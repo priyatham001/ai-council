@@ -1,0 +1,6 @@
+{
+  "name": "AI Council",
+  "description": "One Question. Multiple AIs. One Better Answer.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
