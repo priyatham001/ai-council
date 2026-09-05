@@ -56,7 +56,7 @@ export async function processUploadedFile(fileData: {
     mimeType,
     size,
     uploadedAt: new Date().toISOString(),
-    url: finalUrl || undefined,
+    url: finalUrl || (base64Content && size < 2 * 1024 * 1024 ? `data:${mimeType};base64,${base64Content}` : undefined),
     extractedText: extractedText || `[Attachment: ${safeName} (${(size / 1024).toFixed(1)} KB)]`,
   };
 

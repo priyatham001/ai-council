@@ -5,7 +5,7 @@ import { ProviderResponse } from '../../../types/ai';
 export class GeminiProvider implements AIProvider {
   id = 'gemini' as const;
   name = 'Google Gemini';
-  modelName = 'gemini-3.6-flash';
+  modelName = 'gemini-3.8-flash';
 
   private getClient(): GoogleGenAI | null {
     const apiKey = process.env.GEMINI_API_KEY;

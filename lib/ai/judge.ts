@@ -104,7 +104,7 @@ Format your output as a STRICT JSON object with this schema:
 Return ONLY valid JSON.`;
 
       const generatePromise = ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: 'gemini-3.8-flash',
         contents: prompt,
         config: {
           temperature: 0.15,
@@ -132,6 +132,89 @@ Return ONLY valid JSON.`;
       }
     } catch (err) {
       console.warn('[Judge] Gemini LLM judge fallback:', (err as Error)?.message);
+    }
+  }
+
+  // If OpenAI key is available, use it as fallback LLM for Supreme Judge
+  const openAiKey = process.env.OPENAI_API_KEY;
+  if (openAiKey) {
+    try {
+      const modeSpecificPrompt = getModeInstructions(mode);
+      const prompt = `You are the Supreme Judge of the AI Council.
+Your goal is to synthesize the single best, authoritative, verified final answer to the user's question.
+
+CRITICAL DIRECTIVES:
+1. Synthesize the strongest information into ONE unified, high-quality answer.
+2. The final answer should NOT say "Gemini said...", "GPT said...", "Claude said..." unless directly contrasting differing viewpoints is genuinely useful. The normal output should read as ONE intelligent, definitive answer.
+3. Incorporate corrections from the Lead Critic. Reject hallucinations and unsupported claims.
+4. Mode requirement: ${modeSpecificPrompt}
+
+User Question: "${question}"
+
+Council Cross-Analysis:
+Consensus: ${analysis.consensus.join('; ')}
+Disagreements: ${analysis.disagreements.join('; ')}
+
+Lead Critic Report:
+Reliability: ${critic.reliabilityVerdict}
+Critical Errors: ${critic.criticalErrors.join('; ')}
+Unsupported Claims: ${critic.unsupportedClaims.join('; ')}
+Important Corrections: ${critic.importantCorrections.join('; ')}
+
+AI Provider Responses:
+${validResponses
+  .map(
+    (r) => `
+[${r.providerName} (${r.model})]:
+${r.answer}
+`
+  )
+  .join('\n')}
+
+Format your output as a STRICT JSON object with these exact keys:
+{
+  "finalAnswer": "The comprehensive markdown synthesis combining the optimal reasoning and answers",
+  "confidence": 92,
+  "uncertainty": ["Remaining caveats or assumptions that could not be resolved"],
+  "decisionSummary": "A 2-3 sentence executive synopsis of how the council reached this verdict"
+}
+Return ONLY valid raw JSON with no markdown backticks.`;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${openAiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          response_format: { type: 'json_object' },
+          temperature: 0.2,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) {
+          const parsed = JSON.parse(content);
+          return {
+            finalAnswer: parsed.finalAnswer || validResponses[0].answer,
+            confidence: typeof parsed.confidence === 'number' ? Math.min(100, Math.max(0, parsed.confidence)) : 90,
+            uncertainty: Array.isArray(parsed.uncertainty) ? parsed.uncertainty : [],
+            decisionSummary: parsed.decisionSummary || 'Final synthesis compiled from council proceedings.',
+            debate: parsed.debate,
+            coding: parsed.coding,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[Judge] OpenAI judge fallback error:', (err as Error)?.message);
     }
   }
 

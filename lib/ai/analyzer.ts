@@ -59,7 +59,7 @@ Analyze all responses and return a STRICT JSON object with these exact keys:
 Return ONLY valid raw JSON with no Markdown formatting or backticks if possible.`;
 
       const generatePromise = ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: 'gemini-3.8-flash',
         contents: prompt,
         config: {
           temperature: 0.1,
@@ -91,6 +91,81 @@ Return ONLY valid raw JSON with no Markdown formatting or backticks if possible.
       }
     } catch (err) {
       console.warn('[Analyzer] Gemini LLM cross-analysis fallback:', (err as Error)?.message);
+    }
+  }
+
+  // If OpenAI key is available, use it as fallback LLM for Analyzer
+  const openAiKey = process.env.OPENAI_API_KEY;
+  if (openAiKey) {
+    try {
+      const prompt = `You are the Cross-Analyzer of the AI Council.
+Your task is to compare and contrast multiple AI responses to the user question with rigorous objectivity.
+Do NOT favor an answer merely because it is longer.
+
+User Question: "${question}"
+Mode: ${mode}
+
+AI Responses:
+${validResponses
+  .map(
+    (r, idx) => `
+--- Model ${idx + 1}: ${r.providerName} (${r.model}) ---
+${r.answer.slice(0, 3000)}
+`
+  )
+  .join('\n')}
+
+Analyze all responses and return a STRICT JSON object with these exact keys:
+{
+  "consensus": ["Point of strong agreement 1", "Point of agreement 2"],
+  "disagreements": ["Specific divergence between models on topic X", "Conflict on claim Y"],
+  "claimEvaluation": ["Evaluation of key claims made across models"],
+  "strengths": ["Clear positive aspects of the reasoning across responses"],
+  "weaknesses": ["Vague claims, hand-waving, or questionable logic identified"],
+  "missingInformation": ["Important context or edge cases that all models omitted"],
+  "unsupportedClaims": ["Claims made without sufficient justification"],
+  "reasoningAssessment": "A concise paragraph summarizing the comparative intellectual quality of the responses."
+}
+Return ONLY valid raw JSON with no Markdown formatting or backticks.`;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${openAiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          response_format: { type: 'json_object' },
+          temperature: 0.1,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) {
+          const parsed = JSON.parse(content);
+          return {
+            consensus: Array.isArray(parsed.consensus) ? parsed.consensus : [],
+            disagreements: Array.isArray(parsed.disagreements) ? parsed.disagreements : [],
+            claimEvaluation: Array.isArray(parsed.claimEvaluation) ? parsed.claimEvaluation : [],
+            strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
+            weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : [],
+            missingInformation: Array.isArray(parsed.missingInformation) ? parsed.missingInformation : [],
+            unsupportedClaims: Array.isArray(parsed.unsupportedClaims) ? parsed.unsupportedClaims : [],
+            reasoningAssessment: parsed.reasoningAssessment || 'Comprehensive cross-model evaluation completed.',
+            overallAssessment: parsed.reasoningAssessment,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[Analyzer] OpenAI cross-analysis fallback error:', (err as Error)?.message);
     }
   }
 

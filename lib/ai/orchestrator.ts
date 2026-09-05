@@ -68,7 +68,7 @@ export class AIOrchestrator {
 
     // Check which providers are active
     const configuredProviders = Array.from(this.providers.values()).filter((p) => p.isConfigured());
-    const isDemoRequested = Boolean(enableDemoMode);
+    const isDemoRequested = Boolean(enableDemoMode || process.env.DEMO_MODE === 'true');
 
     let responses: ProviderResponse[] = [];
 
@@ -91,14 +91,35 @@ export class AIOrchestrator {
 
       onProgress?.(`Consulting ${targetProviders.length} active AI provider(s)`, 2);
 
-      // Concurrent independent execution
-      const providerPromises = targetProviders.map(async (provider) => {
-        try {
-          return await provider.generateResponse(question, {
-            mode,
-            filesText,
-          });
-        } catch (err: unknown) {
+      // Concurrent independent execution using Promise.allSettled for fault tolerance
+      const providerSettled = await Promise.allSettled(
+        targetProviders.map(async (provider) => {
+          const startTime = Date.now();
+          try {
+            return await provider.generateResponse(question, {
+              mode,
+              filesText,
+            });
+          } catch (err: unknown) {
+            const elapsed = Date.now() - startTime;
+            return {
+              provider: provider.id,
+              providerName: provider.name,
+              model: provider.modelName,
+              answer: '',
+              responseTime: elapsed,
+              status: 'error' as const,
+              error: (err as Error)?.message || 'Provider execution failed.',
+            };
+          }
+        })
+      );
+
+      responses = providerSettled.map((outcome, idx) => {
+        if (outcome.status === 'fulfilled') {
+          return outcome.value;
+        } else {
+          const provider = targetProviders[idx];
           return {
             provider: provider.id,
             providerName: provider.name,
@@ -106,32 +127,21 @@ export class AIOrchestrator {
             answer: '',
             responseTime: 0,
             status: 'error' as const,
-            error: (err as Error)?.message || 'Provider execution failed.',
+            error: (outcome.reason as Error)?.message || 'Provider execution rejected.',
           };
         }
       });
 
-      responses = await Promise.all(providerPromises);
       onProgress?.('Collecting independent responses', 3);
     }
 
-    // Step 4 & 5: Run cross-analyzer and adversarial critic concurrently
+    // Step 4: Run cross-analyzer across all responses
     onProgress?.('Comparing answers & identifying agreements', 4);
-    const [analysis, critic] = await Promise.all([
-      runCrossAnalysis(question, responses, mode),
-      runCriticReview(question, responses, {
-        consensus: ['Multi-model preliminary consensus'],
-        disagreements: [],
-        claimEvaluation: [],
-        strengths: [],
-        weaknesses: [],
-        missingInformation: [],
-        unsupportedClaims: [],
-        reasoningAssessment: 'Adversarial critique running concurrently',
-      }, mode),
-    ]);
+    const analysis = await runCrossAnalysis(question, responses, mode);
 
+    // Step 5: Run adversarial critic receiving real analysis findings
     onProgress?.('Running adversarial critic & fact-check', 5);
+    const critic = await runCriticReview(question, responses, analysis, mode);
 
     // Step 6: Evaluate disagreements
     onProgress?.('Evaluating critical disagreements and edge cases', 6);

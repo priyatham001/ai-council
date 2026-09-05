@@ -174,3 +174,7 @@ export async function isMongoDbConnected(): Promise<boolean> {
     return false;
   }
 }
+
+// Alias for backwards compatibility
+export const getAnalyses = getAnalysesList;
+

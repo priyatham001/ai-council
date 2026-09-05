@@ -1,23 +1,33 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 
-import { orchestrator } from './lib/ai/orchestrator';
 import {
-  saveAnalysis,
-  getAnalysesList,
-  getAnalysisById,
-  deleteAnalysisById,
-  isMongoDbConnected,
-} from './lib/mongodb';
-import { validateQuestion, validateMode } from './lib/validation';
-import { processUploadedFile } from './lib/blob';
-import { HealthResponse } from './types/ai';
+  handleHealth as handleCouncilHealth,
+  handleModels,
+  handleAnalyze,
+  handleUpload,
+  handleGetHistory as handleCouncilGetHistory,
+  handleGetHistoryById,
+  handleDeleteHistoryById,
+} from './lib/server/api-handlers';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import {
+  handleHealth as handleKrishiHealth,
+  handleGetCrops,
+  handleGetMarkets,
+  handleGetNearbyMarkets,
+  handleGetBuyers,
+  handleGetTransporters,
+  handleRecommend,
+  handleGetTrends,
+  handleGetForecast,
+  handleGetHistory as handleKrishiGetHistory,
+  handleDeleteHistory as handleKrishiDeleteHistory,
+  handleAdminData,
+  handleUpdateTransportRates,
+} from './lib/server/krishi-handlers';
 
 async function startServer() {
   const app = express();
@@ -29,162 +39,40 @@ async function startServer() {
 
   // ===================== API ROUTES FIRST =====================
 
-  // 1. Health check
-  app.get('/api/health', async (_req: Request, res: Response) => {
-    try {
-      const providers = orchestrator.getAvailableProviders();
-      const mongoConnected = await isMongoDbConnected();
+  // 1. Health check (Smart Krishi Market & SIH26132)
+  app.get('/api/health', (req: Request, res: Response) => handleKrishiHealth(req, res));
 
-      const health: HealthResponse = {
-        status: 'ok',
-        mongodb: mongoConnected,
-        providers: {
-          gemini: providers.find((p) => p.id === 'gemini')?.configured ?? false,
-          openai: providers.find((p) => p.id === 'openai')?.configured ?? false,
-          anthropic: providers.find((p) => p.id === 'anthropic')?.configured ?? false,
-          mistral: providers.find((p) => p.id === 'mistral')?.configured ?? false,
-        },
-        totalConfigured: providers.filter((p) => p.configured).length,
-        demoModeAvailable: true,
-        timestamp: new Date().toISOString(),
-      };
+  // 2. Krishi Market discovery & catalog endpoints
+  app.get('/api/crops', (req: Request, res: Response) => handleGetCrops(req, res));
+  app.get('/api/markets', (req: Request, res: Response) => handleGetMarkets(req, res));
+  app.get('/api/markets/nearby', (req: Request, res: Response) => handleGetNearbyMarkets(req, res));
+  app.get('/api/buyers/nearby', (req: Request, res: Response) => handleGetBuyers(req, res));
+  app.get('/api/transporters', (req: Request, res: Response) => handleGetTransporters(req, res));
 
-      res.status(200).json(health);
-    } catch (err) {
-      res.status(500).json({ status: 'degraded', error: 'Health check failed.' });
-    }
-  });
+  // 3. Core Net Return Recommendation & Comparison
+  app.post('/api/recommend', (req: Request, res: Response) => handleRecommend(req, res));
+  app.post('/api/compare', (req: Request, res: Response) => handleRecommend(req, res));
 
-  // 2. Models status metadata (strictly no secrets)
-  app.get('/api/models', (_req: Request, res: Response) => {
-    try {
-      const providers = orchestrator.getAvailableProviders();
-      const totalConfigured = providers.filter((p) => p.configured).length;
-      res.status(200).json({
-        providers,
-        totalConfigured,
-        demoAvailable: true,
-      });
-    } catch (err) {
-      res.status(500).json({ error: 'Failed to retrieve provider metadata.' });
-    }
-  });
+  // 4. Trends & Forecasting
+  app.get('/api/trends', (req: Request, res: Response) => handleGetTrends(req, res));
+  app.post('/api/forecast', (req: Request, res: Response) => handleGetForecast(req, res));
 
-  // 3. Main Council Analysis pipeline
-  app.post('/api/council/analyze', async (req: Request, res: Response) => {
-    try {
-      const { question, mode, selectedProviders, files, enableDemoMode } = req.body;
+  // 5. History management
+  app.get('/api/history', (req: Request, res: Response) => handleKrishiGetHistory(req, res));
+  app.delete('/api/history/:id', (req: Request, res: Response) => handleKrishiDeleteHistory(req, res));
 
-      // Validate question input
-      const validation = validateQuestion(question);
-      if (!validation.valid || !validation.cleanQuestion) {
-        return res.status(400).json({
-          success: false,
-          error: validation.error || 'Invalid question provided.',
-        });
-      }
+  // 6. Admin Panel endpoints
+  app.get('/api/admin/data', (req: Request, res: Response) => handleAdminData(req, res));
+  app.post('/api/admin/rates', (req: Request, res: Response) => handleUpdateTransportRates(req, res));
 
-      const validMode = validateMode(mode);
-
-      // Execute orchestrator
-      const analysisDoc = await orchestrator.runCouncilPipeline({
-        question: validation.cleanQuestion,
-        mode: validMode,
-        selectedProviders,
-        files,
-        enableDemoMode,
-      });
-
-      // Save to MongoDB (or in-memory fallback)
-      const saveResult = await saveAnalysis(analysisDoc);
-      analysisDoc.id = saveResult.id;
-
-      return res.status(200).json({
-        success: true,
-        analysis: analysisDoc,
-        savedToDb: saveResult.savedToDb,
-        id: saveResult.id,
-      });
-    } catch (err: unknown) {
-      console.error('[API /api/council/analyze] Pipeline execution error:', (err as Error)?.message);
-      return res.status(500).json({
-        success: false,
-        error: 'The AI Council encountered an unexpected error processing your inquiry. Please try again.',
-      });
-    }
-  });
-
-  // 4. File upload endpoint
-  app.post('/api/upload', async (req: Request, res: Response) => {
-    try {
-      const { filename, mimeType, size, base64Content } = req.body;
-
-      if (!filename || !mimeType || typeof size !== 'number') {
-        return res.status(400).json({ success: false, error: 'Missing file metadata.' });
-      }
-
-      const result = await processUploadedFile({
-        filename,
-        mimeType,
-        size,
-        base64Content,
-      });
-
-      if (!result.success) {
-        return res.status(400).json({ success: false, error: result.error });
-      }
-
-      return res.status(200).json({ success: true, file: result.attachment });
-    } catch (err: unknown) {
-      console.error('[API /api/upload] File processing error:', (err as Error)?.message);
-      return res.status(500).json({ success: false, error: 'File processing failed.' });
-    }
-  });
-
-  // 5. History list
-  app.get('/api/history', async (_req: Request, res: Response) => {
-    try {
-      const history = await getAnalysesList(100);
-      return res.status(200).json({ success: true, history });
-    } catch (err: unknown) {
-      console.error('[API /api/history] Error fetching history:', (err as Error)?.message);
-      return res.status(500).json({ success: false, error: 'Failed to retrieve analysis history.' });
-    }
-  });
-
-  // 6. History single item
-  app.get('/api/history/:id', async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const analysis = await getAnalysisById(id);
-
-      if (!analysis) {
-        return res.status(404).json({ success: false, error: 'Analysis record not found.' });
-      }
-
-      return res.status(200).json({ success: true, analysis });
-    } catch (err: unknown) {
-      console.error('[API /api/history/:id] Error:', (err as Error)?.message);
-      return res.status(500).json({ success: false, error: 'Failed to fetch analysis record.' });
-    }
-  });
-
-  // 7. History delete item
-  app.delete('/api/history/:id', async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const deleted = await deleteAnalysisById(id);
-
-      if (!deleted) {
-        return res.status(404).json({ success: false, error: 'Record not found or already deleted.' });
-      }
-
-      return res.status(200).json({ success: true, message: 'Analysis deleted successfully.' });
-    } catch (err: unknown) {
-      console.error('[API DELETE /api/history/:id] Error:', (err as Error)?.message);
-      return res.status(500).json({ success: false, error: 'Failed to delete record.' });
-    }
-  });
+  // Legacy / AI Council endpoints for backwards compatibility
+  app.get('/api/council/health', (req: Request, res: Response) => handleCouncilHealth(req, res));
+  app.get('/api/models', (req: Request, res: Response) => handleModels(req, res));
+  app.post('/api/council/analyze', (req: Request, res: Response) => handleAnalyze(req, res));
+  app.post('/api/upload', (req: Request, res: Response) => handleUpload(req, res));
+  app.get('/api/council/history', (req: Request, res: Response) => handleCouncilGetHistory(req, res));
+  app.get('/api/council/history/:id', (req: Request, res: Response) => handleGetHistoryById(req, res, req.params.id));
+  app.delete('/api/council/history/:id', (req: Request, res: Response) => handleDeleteHistoryById(req, res, req.params.id));
 
   // ===================== VITE MIDDLEWARE =====================
   if (process.env.NODE_ENV !== 'production') {

@@ -67,12 +67,16 @@ export class OpenAIProvider implements AIProvider {
       const data = await res.json();
       const answer = data.choices?.[0]?.message?.content || '';
       const elapsed = Date.now() - startTime;
+      const claims = this.extractClaims(answer);
 
       return {
         provider: this.id,
         providerName: this.name,
         model: this.modelName,
         answer,
+        reasoningSummary: claims.slice(0, 3).join('; '),
+        keyClaims: claims,
+        uncertainties: this.extractUncertainties(answer),
         responseTime: elapsed,
         status: 'success',
       };
@@ -88,5 +92,22 @@ export class OpenAIProvider implements AIProvider {
         error: `OpenAI provider error: ${(err as Error)?.message || 'Request failed'}`,
       };
     }
+  }
+
+  private extractClaims(text: string): string[] {
+    const lines = text.split('\n')
+      .map(l => l.trim().replace(/^[-*•\d.]+\s*/, ''))
+      .filter(l => l.length > 20 && l.length < 200 && !l.startsWith('#'));
+    return lines.slice(0, 5);
+  }
+
+  private extractUncertainties(text: string): string[] {
+    const keywords = ['however', 'caveat', 'uncertain', 'depends on', 'assumption', 'note that', 'risk'];
+    const sentences = text.split(/[.!?]\s+/);
+    return sentences
+      .filter(s => keywords.some(k => s.toLowerCase().includes(k)))
+      .map(s => s.trim())
+      .filter(s => s.length > 25 && s.length < 250)
+      .slice(0, 3);
   }
 }

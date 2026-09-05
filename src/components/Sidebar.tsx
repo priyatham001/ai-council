@@ -42,7 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     {
       id: 'council' as const,
-      label: 'New Analysis',
+      label: 'AI Council Chat',
       icon: Compass,
       badge: null,
     },
@@ -142,21 +142,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="text-[10px] text-purple-400 font-mono">Demo</span>
               )}
             </div>
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[#a1a1aa]">Google Gemini</span>
-                <span className="text-green-500 font-medium">Active</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#a1a1aa]">OpenAI GPT</span>
-                <span className={demoMode ? 'text-purple-400' : 'text-[#71717a]'}>
-                  {demoMode ? 'Simulated' : 'Standby'}
+                <span className="text-[#a1a1aa]">Gemini 2.5</span>
+                <span className={health?.providers.gemini ? 'text-emerald-400 font-medium' : demoMode ? 'text-purple-400' : 'text-[#71717a]'}>
+                  {health?.providers.gemini ? 'Active' : demoMode ? 'Simulated' : 'Standby'}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[#a1a1aa]">Claude & Mistral</span>
-                <span className={demoMode ? 'text-purple-400' : 'text-[#71717a]'}>
-                  {demoMode ? 'Simulated' : 'Standby'}
+                <span className="text-[#a1a1aa]">GPT-4o</span>
+                <span className={health?.providers.openai ? 'text-emerald-400 font-medium' : demoMode ? 'text-purple-400' : 'text-[#71717a]'}>
+                  {health?.providers.openai ? 'Active' : demoMode ? 'Simulated' : 'Standby'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[#a1a1aa]">Claude 3.5</span>
+                <span className={health?.providers.anthropic ? 'text-emerald-400 font-medium' : demoMode ? 'text-purple-400' : 'text-[#71717a]'}>
+                  {health?.providers.anthropic ? 'Active' : demoMode ? 'Simulated' : 'Standby'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[#a1a1aa]">Mistral Large</span>
+                <span className={health?.providers.mistral ? 'text-emerald-400 font-medium' : demoMode ? 'text-purple-400' : 'text-[#71717a]'}>
+                  {health?.providers.mistral ? 'Active' : demoMode ? 'Simulated' : 'Standby'}
                 </span>
               </div>
             </div>
