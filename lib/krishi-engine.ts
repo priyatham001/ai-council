@@ -633,6 +633,78 @@ export const SAMPLE_MARKETS: Market[] = [
     verified: true,
     isDemo: true
   },
+  {
+    id: 'mkt_vijayawada',
+    name: 'Vijayawada Gollapudi Commercial APMC Yard',
+    district: 'NTR',
+    state: 'Andhra Pradesh',
+    lat: 16.5415,
+    lng: 80.5930,
+    marketType: 'APMC Mandi',
+    contactPerson: 'M. Venkanna Babu',
+    contactPhone: '+91 866 241 8900',
+    operatingHours: '06:00 AM - 06:00 PM',
+    verified: true,
+    isDemo: true
+  },
+  {
+    id: 'mkt_guntur',
+    name: 'Guntur Asia Mirchi & Commercial Grain Yard',
+    district: 'Guntur',
+    state: 'Andhra Pradesh',
+    lat: 16.2970,
+    lng: 80.4410,
+    marketType: 'APMC Mandi',
+    contactPerson: 'Ch. Subba Rao',
+    contactPhone: '+91 863 222 4110',
+    operatingHours: '06:00 AM - 07:00 PM',
+    verified: true,
+    isDemo: true
+  },
+  {
+    id: 'mkt_rajahmundry',
+    name: 'Rajahmundry APMC Agriculture Market Yard',
+    district: 'East Godavari',
+    state: 'Andhra Pradesh',
+    lat: 17.0005,
+    lng: 81.8040,
+    marketType: 'APMC Mandi',
+    contactPerson: 'P. Satyanarayana Murthy',
+    contactPhone: '+91 883 246 7810',
+    operatingHours: '07:00 AM - 05:00 PM',
+    verified: true,
+    isDemo: true
+  },
+
+  // Telangana Hubs
+  {
+    id: 'mkt_bowenpally',
+    name: 'Bowenpally Agriculture Market Yard (Hyderabad)',
+    district: 'Hyderabad',
+    state: 'Telangana',
+    lat: 17.4720,
+    lng: 78.4900,
+    marketType: 'APMC Mandi',
+    contactPerson: 'L. Narsimha Reddy',
+    contactPhone: '+91 40 2775 3210',
+    operatingHours: '05:00 AM - 04:00 PM',
+    verified: true,
+    isDemo: true
+  },
+  {
+    id: 'mkt_khammam',
+    name: 'Khammam APMC Chilly & Grain Yard',
+    district: 'Khammam',
+    state: 'Telangana',
+    lat: 17.2473,
+    lng: 80.1514,
+    marketType: 'APMC Mandi',
+    contactPerson: 'T. Srinivas',
+    contactPhone: '+91 8742 228940',
+    operatingHours: '06:30 AM - 05:00 PM',
+    verified: true,
+    isDemo: true
+  },
 
   // Maharashtra Hubs (Government of Maharashtra SIH Context)
   {
@@ -650,6 +722,20 @@ export const SAMPLE_MARKETS: Market[] = [
     isDemo: true
   },
   {
+    id: 'mkt_pimpalgaon',
+    name: 'Pimpalgaon Baswant APMC Commercial Yard',
+    district: 'Nashik',
+    state: 'Maharashtra',
+    lat: 20.1706,
+    lng: 73.9856,
+    marketType: 'APMC Mandi',
+    contactPerson: 'Dnyaneshwar Shinde',
+    contactPhone: '+91 2550 241020',
+    operatingHours: '07:00 AM - 06:00 PM',
+    verified: true,
+    isDemo: true
+  },
+  {
     id: 'mkt_pune',
     name: 'Pune Gultekdi APMC Market Yard',
     district: 'Pune',
@@ -660,6 +746,34 @@ export const SAMPLE_MARKETS: Market[] = [
     contactPerson: 'Rajesh Deshmukh (Secretary)',
     contactPhone: '+91 20 2426 6200',
     operatingHours: '05:00 AM - 02:00 PM',
+    verified: true,
+    isDemo: true
+  },
+  {
+    id: 'mkt_baramati',
+    name: 'Baramati APMC Yard',
+    district: 'Pune',
+    state: 'Maharashtra',
+    lat: 18.1517,
+    lng: 74.5772,
+    marketType: 'APMC Mandi',
+    contactPerson: 'Nitin Jagtap',
+    contactPhone: '+91 2112 222450',
+    operatingHours: '07:00 AM - 04:00 PM',
+    verified: true,
+    isDemo: true
+  },
+  {
+    id: 'mkt_latur',
+    name: 'Latur APMC Pulse & Oilseed Hub',
+    district: 'Latur',
+    state: 'Maharashtra',
+    lat: 18.4088,
+    lng: 76.5604,
+    marketType: 'APMC Mandi',
+    contactPerson: 'K. B. Jadhav',
+    contactPhone: '+91 2382 245120',
+    operatingHours: '07:30 AM - 05:00 PM',
     verified: true,
     isDemo: true
   },
@@ -949,25 +1063,33 @@ export function rankMarketsForFarmer(
   const quantityInQuintals = convertToQuintals(quantity, unit);
   const qualityModifier = quality?.priceModifierPct || 0; // e.g. +5% for Grade A
 
-  // Evaluate all sample markets relative to farmer location
-  const candidateMarkets: MarketComparisonItem[] = SAMPLE_MARKETS.map((mkt, idx) => {
+  // 1. Calculate realistic road distance to every mandi in our network
+  const marketsWithDistance = SAMPLE_MARKETS.map((mkt) => {
     let distanceKm = calculateHaversineDistanceKm(
       farmerLocation.lat,
       farmerLocation.lng,
       mkt.lat,
       mkt.lng
     );
-    if (distanceKm < 5) distanceKm = 6 + (idx % 4); // realistic minimum village road transit
+    if (distanceKm < 5) distanceKm = 6; // realistic minimum village road transit
+    return { mkt, distanceKm };
+  });
 
-    // Price variations calibrated to demonstrate the real-world invariant:
-    // "Highest board price doesn't win if transport freight washes out the gain"
+  // 2. Sort by distance and pick the closest regional candidate mandis (up to 7)
+  marketsWithDistance.sort((a, b) => a.distanceKm - b.distanceKm);
+  const selectedCandidates = marketsWithDistance.slice(0, 7);
+
+  // 3. Evaluate realistic market economics & net return for each candidate
+  const candidateMarkets: MarketComparisonItem[] = selectedCandidates.map(({ mkt, distanceKm }, distRank) => {
+    // Calibrated price offsets based on market tier & proximity:
+    // Demonstrates: "Highest board price doesn't win if transport freight washes out the gain"
     let priceOffset = 0;
-    if (idx === 0) priceOffset = -40; // closest market, baseline
-    else if (idx === 1) priceOffset = 120; // moderate distance, good price
-    else if (idx === 2) priceOffset = 30; // mid distance
-    else if (idx === 3) priceOffset = -10;
-    else if (idx === 4) priceOffset = 210; // far distance, highest board price!
-    else if (idx === 5) priceOffset = 280; // very far distance
+    if (distRank === 0) priceOffset = -20; // local nearest yard
+    else if (distRank === 1) priceOffset = 130; // moderate distance, high-demand commercial hub
+    else if (distRank === 2) priceOffset = 40;  // mid-range mandi
+    else if (distRank === 3) priceOffset = 220; // distant major terminal hub with highest board price!
+    else if (distRank === 4) priceOffset = 90;  // regional yard
+    else priceOffset = 180; // far terminal yard
 
     let modal = crop.standardPriceRange.modal + priceOffset;
     if (qualityModifier !== 0) {
@@ -1022,9 +1144,9 @@ export function rankMarketsForFarmer(
       totalCost,
       estimatedNetReturn,
       effectivePricePerQuintal,
-      priceFreshness: (idx % 3 === 0 ? 'fresh' : 'aging') as 'fresh' | 'aging' | 'stale',
-      trend: (idx % 2 === 0 ? 'increasing' : 'stable') as 'increasing' | 'decreasing' | 'stable',
-      trendPct: idx % 2 === 0 ? 2.4 : 0.0,
+      priceFreshness: (distRank % 3 === 0 ? 'fresh' : 'aging') as 'fresh' | 'aging' | 'stale',
+      trend: (distRank % 2 === 0 ? 'increasing' : 'stable') as 'increasing' | 'decreasing' | 'stable',
+      trendPct: distRank % 2 === 0 ? 2.4 : 0.0,
       isRecommended: false,
       recommendationReason: '',
       buyerContactAvailable: Boolean(matchingBuyer),

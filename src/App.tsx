@@ -43,6 +43,11 @@ import { HelpView } from './components/HelpView';
 import { LanguageScreen } from './components/LanguageScreen';
 import { OnboardingModal } from './components/OnboardingModal';
 import { BuyerOfferModal } from './components/BuyerOfferModal';
+import { AgricultureHeroAnimation } from './components/animations/AgricultureHeroAnimation';
+import { FarmToMarketFlow } from './components/animations/FarmToMarketFlow';
+import { CropVisualBanner } from './components/animations/CropVisualBanner';
+import { TransportRouteAnimation } from './components/animations/TransportRouteAnimation';
+import { MarketJourneyAnimation } from './components/animations/MarketJourneyAnimation';
 import {
   CROPS_CATALOG,
   convertToQuintals,
@@ -391,14 +396,44 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Tab 1: Primary Discovery Workspace */}
         {currentTab === 'find' && (
-          <div className="space-y-8">
+          <div className="space-y-6">
+            {/* 1. Agricultural Hero Scene & Panorama */}
+            <AgricultureHeroAnimation
+              language={language}
+              onStartDiscovery={() => {
+                const el = document.getElementById('discovery-config-grid');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                runCalculation(true);
+              }}
+              onStartDemo={handleLoadDemoScenario}
+              onExplorePrices={() => setCurrentTab('prices')}
+            />
+
+            {/* 2. Farm-to-Market Journey Flow Graphic */}
+            <FarmToMarketFlow
+              language={language}
+              currentStep={calculationResult ? 5 : 2}
+            />
+
+            {/* 3. Contextual Crop Visual & Agricultural Profile */}
+            {calculationResult?.crop && (
+              <CropVisualBanner
+                crop={calculationResult.crop}
+                language={language}
+              />
+            )}
+
             {/* Top Interactive Configuration Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div id="discovery-config-grid" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start scroll-mt-20">
               {/* Left Column: Farm Location & Vehicle Logistics (5 Cols) */}
               <div className="lg:col-span-5 space-y-6">
                 <LocationCard
                   location={farmerLocation}
-                  setLocation={setFarmerLocation}
+                  setLocation={(newLoc) => {
+                    setFarmerLocation(newLoc);
+                    // Proactively recalculate recommendations when location updates
+                    setTimeout(() => runCalculation(true), 50);
+                  }}
                   language={language}
                 />
 
@@ -455,12 +490,28 @@ export default function App() {
                     Calculates road distance, transport freight, quality grade premium, and mandi charges for maximum net pocket return.
                   </div>
                 </div>
+
+                {/* Market Journey In-Progress Animation */}
+                {isCalculating && (
+                  <MarketJourneyAnimation language={language} />
+                )}
               </div>
             </div>
 
             {/* Results Section */}
             {calculationResult && (
               <div className="space-y-8 pt-4 border-t border-gray-200">
+                {/* Visual Transport Route Animation */}
+                <TransportRouteAnimation
+                  farmerTown={farmerLocation.villageOrTown}
+                  marketName={calculationResult.recommendedMarket.marketName}
+                  distanceKm={calculationResult.recommendedMarket.distanceKm}
+                  vehicleType={vehicleType}
+                  transportCost={calculationResult.recommendedMarket.transportCost}
+                  isRoundTrip={isRoundTrip}
+                  language={language}
+                />
+
                 {/* 1. Star Recommendation Card */}
                 <RecommendationCard
                   recommendedMarket={calculationResult.recommendedMarket}

@@ -51,11 +51,18 @@ export interface TransporterProfile {
 }
 
 export interface FarmerLocation {
+  country?: string;
   state: string;
   district: string;
+  city?: string;
+  village?: string;
   villageOrTown: string;
   lat: number;
   lng: number;
+  latitude?: number;
+  longitude?: number;
+  formattedAddress?: string;
+  source?: 'gps' | 'manual' | 'search' | 'demo';
   isGps: boolean;
   isDemo: boolean;
 }

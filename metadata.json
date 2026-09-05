@@ -1,5 +1,5 @@
 {
-  "name": "AI Council",
+  "name": "Smart Krishi Market (KrishiSetu)",
   "description": "Smart Krishi Market - Strengthening market linkages and price discovery for farmers (SIH26132)",
   "requestFramePermissions": ["geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
