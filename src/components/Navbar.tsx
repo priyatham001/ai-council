@@ -25,6 +25,7 @@ interface NavbarProps {
   isDemoMode: boolean;
   onLoadDemoScenario: () => void;
   onOpenLanguageModal?: () => void;
+  onSwitchToSimpleMode?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -34,7 +35,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   setLanguage,
   isDemoMode,
   onLoadDemoScenario,
-  onOpenLanguageModal
+  onOpenLanguageModal,
+  onSwitchToSimpleMode
 }) => {
   const t = getTranslation(language);
 
@@ -130,8 +132,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             })}
           </nav>
 
-            {/* Right Controls: Language Selector */}
-            <div className="flex items-center gap-3">
+            {/* Right Controls: Simple Mode & Language Selector */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {onSwitchToSimpleMode && (
+                <button
+                  onClick={onSwitchToSimpleMode}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs cursor-pointer transition-all"
+                  title="Switch to 5-Step Guided Farmer Assistant"
+                >
+                  <span>🌾</span>
+                  <span className="hidden sm:inline">Farmer Assistant</span>
+                  <span className="sm:hidden">Assistant</span>
+                </button>
+              )}
+
               <div className="flex items-center bg-gray-100 p-1 rounded-lg border border-gray-200">
                 <button
                   type="button"

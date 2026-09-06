@@ -48,6 +48,12 @@ import { FarmToMarketFlow } from './components/animations/FarmToMarketFlow';
 import { CropVisualBanner } from './components/animations/CropVisualBanner';
 import { TransportRouteAnimation } from './components/animations/TransportRouteAnimation';
 import { MarketJourneyAnimation } from './components/animations/MarketJourneyAnimation';
+import { Page1Language } from './components/farmer-flow/Page1Language';
+import { Page2FarmLocation } from './components/farmer-flow/Page2FarmLocation';
+import { Page3CropDetails } from './components/farmer-flow/Page3CropDetails';
+import { Page4MarketAnalysis } from './components/farmer-flow/Page4MarketAnalysis';
+import { Page5BestOption } from './components/farmer-flow/Page5BestOption';
+import { FarmerHeader } from './components/farmer-flow/FarmerHeader';
 import {
   CROPS_CATALOG,
   convertToQuintals,
@@ -56,10 +62,22 @@ import {
 } from './lib/krishi-data-client';
 import { getTranslation } from './lib/translations';
 
+export type FarmerFlowStep =
+  | 'page1_language'
+  | 'page2_location'
+  | 'page3_crop'
+  | 'page4_analysis'
+  | 'page5_best_option'
+  | 'dashboard';
+
 export default function App() {
   const [currentTab, setCurrentTab] = useState('find');
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>('te'); // Default to Telugu as priority regional demonstration
   const [isDemoMode, setIsDemoMode] = useState(true);
+
+  // Progressive Farmer-First Flow Step
+  const [farmerFlowStep, setFarmerFlowStep] = useState<FarmerFlowStep>('page1_language');
+  const [farmerName, setFarmerName] = useState<string>('');
 
   // First-run experience states
   const [hasSelectedLanguage, setHasSelectedLanguage] = useState<boolean>(true);
@@ -316,16 +334,188 @@ export default function App() {
     'Ranking markets by estimated net return and synthesizing AI insights...'
   ];
 
-  // 1. First Screen: Language Selection (if not selected)
-  if (!hasSelectedLanguage) {
+  // 1. PAGE 1: Language Selection (Zero clutter, calm background visual, prominent language cards)
+  if (farmerFlowStep === 'page1_language') {
     return (
-      <LanguageScreen
-        onSelectLanguage={handleLanguageSelect}
-        currentLanguage={language}
-      />
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
+        <Page1Language
+          currentLanguage={language}
+          onSelectLanguage={(lang) => {
+            setLanguage(lang);
+            try {
+              localStorage.setItem('krishisetu_language', lang);
+            } catch (e) {}
+          }}
+          onContinue={() => setFarmerFlowStep('page2_location')}
+        />
+      </div>
     );
   }
 
+  // 2. PAGE 2: Farmer Name + Farm Location (GPS pulse animation, search, manual selection)
+  if (farmerFlowStep === 'page2_location') {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
+        <FarmerHeader
+          language={language}
+          onSelectLanguage={setLanguage}
+          farmerName={farmerName}
+          location={farmerLocation}
+          currentStep={1}
+          onRestartFlow={() => setFarmerFlowStep('page1_language')}
+          onNavigateToTab={(tab) => {
+            setCurrentTab(tab);
+            setFarmerFlowStep('dashboard');
+          }}
+        />
+        <main className="flex-1 py-4">
+          <Page2FarmLocation
+            farmerName={farmerName}
+            setFarmerName={setFarmerName}
+            location={farmerLocation}
+            setLocation={setFarmerLocation}
+            language={language}
+            onNext={() => setFarmerFlowStep('page3_crop')}
+            onBack={() => setFarmerFlowStep('page1_language')}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // 3. PAGE 3: Crop + Quantity + Quality (Adaptive crop visual, search, categories, large quantity, grades)
+  if (farmerFlowStep === 'page3_crop') {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
+        <FarmerHeader
+          language={language}
+          onSelectLanguage={setLanguage}
+          farmerName={farmerName}
+          location={farmerLocation}
+          currentStep={2}
+          onRestartFlow={() => setFarmerFlowStep('page1_language')}
+          onNavigateToTab={(tab) => {
+            setCurrentTab(tab);
+            setFarmerFlowStep('dashboard');
+          }}
+        />
+        <main className="flex-1 py-4">
+          <Page3CropDetails
+            selectedCropId={selectedCropId}
+            setSelectedCropId={setSelectedCropId}
+            customCropName={customCropName}
+            setCustomCropName={setCustomCropName}
+            quantity={quantity}
+            setQuantity={setQuantity}
+            unit={unit}
+            setUnit={setUnit}
+            quality={quality}
+            setQuality={setQuality}
+            language={language}
+            onNext={() => setFarmerFlowStep('page4_analysis')}
+            onBack={() => setFarmerFlowStep('page2_location')}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // 4. PAGE 4: Market Analysis (Compact summary + [ Find Best Market ] triggering 8-stage decision animation)
+  if (farmerFlowStep === 'page4_analysis') {
+    const activeCrop =
+      CROPS_CATALOG.find((c) => c.id === selectedCropId) || CROPS_CATALOG[0];
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
+        <FarmerHeader
+          language={language}
+          onSelectLanguage={setLanguage}
+          farmerName={farmerName}
+          location={farmerLocation}
+          currentStep={3}
+          onRestartFlow={() => setFarmerFlowStep('page1_language')}
+          onNavigateToTab={(tab) => {
+            setCurrentTab(tab);
+            setFarmerFlowStep('dashboard');
+          }}
+        />
+        <main className="flex-1 py-4">
+          <Page4MarketAnalysis
+            location={farmerLocation}
+            crop={activeCrop}
+            customCropName={customCropName}
+            quantityInQuintals={convertToQuintals(quantity, unit)}
+            grade={quality.grade}
+            language={language}
+            onStartAnalysis={() => runCalculation(false)}
+            onComplete={() => setFarmerFlowStep('page5_best_option')}
+            onBack={() => setFarmerFlowStep('page3_crop')}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // 5. PAGE 5: Best Selling Option (⭐ BEST OPTION, Net Return, Why, Compact flow, Expandable accordions)
+  if (farmerFlowStep === 'page5_best_option') {
+    const activeCrop =
+      CROPS_CATALOG.find((c) => c.id === selectedCropId) || CROPS_CATALOG[0];
+    const calc = rankMarketsForFarmer(
+      farmerLocation,
+      selectedCropId,
+      quantity,
+      unit,
+      vehicleType,
+      isRoundTrip,
+      customRatePerKm,
+      quality
+    );
+    const resolvedResult: MarketCalculationResult = calculationResult || {
+      crop: activeCrop,
+      quantityInQuintals: convertToQuintals(quantity, unit),
+      rankedMarkets: calc.rankedMarkets,
+      recommendedMarket: calc.recommendedMarket,
+      aiInsight: generateDeterministicAIInsight(
+        activeCrop,
+        convertToQuintals(quantity, unit),
+        calc.rankedMarkets,
+        vehicleType,
+        isRoundTrip,
+        quality
+      )
+    };
+
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
+        <FarmerHeader
+          language={language}
+          onSelectLanguage={setLanguage}
+          farmerName={farmerName}
+          location={farmerLocation}
+          currentStep={4}
+          onRestartFlow={() => setFarmerFlowStep('page1_language')}
+          onNavigateToTab={(tab) => {
+            setCurrentTab(tab);
+            setFarmerFlowStep('dashboard');
+          }}
+        />
+        <main className="flex-1 py-4">
+          <Page5BestOption
+            calculationResult={resolvedResult}
+            farmerLocation={farmerLocation}
+            vehicleType={vehicleType}
+            language={language}
+            onRestart={() => setFarmerFlowStep('page3_crop')}
+            onOpenFullDashboard={() => setFarmerFlowStep('dashboard')}
+            onContactBuyer={(mkt) => {
+              setOfferTarget({ market: resolvedResult.recommendedMarket });
+            }}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // FULL DASHBOARD VIEW (Available when farmer wants advanced tools)
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
       {/* Farmer Onboarding Modal if pending */}
@@ -379,7 +569,23 @@ export default function App() {
         isDemoMode={isDemoMode}
         onLoadDemoScenario={handleLoadDemoScenario}
         onOpenLanguageModal={() => setShowLanguageModal(true)}
+        onSwitchToSimpleMode={() => setFarmerFlowStep('page2_location')}
       />
+
+      {/* Quick Return to Guided Assistant Banner */}
+      <div className="bg-emerald-50 border-b border-emerald-100 px-4 py-2">
+        <div className="max-w-7xl mx-auto flex items-center justify-between text-xs">
+          <span className="text-emerald-900 font-medium">
+            🌾 Want a simpler, step-by-step experience?
+          </span>
+          <button
+            onClick={() => setFarmerFlowStep('page2_location')}
+            className="text-emerald-700 hover:text-emerald-950 font-bold underline cursor-pointer"
+          >
+            Open 5-Step Farmer Assistant →
+          </button>
+        </div>
+      </div>
 
       {/* Global Toast Notification */}
       {toastMessage && (
