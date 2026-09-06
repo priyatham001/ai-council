@@ -16,6 +16,7 @@ import {
   Printer,
   RotateCcw,
   Sparkles,
+  Phone,
 } from 'lucide-react';
 
 interface DealSummaryStepProps {
@@ -193,6 +194,26 @@ export const DealSummaryStep: React.FC<DealSummaryStepProps> = ({
               <span className="text-lg">₹{marketResult.netReturn.toLocaleString()}</span>
             </div>
           </div>
+        </div>
+
+        {/* Mandi Support / Coordinator Desk */}
+        <div className="bg-amber-50/80 border border-amber-300 rounded-xl p-3 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-amber-500 text-stone-950 flex items-center justify-center shrink-0">
+              <Phone className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-bold text-stone-900">Need Mandi Gate Entry / Transit Assistance?</p>
+              <p className="text-stone-600 text-[11px]">Direct Line to APMC Desk & Kisan Mitra Support</p>
+            </div>
+          </div>
+          <a
+            href="tel:9160365486"
+            className="shrink-0 bg-stone-900 hover:bg-black text-amber-300 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
+          >
+            <Phone className="w-3.5 h-3.5 text-amber-400" />
+            <span>9160365486</span>
+          </a>
         </div>
 
         {/* Action Controls */}

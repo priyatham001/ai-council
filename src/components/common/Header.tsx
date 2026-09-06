@@ -1,7 +1,7 @@
 import React from 'react';
 import { Language, LocationData } from '../../types/krishi';
 import { TRANSLATIONS } from '../../utils/i18n';
-import { MapPin, Languages, CheckCircle2 } from 'lucide-react';
+import { MapPin, Languages, CheckCircle2, Phone } from 'lucide-react';
 
 interface HeaderProps {
   language: Language;
@@ -34,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="bg-emerald-900 text-white shadow-md border-b border-emerald-800 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
-        {/* Top bar: Brand + Language Switcher */}
+        {/* Top bar: Brand + Helpline + Language Switcher */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-emerald-800/80">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-2xl shadow-sm font-bold">
@@ -89,6 +89,17 @@ export const Header: React.FC<HeaderProps> = ({
                 <option value="te" className="bg-emerald-950 text-white">తెలుగు (Telugu)</option>
               </select>
             </div>
+
+            {/* Kisan Helpline Number */}
+            <a
+              href="tel:9160365486"
+              className="flex items-center gap-1.5 text-xs bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold px-2.5 py-1.5 rounded-lg shadow-sm transition-colors"
+              title="Kisan Helpline: 9160365486"
+            >
+              <Phone className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden md:inline">Helpline:</span>
+              <span>9160365486</span>
+            </a>
           </div>
         </div>
 

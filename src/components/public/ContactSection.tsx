@@ -82,9 +82,14 @@ export const ContactSection: React.FC = () => {
                   </div>
                   <div>
                     <strong className="block text-slate-800">Helpdesk & Admissions:</strong>
-                    <a href="tel:9581617315" className="text-emerald-700 hover:text-emerald-800 font-bold hover:underline">
-                      +91 9581617315
-                    </a>
+                    <div className="flex flex-col gap-0.5">
+                      <a href="tel:9160365486" className="text-emerald-700 hover:text-emerald-800 font-bold hover:underline">
+                        +91 9160365486
+                      </a>
+                      <a href="tel:9581617315" className="text-slate-600 hover:text-slate-800 text-xs hover:underline">
+                        Alt: +91 9581617315
+                      </a>
+                    </div>
                   </div>
                 </div>
 

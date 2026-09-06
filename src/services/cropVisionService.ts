@@ -1,4 +1,5 @@
 import { AIQualityAssessment, CropItem, QualityGrade } from '../types/krishi';
+import { getCropQualityStandard, CropQualityStandard } from '../data/cropQualityStandards';
 
 interface AnalyzeCropRequest {
   imageFileOrBase64: string;
@@ -9,8 +10,23 @@ interface AnalyzeCropRequest {
 export function validateAIResponse(data: any, expectedCropName: string): AIQualityAssessment | null {
   if (!data || typeof data !== 'object') return null;
 
-  const validGrades: QualityGrade[] = ['A', 'B', 'C', 'Custom'];
-  const suggestedGrade = validGrades.includes(data.suggestedGrade) ? data.suggestedGrade : 'B';
+  const validGrades = ['A', 'B', 'C', 'REJECT', 'Custom'];
+  let suggestedGrade: QualityGrade | 'REJECT' = validGrades.includes(data.suggestedGrade) 
+    ? data.suggestedGrade 
+    : 'B';
+
+  const rotDetected = Boolean(data.rotDetected || data.suggestedGrade === 'REJECT');
+  const pestDamageDetected = Boolean(data.pestDamageDetected);
+
+  let verdict: 'ACCEPT' | 'REJECT' | 'WARNING' | 'INSUFFICIENT_IMAGE' = 'ACCEPT';
+  if (rotDetected || suggestedGrade === 'REJECT' || data.verdict === 'REJECT') {
+    verdict = 'REJECT';
+    suggestedGrade = 'REJECT';
+  } else if (data.cropMatch === false || data.verdict === 'WARNING') {
+    verdict = 'WARNING';
+  } else if (data.verdict === 'INSUFFICIENT_IMAGE') {
+    verdict = 'INSUFFICIENT_IMAGE';
+  }
 
   const confidenceScore = typeof data.confidenceScore === 'number' 
     ? Math.max(0, Math.min(1, data.confidenceScore)) 
@@ -23,12 +39,18 @@ export function validateAIResponse(data: any, expectedCropName: string): AIQuali
     confidenceLevel = 'Low';
   }
 
+  const rejectionReasons = Array.isArray(data.rejectionReasons) && data.rejectionReasons.length > 0
+    ? data.rejectionReasons.map(String)
+    : rotDetected
+    ? ['Visible fungal rot, mold spores, or decomposing tissue observed in harvest sample']
+    : [];
+
   const observations = Array.isArray(data.observations) && data.observations.length > 0
     ? data.observations.map(String)
     : [
         'Visible grain / fruit texture inspected from surface lighting',
         'Overall color uniformity consistent with harvest sample',
-        'No catastrophic insect infilling observed on outer layer',
+        'Evaluated against Agmark / Mandi FAQ visual standards',
       ];
 
   const limitations = Array.isArray(data.limitations) && data.limitations.length > 0
@@ -40,30 +62,36 @@ export function validateAIResponse(data: any, expectedCropName: string): AIQuali
 
   const qualityFactors = data.qualityFactors && typeof data.qualityFactors === 'object'
     ? {
-        appearance: data.qualityFactors.appearance || 'good',
+        appearance: data.qualityFactors.appearance || (rotDetected ? 'poor' : 'good'),
         uniformity: data.qualityFactors.uniformity || 'medium',
-        visible_damage: data.qualityFactors.visible_damage || 'low',
-        discoloration: data.qualityFactors.discoloration || 'medium',
-        freshness: data.qualityFactors.freshness || 'good',
+        visible_damage: data.qualityFactors.visible_damage || (rotDetected ? 'high' : 'low'),
+        discoloration: data.qualityFactors.discoloration || (rotDetected ? 'high' : 'low'),
+        freshness: data.qualityFactors.freshness || (rotDetected ? 'poor' : 'good'),
       }
     : {
-        appearance: 'good',
+        appearance: rotDetected ? 'poor' : 'good',
         uniformity: 'medium',
-        visible_damage: 'low',
-        discoloration: 'low',
-        freshness: 'good',
+        visible_damage: rotDetected ? 'high' : 'low',
+        discoloration: rotDetected ? 'high' : 'low',
+        freshness: rotDetected ? 'poor' : 'good',
       };
 
   return {
     cropDetected: String(data.cropDetected || expectedCropName),
     cropMatch: Boolean(data.cropMatch !== false),
     suggestedGrade,
+    verdict,
+    rotDetected,
+    pestDamageDetected,
+    rejectionReasons,
+    referenceStandardMatched: data.referenceStandardMatched || expectedCropName,
+    standardCriteriaChecked: Array.isArray(data.standardCriteriaChecked) ? data.standardCriteriaChecked.map(String) : [],
     confidenceScore,
     confidenceLevel,
     observations,
     qualityFactors,
     limitations,
-    needsManualReview: Boolean(data.needsManualReview),
+    needsManualReview: Boolean(data.needsManualReview || rotDetected || verdict === 'INSUFFICIENT_IMAGE'),
     analyzedAt: new Date().toISOString(),
   };
 }
@@ -72,13 +100,60 @@ export function validateAIResponse(data: any, expectedCropName: string): AIQuali
 export function generateCropSpecificSampleAnalysis(
   crop: CropItem,
   isBlurry: boolean = false,
-  isMismatch: boolean = false
+  isMismatch: boolean = false,
+  isRotten: boolean = false
 ): AIQualityAssessment {
+  const standard = getCropQualityStandard(crop.id || crop.name, crop.category);
+
+  if (isRotten) {
+    return {
+      cropDetected: crop.name,
+      cropMatch: true,
+      suggestedGrade: 'REJECT',
+      verdict: 'REJECT',
+      rotDetected: true,
+      pestDamageDetected: false,
+      rejectionReasons: [
+        'Visible fungal mold and bacterial soft rot observed on produce surface',
+        'Tissue breakdown and necrotic black rot lesions exceed commercial market tolerance',
+      ],
+      referenceStandardMatched: standard.cropName,
+      standardCriteriaChecked: standard.rejectionDisqualifiers.slice(0, 3),
+      confidenceScore: 0.94,
+      confidenceLevel: 'High',
+      observations: [
+        'Extensive discoloration with fungal mycelium / mold patches visible',
+        'Water-soaked necrotic softening indicating progressive rot breakdown',
+        'Sample fails basic Agmark FAQ soundness criteria — not eligible for Grade A or B',
+      ],
+      qualityFactors: {
+        appearance: 'poor',
+        uniformity: 'low',
+        visible_damage: 'high',
+        discoloration: 'high',
+        freshness: 'poor',
+      },
+      limitations: [
+        'Severe fungal rot detected; lot requires segregation / disposal or deep salvage triage',
+        'Visual examination confirmed decay; physical moisture & mycotoxin testing recommended',
+      ],
+      needsManualReview: true,
+      isDemo: true,
+      analyzedAt: new Date().toISOString(),
+    };
+  }
+
   if (isMismatch) {
     return {
       cropDetected: 'Leaf Foliage / Unidentified Object',
       cropMatch: false,
-      suggestedGrade: 'B',
+      suggestedGrade: 'REJECT',
+      verdict: 'WARNING',
+      rotDetected: false,
+      pestDamageDetected: false,
+      rejectionReasons: ['Uploaded photo does not match the selected crop (' + crop.name + ')'],
+      referenceStandardMatched: standard.cropName,
+      standardCriteriaChecked: ['Crop morphology validation', 'Species visual profile comparison'],
       confidenceScore: 0.45,
       confidenceLevel: 'Low',
       observations: [
@@ -106,7 +181,13 @@ export function generateCropSpecificSampleAnalysis(
       cropDetected: crop.name,
       cropMatch: true,
       suggestedGrade: 'B',
-      confidenceScore: 0.5,
+      verdict: 'INSUFFICIENT_IMAGE',
+      rotDetected: false,
+      pestDamageDetected: false,
+      rejectionReasons: ['Photo is too blurry or low-light to detect surface mold or fine kernel texture'],
+      referenceStandardMatched: standard.cropName,
+      standardCriteriaChecked: ['Resolution check: Insufficient for micro-defect inspection'],
+      confidenceScore: 0.4,
       confidenceLevel: 'Low',
       observations: [
         'Image sharpness is low due to camera shake or focus drift',
@@ -196,6 +277,16 @@ export function generateCropSpecificSampleAnalysis(
     cropDetected: crop.name,
     cropMatch: true,
     suggestedGrade,
+    verdict: 'ACCEPT',
+    rotDetected: false,
+    pestDamageDetected: false,
+    rejectionReasons: [],
+    referenceStandardMatched: standard.cropName,
+    standardCriteriaChecked: [
+      'Checked against ' + standard.gradeB.title,
+      'Evaluated freedom from disqualifying rot: passed',
+      'Verified surface color maturity and kernel fullness',
+    ],
     confidenceScore: 0.88,
     confidenceLevel,
     observations,
@@ -211,7 +302,7 @@ export function generateCropSpecificSampleAnalysis(
       'Internal chemical composition (oil %, protein %, aflatoxin ppb) requires lab testing',
       'AI visual estimate — not an accredited laboratory certification',
     ],
-    needsManualReview: false,
+    needsManualReview: true,
     isDemo: true,
     analyzedAt: new Date().toISOString(),
   };

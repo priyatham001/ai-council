@@ -81,7 +81,7 @@ export const Footer: React.FC<FooterProps> = ({
                 <Youtube className="w-4 h-4" />
               </a>
               <a
-                href="https://wa.me/919581617315"
+                href="https://wa.me/919160365486"
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Chat with K for Kidz on WhatsApp"
@@ -172,8 +172,8 @@ export const Footer: React.FC<FooterProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-amber-400 shrink-0" />
-                <a href="tel:9581617315" className="hover:text-amber-300 font-semibold transition-colors">
-                  +91 9581617315
+                <a href="tel:9160365486" className="hover:text-amber-300 font-semibold transition-colors">
+                  +91 9160365486
                 </a>
               </div>
               <div className="flex items-center gap-2">

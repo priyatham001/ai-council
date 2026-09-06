@@ -66,7 +66,7 @@ export const AdmissionModal: React.FC<AdmissionModalProps> = ({ isOpen, onClose 
                 Enquiry Received with Joy! 🎈
               </h3>
               <p className="text-slate-600 text-sm max-w-sm mx-auto mb-6">
-                Thank you, <span className="font-semibold">{formData.parentName}</span>. Our admissions coordinator will call you at <span className="font-semibold">{formData.phone || '+91 9581617315'}</span> to schedule a fun campus discovery tour for <span className="font-semibold">{formData.childName || 'your child'}</span>!
+                Thank you, <span className="font-semibold">{formData.parentName}</span>. Our admissions coordinator will call you at <span className="font-semibold">{formData.phone || '+91 9160365486'}</span> to schedule a fun campus discovery tour for <span className="font-semibold">{formData.childName || 'your child'}</span>!
               </p>
               <button
                 id="btn-modal-done"

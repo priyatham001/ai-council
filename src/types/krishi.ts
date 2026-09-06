@@ -53,7 +53,13 @@ export interface AIQualityFactors {
 export interface AIQualityAssessment {
   cropDetected: string;
   cropMatch: boolean;
-  suggestedGrade: QualityGrade;
+  suggestedGrade: QualityGrade | 'REJECT';
+  verdict?: 'ACCEPT' | 'REJECT' | 'WARNING' | 'INSUFFICIENT_IMAGE';
+  rotDetected?: boolean;
+  pestDamageDetected?: boolean;
+  rejectionReasons?: string[];
+  referenceStandardMatched?: string;
+  standardCriteriaChecked?: string[];
   confidenceScore: number;
   confidenceLevel: 'High' | 'Medium' | 'Low';
   observations: string[];

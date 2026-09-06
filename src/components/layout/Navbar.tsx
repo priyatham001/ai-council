@@ -61,8 +61,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           🌈 <span className="font-bold">Admissions Open 2026-27!</span> Limited Seats for Playgroup, Nursery & UKG
         </span>
         <div className="flex items-center gap-4 ml-auto text-[11px]">
-          <a href="tel:9581617315" className="flex items-center gap-1 hover:text-amber-100 font-bold transition-colors">
-            <PhoneCall className="w-3 h-3" /> +91 9581617315
+          <a href="tel:9160365486" className="flex items-center gap-1 hover:text-amber-100 font-bold transition-colors">
+            <PhoneCall className="w-3 h-3" /> +91 9160365486
           </a>
           <span className="hidden md:inline">🕒 Mon - Sat: 8:00 AM - 6:30 PM</span>
         </div>
