@@ -1,862 +1,168 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  Sparkles,
-  Compass,
-  ArrowRight,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  Tractor,
-  TrendingUp,
-  MapPin,
-  RefreshCw,
-  Truck,
-  Check
-} from 'lucide-react';
-import {
-  FarmerLocation,
-  WeightUnit,
-  VehicleTypeId,
-  MarketCalculationResult,
-  FarmerSearchHistory,
+  CropSelectionState,
   Language,
-  MarketComparisonItem,
-  CropQuality,
-  BuyerProfile
-} from './types';
-import { Navbar } from './components/Navbar';
-import { LocationCard } from './components/LocationCard';
-import { CropQuantityCard } from './components/CropQuantityCard';
-import { TransportConfigCard } from './components/TransportConfigCard';
-import { RecommendationCard } from './components/RecommendationCard';
-import { MarketComparisonTable } from './components/MarketComparisonTable';
-import { MarketComparisonCharts } from './components/MarketComparisonCharts';
-import { MarketMapVisualizer } from './components/MarketMapVisualizer';
-import { AIInsightsCard } from './components/AIInsightsCard';
-import { PriceDiscoveryView } from './components/PriceDiscoveryView';
-import { PriceTrendsView } from './components/PriceTrendsView';
-import { NearbyBuyersView } from './components/NearbyBuyersView';
-import { TransportView } from './components/TransportView';
-import { HistoryView } from './components/HistoryView';
-import { AdminPanelView } from './components/AdminPanelView';
-import { HelpView } from './components/HelpView';
-import { LanguageScreen } from './components/LanguageScreen';
-import { OnboardingModal } from './components/OnboardingModal';
-import { BuyerOfferModal } from './components/BuyerOfferModal';
-import { AgricultureHeroAnimation } from './components/animations/AgricultureHeroAnimation';
-import { FarmToMarketFlow } from './components/animations/FarmToMarketFlow';
-import { CropVisualBanner } from './components/animations/CropVisualBanner';
-import { TransportRouteAnimation } from './components/animations/TransportRouteAnimation';
-import { MarketJourneyAnimation } from './components/animations/MarketJourneyAnimation';
-import { Page1Language } from './components/farmer-flow/Page1Language';
-import { Page2FarmLocation } from './components/farmer-flow/Page2FarmLocation';
-import { Page3CropDetails } from './components/farmer-flow/Page3CropDetails';
-import { Page4MarketAnalysis } from './components/farmer-flow/Page4MarketAnalysis';
-import { Page5BestOption } from './components/farmer-flow/Page5BestOption';
-import { FarmerHeader } from './components/farmer-flow/FarmerHeader';
-import {
-  CROPS_CATALOG,
-  convertToQuintals,
-  rankMarketsForFarmer,
-  generateDeterministicAIInsight
-} from './lib/krishi-data-client';
-import { getTranslation } from './lib/translations';
+  LocationData,
+  MarketAnalysisResult,
+} from './types/krishi';
+import { CROP_DATABASE } from './data/cropsData';
+import { Header } from './components/common/Header';
+import { LocationSelector } from './components/step1/LocationSelector';
+import { CropDetailsStep } from './components/step2/CropDetailsStep';
+import { MarketComparisonStep } from './components/step3/MarketComparisonStep';
+import { DealSummaryStep } from './components/step4/DealSummaryStep';
 
-export type FarmerFlowStep =
-  | 'page1_language'
-  | 'page2_location'
-  | 'page3_crop'
-  | 'page4_analysis'
-  | 'page5_best_option'
-  | 'dashboard';
+export const App: React.FC = () => {
+  // Global Language state (English, Hindi, Marathi, Telugu)
+  const [language, setLanguage] = useState<Language>('en');
 
-export default function App() {
-  const [currentTab, setCurrentTab] = useState('find');
-  const [language, setLanguage] = useState<Language>('te'); // Default to Telugu as priority regional demonstration
-  const [isDemoMode, setIsDemoMode] = useState(true);
+  // Step Navigation: 1 (Location) -> 2 (Crop Details) -> 3 (Market Comparison) -> 4 (Deal Summary)
+  const [currentStep, setCurrentStep] = useState<number>(2); // Start directly on Step 2 as requested!
 
-  // Progressive Farmer-First Flow Step
-  const [farmerFlowStep, setFarmerFlowStep] = useState<FarmerFlowStep>('page1_language');
-  const [farmerName, setFarmerName] = useState<string>('');
-
-  // First-run experience states
-  const [hasSelectedLanguage, setHasSelectedLanguage] = useState<boolean>(true);
-  const [hasOnboarded, setHasOnboarded] = useState<boolean>(true);
-  const [showLanguageModal, setShowLanguageModal] = useState<boolean>(false);
-
-  // Form State
-  const [farmerLocation, setFarmerLocation] = useState<FarmerLocation>({
+  // Location State (Default: Bhimavaram, West Godavari, AP — dynamically changeable to any location in India)
+  const [location, setLocation] = useState<LocationData>({
+    latitude: 16.5449,
+    longitude: 81.5212,
+    country: 'India',
     state: 'Andhra Pradesh',
     district: 'West Godavari',
-    villageOrTown: 'Bhimavaram',
-    lat: 16.5449,
-    lng: 81.5212,
-    isGps: false,
-    isDemo: true
+    city: 'Bhimavaram',
+    formattedAddress: 'Bhimavaram, West Godavari, Andhra Pradesh, India',
+    source: 'search',
   });
 
-  const [selectedCropId, setSelectedCropId] = useState('paddy');
-  const [customCropName, setCustomCropName] = useState('');
-  const [quantity, setQuantity] = useState(10);
-  const [unit, setUnit] = useState<WeightUnit>('quintal');
-  const [vehicleType, setVehicleType] = useState<VehicleTypeId>('mini_truck');
-  const [customRatePerKm, setCustomRatePerKm] = useState(22);
-  const [isRoundTrip, setIsRoundTrip] = useState(false);
-
-  // Quality & Grading State
-  const [quality, setQuality] = useState<CropQuality>({
-    grade: 'Grade B',
-    moisturePct: 12,
-    packagingType: 'Gunny Bags (50kg)',
-    priceModifierPct: 0
+  // Step 2 Crop Selection State
+  const defaultPaddyCrop = CROP_DATABASE.find((c) => c.id === 'paddy') || CROP_DATABASE[0];
+  const [cropState, setCropState] = useState<CropSelectionState>({
+    selectedCrop: defaultPaddyCrop,
+    customCropName: '',
+    quantityValue: 10,
+    quantityUnit: 'quintal',
+    normalizedKilograms: 1000, // 10 quintals = 1,000 kg
+    qualityGrade: 'B',
+    qualitySource: 'manual',
+    qualityConfirmed: true,
+    aiAssessment: null,
   });
 
-  // Direct offer modal state
-  const [offerTarget, setOfferTarget] = useState<{
-    buyer?: BuyerProfile;
-    market?: MarketComparisonItem;
-  } | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // Step 3 Selected Market Result for Step 4 Deal Slip
+  const [selectedMarketResult, setSelectedMarketResult] = useState<MarketAnalysisResult | null>(null);
 
-  // Results State
-  const [isCalculating, setIsCalculating] = useState(false);
-  const [calcStage, setCalcStage] = useState(0);
-  const [calculationResult, setCalculationResult] = useState<MarketCalculationResult | null>(null);
-  const [historyList, setHistoryList] = useState<FarmerSearchHistory[]>([]);
+  // Hard Gate validation check
+  const isCropValid =
+    Boolean(cropState.selectedCrop && cropState.selectedCrop.id !== 'other_custom') ||
+    Boolean(cropState.customCropName.trim().length > 0);
 
-  const t = getTranslation(language);
+  const isQuantityValid =
+    typeof cropState.quantityValue === 'number' && cropState.quantityValue > 0;
 
-  // Check initial first-run state from localStorage
-  useEffect(() => {
-    try {
-      const storedLangSelected = localStorage.getItem('krishisetu_language_selected');
-      const storedLang = localStorage.getItem('krishisetu_language');
-      const storedOnboarded = localStorage.getItem('krishisetu_onboarded');
+  const isQualityValid =
+    Boolean(cropState.qualityGrade) && cropState.qualityConfirmed;
 
-      if (!storedLangSelected) {
-        setHasSelectedLanguage(false);
-      } else if (storedLang) {
-        setLanguage(storedLang as Language);
-      }
+  const canNavigateToStep3 = isCropValid && isQuantityValid && isQualityValid;
 
-      if (storedLangSelected && !storedOnboarded) {
-        setHasOnboarded(false);
-      }
-    } catch (e) {
-      // LocalStorage access fallback
+  const handleUpdateCropState = (newState: Partial<CropSelectionState>) => {
+    setCropState((prev) => ({
+      ...prev,
+      ...newState,
+    }));
+  };
+
+  const handleStepClick = (targetStep: number) => {
+    if (targetStep === 3 && !canNavigateToStep3) {
+      // Hard gate prevents reaching Step 3 if incomplete
+      setCurrentStep(2);
+      return;
     }
-
-    runCalculation(false);
-    fetchHistory();
-  }, []);
-
-  const handleLanguageSelect = (lang: Language) => {
-    setLanguage(lang);
-    setHasSelectedLanguage(true);
-    try {
-      localStorage.setItem('krishisetu_language', lang);
-      localStorage.setItem('krishisetu_language_selected', 'true');
-    } catch (e) {}
-
-    // If not onboarded yet, show onboarding
-    const storedOnboarded = localStorage.getItem('krishisetu_onboarded');
-    if (!storedOnboarded) {
-      setHasOnboarded(false);
+    if (targetStep === 4 && !selectedMarketResult) {
+      setCurrentStep(3);
+      return;
     }
+    setCurrentStep(targetStep);
   };
 
-  const handleOnboardingComplete = (location: FarmerLocation, _name?: string) => {
-    setFarmerLocation(location);
-    setHasOnboarded(true);
-    try {
-      localStorage.setItem('krishisetu_onboarded', 'true');
-    } catch (e) {}
-    runCalculation(true);
-  };
-
-  const fetchHistory = async () => {
-    try {
-      const res = await fetch('/api/history');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.history) setHistoryList(data.history);
-      }
-    } catch (err) {
-      console.warn('Could not fetch server history, using local state:', err);
-    }
-  };
-
-  const runCalculation = async (showProgress = true) => {
-    if (showProgress) {
-      setIsCalculating(true);
-      setCalcStage(1);
-      await new Promise((r) => setTimeout(r, 200));
-      setCalcStage(2);
-      await new Promise((r) => setTimeout(r, 200));
-      setCalcStage(3);
-      await new Promise((r) => setTimeout(r, 200));
-    }
-
-    try {
-      // 1. First attempt to call the server endpoint
-      const response = await fetch('/api/recommend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          farmerLocation,
-          cropId: selectedCropId,
-          quantity,
-          unit,
-          vehicleType,
-          customRatePerKm,
-          isRoundTrip,
-          quality
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCalculationResult(data);
-        fetchHistory();
-      } else {
-        // Fallback to client-side engine if server route has issue
-        runClientFallback();
-      }
-    } catch (err) {
-      console.warn('API error, falling back to local client engine:', err);
-      runClientFallback();
-    } finally {
-      setIsCalculating(false);
-      setCalcStage(0);
-    }
-  };
-
-  const runClientFallback = () => {
-    const qtl = convertToQuintals(quantity, unit);
-    const crop =
-      CROPS_CATALOG.find((c) => c.id === selectedCropId) || CROPS_CATALOG[0];
-
-    const calculation = rankMarketsForFarmer(
-      farmerLocation,
-      selectedCropId,
-      quantity,
-      unit,
-      vehicleType,
-      isRoundTrip,
-      customRatePerKm,
-      quality
-    );
-
-    const aiInsight = generateDeterministicAIInsight(
-      crop,
-      qtl,
-      calculation.rankedMarkets,
-      vehicleType,
-      isRoundTrip,
-      quality
-    );
-
-    const result: MarketCalculationResult = {
-      crop,
-      quantityInQuintals: qtl,
-      rankedMarkets: calculation.rankedMarkets,
-      recommendedMarket: calculation.recommendedMarket,
-      aiInsight
-    };
-
-    setCalculationResult(result);
-  };
-
-  // Demo Scenario Handler (One-click quick demo for reviewers)
-  const handleLoadDemoScenario = () => {
-    setFarmerLocation({
-      state: 'Andhra Pradesh',
-      district: 'West Godavari',
-      villageOrTown: 'Bhimavaram',
-      lat: 16.5449,
-      lng: 81.5212,
-      isGps: false,
-      isDemo: true
-    });
-    setSelectedCropId('paddy');
-    setQuantity(10);
-    setUnit('quintal');
-    setVehicleType('mini_truck');
-    setCustomRatePerKm(22);
-    setIsRoundTrip(false);
-    setQuality({
-      grade: 'Grade A',
-      moisturePct: 11.5,
-      packagingType: 'Gunny Bags (50kg)',
-      priceModifierPct: 5
-    });
-    setCurrentTab('find');
-    runCalculation(true);
-  };
-
-  const handleSelectCropAndMarket = (cropId: string, _marketId: string) => {
-    setSelectedCropId(cropId);
-    setCurrentTab('find');
-    runCalculation(true);
-  };
-
-  const handleDeleteHistory = async (id: string) => {
-    try {
-      await fetch(`/api/history/${id}`, { method: 'DELETE' });
-    } catch (e) {
-      // ignore
-    }
-    setHistoryList((prev) => prev.filter((h) => h.id !== id));
-  };
-
-  const handleSelectHistoryItem = (item: FarmerSearchHistory) => {
-    const matchedCrop = CROPS_CATALOG.find(
-      (c) => c.name.toLowerCase() === item.cropName.toLowerCase()
-    );
-    if (matchedCrop) setSelectedCropId(matchedCrop.id);
-    setQuantity(item.quantity);
-    setUnit(item.unit);
-    setCurrentTab('find');
-    runCalculation(true);
-  };
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 6000);
-  };
-
-  const stagesText = [
-    '',
-    'Finding regional APMC mandis within operating radius...',
-    'Fetching electronic board rates and calculating road freight...',
-    'Ranking markets by estimated net return and synthesizing AI insights...'
-  ];
-
-  // 1. PAGE 1: Language Selection (Zero clutter, calm background visual, prominent language cards)
-  if (farmerFlowStep === 'page1_language') {
-    return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
-        <Page1Language
-          currentLanguage={language}
-          onSelectLanguage={(lang) => {
-            setLanguage(lang);
-            try {
-              localStorage.setItem('krishisetu_language', lang);
-            } catch (e) {}
-          }}
-          onContinue={() => setFarmerFlowStep('page2_location')}
-        />
-      </div>
-    );
-  }
-
-  // 2. PAGE 2: Farmer Name + Farm Location (GPS pulse animation, search, manual selection)
-  if (farmerFlowStep === 'page2_location') {
-    return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
-        <FarmerHeader
-          language={language}
-          onSelectLanguage={setLanguage}
-          farmerName={farmerName}
-          location={farmerLocation}
-          currentStep={1}
-          onRestartFlow={() => setFarmerFlowStep('page1_language')}
-          onNavigateToTab={(tab) => {
-            setCurrentTab(tab);
-            setFarmerFlowStep('dashboard');
-          }}
-        />
-        <main className="flex-1 py-4">
-          <Page2FarmLocation
-            farmerName={farmerName}
-            setFarmerName={setFarmerName}
-            location={farmerLocation}
-            setLocation={setFarmerLocation}
-            language={language}
-            onNext={() => setFarmerFlowStep('page3_crop')}
-            onBack={() => setFarmerFlowStep('page1_language')}
-          />
-        </main>
-      </div>
-    );
-  }
-
-  // 3. PAGE 3: Crop + Quantity + Quality (Adaptive crop visual, search, categories, large quantity, grades)
-  if (farmerFlowStep === 'page3_crop') {
-    return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
-        <FarmerHeader
-          language={language}
-          onSelectLanguage={setLanguage}
-          farmerName={farmerName}
-          location={farmerLocation}
-          currentStep={2}
-          onRestartFlow={() => setFarmerFlowStep('page1_language')}
-          onNavigateToTab={(tab) => {
-            setCurrentTab(tab);
-            setFarmerFlowStep('dashboard');
-          }}
-        />
-        <main className="flex-1 py-4">
-          <Page3CropDetails
-            selectedCropId={selectedCropId}
-            setSelectedCropId={setSelectedCropId}
-            customCropName={customCropName}
-            setCustomCropName={setCustomCropName}
-            quantity={quantity}
-            setQuantity={setQuantity}
-            unit={unit}
-            setUnit={setUnit}
-            quality={quality}
-            setQuality={setQuality}
-            language={language}
-            onNext={() => setFarmerFlowStep('page4_analysis')}
-            onBack={() => setFarmerFlowStep('page2_location')}
-          />
-        </main>
-      </div>
-    );
-  }
-
-  // 4. PAGE 4: Market Analysis (Compact summary + [ Find Best Market ] triggering 8-stage decision animation)
-  if (farmerFlowStep === 'page4_analysis') {
-    const activeCrop =
-      CROPS_CATALOG.find((c) => c.id === selectedCropId) || CROPS_CATALOG[0];
-    return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
-        <FarmerHeader
-          language={language}
-          onSelectLanguage={setLanguage}
-          farmerName={farmerName}
-          location={farmerLocation}
-          currentStep={3}
-          onRestartFlow={() => setFarmerFlowStep('page1_language')}
-          onNavigateToTab={(tab) => {
-            setCurrentTab(tab);
-            setFarmerFlowStep('dashboard');
-          }}
-        />
-        <main className="flex-1 py-4">
-          <Page4MarketAnalysis
-            location={farmerLocation}
-            crop={activeCrop}
-            customCropName={customCropName}
-            quantityInQuintals={convertToQuintals(quantity, unit)}
-            grade={quality.grade}
-            language={language}
-            onStartAnalysis={() => runCalculation(false)}
-            onComplete={() => setFarmerFlowStep('page5_best_option')}
-            onBack={() => setFarmerFlowStep('page3_crop')}
-          />
-        </main>
-      </div>
-    );
-  }
-
-  // 5. PAGE 5: Best Selling Option (⭐ BEST OPTION, Net Return, Why, Compact flow, Expandable accordions)
-  if (farmerFlowStep === 'page5_best_option') {
-    const activeCrop =
-      CROPS_CATALOG.find((c) => c.id === selectedCropId) || CROPS_CATALOG[0];
-    const calc = rankMarketsForFarmer(
-      farmerLocation,
-      selectedCropId,
-      quantity,
-      unit,
-      vehicleType,
-      isRoundTrip,
-      customRatePerKm,
-      quality
-    );
-    const resolvedResult: MarketCalculationResult = calculationResult || {
-      crop: activeCrop,
-      quantityInQuintals: convertToQuintals(quantity, unit),
-      rankedMarkets: calc.rankedMarkets,
-      recommendedMarket: calc.recommendedMarket,
-      aiInsight: generateDeterministicAIInsight(
-        activeCrop,
-        convertToQuintals(quantity, unit),
-        calc.rankedMarkets,
-        vehicleType,
-        isRoundTrip,
-        quality
-      )
-    };
-
-    return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
-        <FarmerHeader
-          language={language}
-          onSelectLanguage={setLanguage}
-          farmerName={farmerName}
-          location={farmerLocation}
-          currentStep={4}
-          onRestartFlow={() => setFarmerFlowStep('page1_language')}
-          onNavigateToTab={(tab) => {
-            setCurrentTab(tab);
-            setFarmerFlowStep('dashboard');
-          }}
-        />
-        <main className="flex-1 py-4">
-          <Page5BestOption
-            calculationResult={resolvedResult}
-            farmerLocation={farmerLocation}
-            vehicleType={vehicleType}
-            language={language}
-            onRestart={() => setFarmerFlowStep('page3_crop')}
-            onOpenFullDashboard={() => setFarmerFlowStep('dashboard')}
-            onContactBuyer={(mkt) => {
-              setOfferTarget({ market: resolvedResult.recommendedMarket });
-            }}
-          />
-        </main>
-      </div>
-    );
-  }
-
-  // FULL DASHBOARD VIEW (Available when farmer wants advanced tools)
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
-      {/* Farmer Onboarding Modal if pending */}
-      {!hasOnboarded && (
-        <OnboardingModal
-          language={language}
-          onComplete={handleOnboardingComplete}
-        />
-      )}
-
-      {/* Language Switcher Modal when requested */}
-      {showLanguageModal && (
-        <LanguageScreen
-          isModal={true}
-          currentLanguage={language}
-          onSelectLanguage={(lang) => {
-            setLanguage(lang);
-            try {
-              localStorage.setItem('krishisetu_language', lang);
-            } catch (e) {}
-            setShowLanguageModal(false);
-          }}
-          onClose={() => setShowLanguageModal(false)}
-        />
-      )}
-
-      {/* Direct Buyer / Market Offer Modal */}
-      {offerTarget && (
-        <BuyerOfferModal
-          buyer={offerTarget.buyer}
-          market={offerTarget.market}
-          cropName={calculationResult?.crop.name || 'Harvest Lot'}
-          quantity={quantity}
-          unit={unit}
-          onClose={() => setOfferTarget(null)}
-          onSuccess={(msg) => showToast(msg)}
-        />
-      )}
-
-      {/* Navigation Header */}
-      <Navbar
-        currentTab={currentTab}
-        setCurrentTab={setCurrentTab}
+    <div className="min-h-screen bg-stone-50 flex flex-col selection:bg-emerald-200 selection:text-emerald-950 font-sans">
+      {/* Persistent Header with Language & Location controls */}
+      <Header
         language={language}
-        setLanguage={(l) => {
-          setLanguage(l);
-          try {
-            localStorage.setItem('krishisetu_language', l);
-          } catch (e) {}
-        }}
-        isDemoMode={isDemoMode}
-        onLoadDemoScenario={handleLoadDemoScenario}
-        onOpenLanguageModal={() => setShowLanguageModal(true)}
-        onSwitchToSimpleMode={() => setFarmerFlowStep('page2_location')}
+        onLanguageChange={setLanguage}
+        currentStep={currentStep}
+        onStepClick={handleStepClick}
+        location={location}
+        onChangeLocationClick={() => setCurrentStep(1)}
+        canNavigateToStep3={canNavigateToStep3}
       />
 
-      {/* Quick Return to Guided Assistant Banner */}
-      <div className="bg-emerald-50 border-b border-emerald-100 px-4 py-2">
-        <div className="max-w-7xl mx-auto flex items-center justify-between text-xs">
-          <span className="text-emerald-900 font-medium">
-            🌾 Want a simpler, step-by-step experience?
-          </span>
-          <button
-            onClick={() => setFarmerFlowStep('page2_location')}
-            className="text-emerald-700 hover:text-emerald-950 font-bold underline cursor-pointer"
-          >
-            Open 5-Step Farmer Assistant →
-          </button>
-        </div>
-      </div>
-
-      {/* Global Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-20 right-4 z-50 max-w-md bg-emerald-900 text-white p-4 rounded-2xl shadow-xl border border-emerald-700 flex items-start gap-3 animate-in fade-in slide-in-from-top-4">
-          <CheckCircle2 className="w-5 h-5 text-emerald-300 shrink-0 mt-0.5" />
-          <div className="text-xs">
-            <p className="font-bold text-sm text-emerald-200">Action Complete</p>
-            <p className="mt-0.5 text-emerald-50 leading-relaxed">{toastMessage}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Tab 1: Primary Discovery Workspace */}
-        {currentTab === 'find' && (
-          <div className="space-y-6">
-            {/* 1. Agricultural Hero Scene & Panorama */}
-            <AgricultureHeroAnimation
-              language={language}
-              onStartDiscovery={() => {
-                const el = document.getElementById('discovery-config-grid');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-                runCalculation(true);
-              }}
-              onStartDemo={handleLoadDemoScenario}
-              onExplorePrices={() => setCurrentTab('prices')}
-            />
-
-            {/* 2. Farm-to-Market Journey Flow Graphic */}
-            <FarmToMarketFlow
-              language={language}
-              currentStep={calculationResult ? 5 : 2}
-            />
-
-            {/* 3. Contextual Crop Visual & Agricultural Profile */}
-            {calculationResult?.crop && (
-              <CropVisualBanner
-                crop={calculationResult.crop}
-                language={language}
-              />
-            )}
-
-            {/* Top Interactive Configuration Grid */}
-            <div id="discovery-config-grid" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start scroll-mt-20">
-              {/* Left Column: Farm Location & Vehicle Logistics (5 Cols) */}
-              <div className="lg:col-span-5 space-y-6">
-                <LocationCard
-                  location={farmerLocation}
-                  setLocation={(newLoc) => {
-                    setFarmerLocation(newLoc);
-                    // Proactively recalculate recommendations when location updates
-                    setTimeout(() => runCalculation(true), 50);
-                  }}
-                  language={language}
-                />
-
-                <TransportConfigCard
-                  vehicleType={vehicleType}
-                  setVehicleType={setVehicleType}
-                  customRatePerKm={customRatePerKm}
-                  setCustomRatePerKm={setCustomRatePerKm}
-                  isRoundTrip={isRoundTrip}
-                  setIsRoundTrip={setIsRoundTrip}
-                  quantityInQuintals={convertToQuintals(quantity, unit)}
-                  language={language}
-                />
-              </div>
-
-              {/* Right Column: Crop, Quality & Harvest Batch (7 Cols) */}
-              <div className="lg:col-span-7 space-y-6">
-                <CropQuantityCard
-                  selectedCropId={selectedCropId}
-                  setSelectedCropId={setSelectedCropId}
-                  customCropName={customCropName}
-                  setCustomCropName={setCustomCropName}
-                  quantity={quantity}
-                  setQuantity={setQuantity}
-                  unit={unit}
-                  setUnit={setUnit}
-                  quality={quality}
-                  setQuality={setQuality}
-                  language={language}
-                />
-
-                {/* Primary Action Button */}
-                <div className="pt-1">
-                  <button
-                    onClick={() => runCalculation(true)}
-                    disabled={isCalculating}
-                    className="w-full py-4 px-6 bg-linear-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white rounded-2xl text-base font-bold shadow-lg shadow-emerald-700/20 transition-all flex items-center justify-center gap-3 cursor-pointer group disabled:opacity-75"
-                  >
-                    {isCalculating ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>{stagesText[calcStage] || 'Calculating...'}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Compass className="w-5 h-5 group-hover:rotate-45 transition-transform" />
-                        <span>{t.btnFindBestMarket}</span>
-                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
-                  </button>
-
-                  <div className="mt-2 text-center text-[11px] text-gray-500">
-                    Calculates road distance, transport freight, quality grade premium, and mandi charges for maximum net pocket return.
-                  </div>
-                </div>
-
-                {/* Market Journey In-Progress Animation */}
-                {isCalculating && (
-                  <MarketJourneyAnimation language={language} />
-                )}
-              </div>
-            </div>
-
-            {/* Results Section */}
-            {calculationResult && (
-              <div className="space-y-8 pt-4 border-t border-gray-200">
-                {/* Visual Transport Route Animation */}
-                <TransportRouteAnimation
-                  farmerTown={farmerLocation.villageOrTown}
-                  marketName={calculationResult.recommendedMarket.marketName}
-                  distanceKm={calculationResult.recommendedMarket.distanceKm}
-                  vehicleType={vehicleType}
-                  transportCost={calculationResult.recommendedMarket.transportCost}
-                  isRoundTrip={isRoundTrip}
-                  language={language}
-                />
-
-                {/* 1. Star Recommendation Card */}
-                <RecommendationCard
-                  recommendedMarket={calculationResult.recommendedMarket}
-                  cropName={calculationResult.crop.name}
-                  quantityInQuintals={calculationResult.quantityInQuintals}
-                  language={language}
-                  onCompareAgain={() => runCalculation(true)}
-                  onContactBuyer={(mkt) => setOfferTarget({ market: mkt })}
-                  onGetDirections={(mkt) => {
-                    const url = `https://www.google.com/maps/dir/?api=1&destination=${mkt.lat},${mkt.lng}`;
-                    window.open(url, '_blank');
-                  }}
-                  onViewDetails={(_mkt) => {
-                    const el = document.getElementById('comparison-table-section');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                />
-
-                {/* 2. Visual Comparison Charts */}
-                <MarketComparisonCharts
-                  markets={calculationResult.rankedMarkets}
-                  language={language}
-                />
-
-                {/* 3. Ranked Markets Table */}
-                <div id="comparison-table-section">
-                  <MarketComparisonTable
-                    markets={calculationResult.rankedMarkets}
-                    quantityInQuintals={calculationResult.quantityInQuintals}
-                    language={language}
-                    onSelectMarket={(mkt) => setOfferTarget({ market: mkt })}
-                  />
-                </div>
-
-                {/* 4. Interactive Route & Logistics Map */}
-                <MarketMapVisualizer
-                  farmerLocation={farmerLocation}
-                  markets={calculationResult.rankedMarkets}
-                  language={language}
-                />
-
-                {/* 5. AI Insights & Multi-Model Synthesis Card */}
-                <AIInsightsCard
-                  insightResult={calculationResult.aiInsight}
-                  language={language}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 2: Market Prices Discovery */}
-        {currentTab === 'prices' && (
-          <PriceDiscoveryView
-            farmerLocation={farmerLocation}
+      {/* Main Flow Pages */}
+      <main className="flex-1">
+        {currentStep === 1 && (
+          <LocationSelector
             language={language}
-            onSelectCropAndMarket={handleSelectCropAndMarket}
-          />
-        )}
-
-        {/* Tab 3: Nearby Verified Buyers */}
-        {currentTab === 'buyers' && (
-          <NearbyBuyersView
-            language={language}
-            onSelectBuyerCrop={(cropId) => {
-              setSelectedCropId(cropId);
-              setCurrentTab('find');
-              runCalculation(true);
+            currentLocation={location}
+            onSelectLocation={(newLoc) => {
+              setLocation(newLoc);
+              setCurrentStep(2);
             }}
-            onConnectBuyer={(buyer) => {
-              setOfferTarget({ buyer });
-            }}
+            onContinue={() => setCurrentStep(2)}
           />
         )}
 
-        {/* Tab 4: Farm Logistics & Transporters Linkage */}
-        {currentTab === 'transport' && (
-          <TransportView language={language} />
-        )}
-
-        {/* Tab 5: Historical Price Trends & Forecast */}
-        {currentTab === 'trends' && (
-          <PriceTrendsView language={language} />
-        )}
-
-        {/* Tab 6: AI Insights Full View */}
-        {currentTab === 'ai' && calculationResult && (
-          <div className="space-y-6">
-            <AIInsightsCard
-              insightResult={calculationResult.aiInsight}
-              language={language}
-            />
-          </div>
-        )}
-
-        {/* Tab 7: Calculation History */}
-        {currentTab === 'history' && (
-          <HistoryView
-            history={historyList}
+        {currentStep === 2 && (
+          <CropDetailsStep
             language={language}
-            onSelectHistoryItem={handleSelectHistoryItem}
-            onDeleteHistoryItem={handleDeleteHistory}
+            cropState={cropState}
+            onUpdateCropState={handleUpdateCropState}
+            onContinue={() => {
+              if (canNavigateToStep3) {
+                setCurrentStep(3);
+              }
+            }}
+            onBack={() => setCurrentStep(1)}
           />
         )}
 
-        {/* Tab 8: Admin Panel */}
-        {currentTab === 'admin' && (
-          <AdminPanelView language={language} />
+        {currentStep === 3 && (
+          <MarketComparisonStep
+            language={language}
+            location={location}
+            cropState={cropState}
+            onSelectMarketForDeal={(mktResult) => {
+              setSelectedMarketResult(mktResult);
+              setCurrentStep(4);
+            }}
+            onBack={() => setCurrentStep(2)}
+          />
         )}
 
-        {/* Tab 9: Help & Net Return Transparency Guide */}
-        {currentTab === 'help' && (
-          <HelpView language={language} />
+        {currentStep === 4 && selectedMarketResult && (
+          <DealSummaryStep
+            language={language}
+            location={location}
+            cropState={cropState}
+            marketResult={selectedMarketResult}
+            onRestart={() => {
+              setCurrentStep(2);
+            }}
+            onBack={() => setCurrentStep(3)}
+          />
         )}
       </main>
 
-      {/* Footer with SIH 2026 Problem Statement Attributions */}
-      <footer className="bg-white border-t border-gray-200 py-6 text-xs text-gray-500 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Tractor className="w-4 h-4 text-emerald-600" />
-            <span className="font-semibold text-gray-800">
-              Smart Krishi Market (KrishiSetu)
-            </span>
-            <span>• Smart India Hackathon 2026 (SIH26132)</span>
-          </div>
-
-          <div className="flex items-center gap-4 text-gray-500">
-            <button
-              onClick={() => setShowLanguageModal(true)}
-              className="text-emerald-700 hover:text-emerald-900 font-semibold cursor-pointer underline underline-offset-2"
-            >
-              Change Language ({language.toUpperCase()})
-            </button>
-            <span>•</span>
-            <span>Government of Maharashtra Prototype</span>
-          </div>
+      {/* Simple Farmer-First Footer */}
+      <footer className="bg-stone-900 text-stone-400 text-xs py-6 border-t border-stone-800">
+        <div className="max-w-7xl mx-auto px-4 text-center space-y-2">
+          <p className="font-semibold text-stone-300">
+            🌾 KrishiSetu • Farmer Crop to Market Intelligence Platform
+          </p>
+          <p className="text-[11px] text-stone-500 max-w-2xl mx-auto">
+            Providing transparent mandi price discovery, deterministic quality grade adjustments, and route optimization across India.
+            AI quality assessments are surface estimates and do not replace certified physical laboratory testing.
+          </p>
         </div>
       </footer>
     </div>
   );
-}
+};
+
+export default App;

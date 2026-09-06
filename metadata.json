@@ -1,6 +1,11 @@
 {
-  "name": "Smart Krishi Market (KrishiSetu)",
-  "description": "Smart Krishi Market - Strengthening market linkages and price discovery for farmers (SIH26132)",
-  "requestFramePermissions": ["geolocation"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "KrishiSetu - Kisan Crop & Market Platform",
+  "description": "Farmer-first crop-to-market discovery platform with AI crop quality camera, deterministic pricing, and India-wide Google Maps market routing.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
