@@ -10,7 +10,7 @@ import {
 import { CROP_DATABASE, filterCrops } from '../../data/cropsData';
 import { TRANSLATIONS } from '../../utils/i18n';
 import { normalizeToKilograms } from '../../utils/pricing';
-import { analyzeCropPhoto, generateCropSpecificSampleAnalysis } from '../../services/cropVisionService';
+import { analyzeCropPhoto, preValidateImage } from '../../services/cropVisionService';
 import { ReferenceStandardsModal } from './ReferenceStandardsModal';
 import { WebcamCaptureModal } from './WebcamCaptureModal';
 import {
@@ -29,6 +29,8 @@ import {
   X,
   BookOpen,
   FileCheck,
+  Eye,
+  Sliders,
 } from 'lucide-react';
 
 interface CropDetailsStepProps {
@@ -38,6 +40,15 @@ interface CropDetailsStepProps {
   onContinue: () => void;
   onBack: () => void;
 }
+
+// Multi-stage analysis animation steps
+const ANALYSIS_STEPS = [
+  { step: 1, title: 'Reading crop image pixels & clarity...', durationMs: 700 },
+  { step: 2, title: 'Verifying crop species & identity...', durationMs: 800 },
+  { step: 3, title: 'Inspecting surface (rot, mold, pest, freshness)...', durationMs: 900 },
+  { step: 4, title: 'Benchmarking against Agmark Mandi visual criteria...', durationMs: 800 },
+  { step: 5, title: 'Finalizing visual quality assessment...', durationMs: 500 },
+];
 
 export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
   language,
@@ -55,28 +66,28 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
     cropState.selectedCrop?.id === 'other_custom' || Boolean(cropState.customCropName)
   );
 
-  // AI Camera & Modal state
-  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  // Modals & inputs
   const [isWebcamModalOpen, setIsWebcamModalOpen] = useState(false);
   const [isStandardsModalOpen, setIsStandardsModalOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [capturedImage, setCapturedImage] = useState<string | null>(cropState.aiAssessment?.imageUrl || null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(cropState.cropPhoto || cropState.aiAssessment?.imageUrl || null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisCurrentStep, setAnalysisCurrentStep] = useState(1);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [showWhyExpander, setShowWhyExpander] = useState(true);
 
   // Validation / Hard Gate tracking & scroll anchors
   const [showValidationAlert, setShowValidationAlert] = useState(false);
   const cropSectionRef = useRef<HTMLDivElement>(null);
   const quantitySectionRef = useRef<HTMLDivElement>(null);
+  const photoSectionRef = useRef<HTMLDivElement>(null);
   const qualitySectionRef = useRef<HTMLDivElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter crops using single reusable function
+  // Filter crops
   const filteredCrops = filterCrops(CROP_DATABASE, selectedCategory, searchQuery);
 
-  // Validation rules
+  // Validation rules: Photo is MANDATORY!
   const isCropValid =
     Boolean(cropState.selectedCrop && cropState.selectedCrop.id !== 'other_custom') ||
     (isOtherCropSelected && cropState.customCropName.trim().length > 0);
@@ -84,10 +95,12 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
   const isQuantityValid =
     typeof cropState.quantityValue === 'number' && cropState.quantityValue > 0;
 
+  const isPhotoValid = Boolean(capturedImage || cropState.cropPhoto);
+
   const isQualityValid =
     Boolean(cropState.qualityGrade) && cropState.qualityConfirmed;
 
-  const isCompleteAndReady = isCropValid && isQuantityValid && isQualityValid;
+  const isCompleteAndReady = isCropValid && isQuantityValid && isPhotoValid && isQualityValid;
 
   // Handle Crop Selection (invalidates previous quality if crop changed)
   const handleSelectCrop = (crop: CropItem) => {
@@ -95,7 +108,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
     onUpdateCropState({
       selectedCrop: crop,
       customCropName: '',
-      // Invalidate previous quality verification if crop changes
+      cropPhoto: null,
       qualityGrade: null,
       qualitySource: null,
       qualityConfirmed: false,
@@ -130,11 +143,13 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
 
     onUpdateCropState({
       selectedCrop: customCropItem,
+      cropPhoto: null,
       qualityGrade: null,
       qualitySource: null,
       qualityConfirmed: false,
       aiAssessment: null,
     });
+    setCapturedImage(null);
   };
 
   const handleCustomCropNameChange = (name: string) => {
@@ -190,7 +205,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
     });
   };
 
-  // Manual Quality selection
+  // Manual Quality selection (Farmer Confirmation)
   const handleSelectManualGrade = (grade: QualityGrade) => {
     onUpdateCropState({
       qualityGrade: grade,
@@ -207,7 +222,6 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
       return;
     }
 
-    // Incomplete — trigger hard gate warning & scroll to first missing section
     setShowValidationAlert(true);
 
     if (!isCropValid) {
@@ -216,6 +230,10 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
     }
     if (!isQuantityValid) {
       quantitySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    if (!isPhotoValid) {
+      photoSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     if (!isQualityValid) {
@@ -232,7 +250,6 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
       return;
     }
 
-    // Check if touch / mobile device
     const isMobile =
       /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
       (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1);
@@ -240,7 +257,6 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
     if (isMobile) {
       cameraInputRef.current?.click();
     } else {
-      // On desktop, open live webcam modal if supported
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         setIsWebcamModalOpen(true);
       } else {
@@ -268,15 +284,17 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
     reader.onload = async () => {
       const base64Data = reader.result as string;
       setCapturedImage(base64Data);
+      onUpdateCropState({ cropPhoto: base64Data });
       await triggerAIAnalysis(base64Data);
     };
 
     reader.readAsDataURL(file);
-    e.target.value = ''; // Reset input
+    e.target.value = '';
   };
 
   const handleWebcamCapture = async (base64Data: string) => {
     setCapturedImage(base64Data);
+    onUpdateCropState({ cropPhoto: base64Data });
     await triggerAIAnalysis(base64Data);
   };
 
@@ -297,12 +315,14 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
       reader.onload = async () => {
         const base64Data = reader.result as string;
         setCapturedImage(base64Data);
+        onUpdateCropState({ cropPhoto: base64Data });
         await triggerAIAnalysis(base64Data);
       };
       reader.readAsDataURL(file);
     }
   };
 
+  // Multi-step Animation and AI trigger
   const triggerAIAnalysis = async (imageData: string) => {
     if (!cropState.selectedCrop) {
       setCameraError(t.pleaseSelectCrop);
@@ -311,6 +331,26 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
 
     setCameraError(null);
     setIsAnalyzing(true);
+    setAnalysisCurrentStep(1);
+
+    // Client-side quick brightness check
+    const preCheck = await preValidateImage(imageData);
+    if (!preCheck.valid) {
+      setIsAnalyzing(false);
+      setCameraError(preCheck.message || 'Image clarity is insufficient. Please provide a clear photo.');
+      return;
+    }
+
+    // Step animation interval
+    let step = 1;
+    const stepInterval = setInterval(() => {
+      step += 1;
+      if (step <= 4) {
+        setAnalysisCurrentStep(step);
+      } else {
+        clearInterval(stepInterval);
+      }
+    }, 750);
 
     try {
       const assessment = await analyzeCropPhoto({
@@ -319,32 +359,33 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
       });
 
       assessment.imageUrl = imageData;
+      clearInterval(stepInterval);
+      setAnalysisCurrentStep(5);
 
-      // Note: We DO NOT automatically finalize the quality grade!
-      // The farmer's manual confirmation or active choice is strictly required.
+      // We NEVER auto-assign the final grade!
+      // The farmer must confirm or select their grade.
       onUpdateCropState({
         aiAssessment: assessment,
+        cropPhoto: imageData,
       });
     } catch (err: any) {
-      console.warn('AI analysis error, using fallback:', err);
-      const fallback = generateCropSpecificSampleAnalysis(cropState.selectedCrop);
-      fallback.imageUrl = imageData;
-      onUpdateCropState({
-        aiAssessment: fallback,
-      });
+      console.warn('AI analysis error:', err);
+      clearInterval(stepInterval);
+      setCameraError('AI service could not process image. Please verify connection or select your grade manually.');
     } finally {
-      setIsAnalyzing(false);
+      setTimeout(() => {
+        setIsAnalyzing(false);
+      }, 500);
     }
   };
 
-  // Accept AI suggested grade (only allowed if grade is not REJECT)
+  // Accept AI suggested grade (Farmer Confirmation)
   const handleAcceptAIGrade = (grade: QualityGrade) => {
     onUpdateCropState({
       qualityGrade: grade,
       qualitySource: 'ai',
       qualityConfirmed: true,
     });
-    setIsCameraModalOpen(false);
   };
 
   return (
@@ -363,7 +404,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
         <button
           type="button"
           onClick={onBack}
-          className="text-xs text-stone-500 hover:text-stone-800 font-semibold self-start sm:self-auto"
+          className="text-xs text-stone-500 hover:text-stone-800 font-semibold self-start sm:self-auto cursor-pointer"
         >
           {t.backToLocation}
         </button>
@@ -381,7 +422,8 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
               <ul className="text-xs text-red-800 mt-1.5 space-y-1 list-disc list-inside">
                 {!isCropValid && <li>{t.pleaseSelectCrop}</li>}
                 {!isQuantityValid && <li>{t.pleaseEnterQuantity}</li>}
-                {!isQualityValid && <li>{t.pleaseSelectQuality}</li>}
+                {!isPhotoValid && <li>Mandatory: Please capture or upload a clear crop photo.</li>}
+                {!isQualityValid && <li>Mandatory: Please inspect and confirm the quality grade (Grade A, B, or C).</li>}
               </ul>
             </div>
           </div>
@@ -457,141 +499,121 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                     setSelectedCategory(cat.id as CropCategory);
                     setIsOtherCropSelected(false);
                   }}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-emerald-800 text-white shadow-sm ring-2 ring-emerald-700/40'
+                      ? 'bg-emerald-800 text-white shadow-sm ring-2 ring-emerald-600/30'
                       : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
                   }`}
                 >
                   <span>{cat.icon}</span>
                   <span>{cat.label}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                    isActive ? 'bg-emerald-950/60 text-emerald-200' : 'bg-stone-200 text-stone-600'
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                    isActive ? 'bg-emerald-900/80 text-emerald-200' : 'bg-stone-200 text-stone-600'
                   }`}>
                     {count}
                   </span>
                 </button>
               );
             })}
-
-            {/* Other Crop button (always available regardless of active category) */}
-            <button
-              type="button"
-              onClick={handleSelectOtherCrop}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                isOtherCropSelected
-                  ? 'bg-amber-500 text-stone-950 ring-2 ring-amber-400'
-                  : 'bg-amber-100 text-amber-900 hover:bg-amber-200'
-              }`}
-            >
-              <span>🌱</span>
-              <span>{t.otherCrop}</span>
-            </button>
           </div>
         </div>
 
-        {/* Search Input Bar (works synchronously with Category Filter) */}
-        {!isOtherCropSelected && (
-          <div className="relative mb-5">
-            <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t.searchCropsPlaceholder}
-              className="w-full pl-10 pr-4 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        )}
+        {/* Search Bar */}
+        <div className="relative mb-4">
+          <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t.searchCropPlaceholder}
+            className="w-full pl-10 pr-4 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-1"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
 
-        {/* Custom Crop Name Input when "Other Crop" is selected */}
-        {isOtherCropSelected ? (
-          <div className="bg-amber-50/70 border border-amber-300 rounded-xl p-4 my-2">
-            <label className="block text-xs font-bold text-amber-950 mb-1.5">
-              {t.enterCustomCropName}
+        {/* Crops Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 max-h-72 overflow-y-auto pr-1">
+          {filteredCrops.map((crop) => {
+            const isSelected = cropState.selectedCrop?.id === crop.id && !isOtherCropSelected;
+            return (
+              <button
+                key={crop.id}
+                type="button"
+                onClick={() => handleSelectCrop(crop)}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                  isSelected
+                    ? 'bg-emerald-50 border-emerald-600 shadow-sm ring-2 ring-emerald-500/30 font-bold'
+                    : 'bg-white border-stone-200 hover:border-emerald-300 hover:bg-stone-50'
+                }`}
+              >
+                <div>
+                  <div className="text-2xl mb-1">{crop.icon}</div>
+                  <div className="text-xs font-bold text-stone-900 line-clamp-1">
+                    {crop.localNames[language] || crop.name}
+                  </div>
+                  <div className="text-[10px] text-stone-500">
+                    {crop.name}
+                  </div>
+                </div>
+                <div className="mt-2 text-[10px] font-bold text-emerald-800 bg-emerald-100/60 px-1.5 py-0.5 rounded w-fit">
+                  ₹{crop.modalPrice}/qtl
+                </div>
+              </button>
+            );
+          })}
+
+          {/* Other / Unlisted Crop Button */}
+          <button
+            type="button"
+            onClick={handleSelectOtherCrop}
+            className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+              isOtherCropSelected
+                ? 'bg-amber-50 border-amber-600 shadow-sm ring-2 ring-amber-500/30 font-bold'
+                : 'bg-stone-50 border-stone-200 hover:border-amber-300'
+            }`}
+          >
+            <div>
+              <div className="text-2xl mb-1">🌱</div>
+              <div className="text-xs font-bold text-stone-900">
+                {t.otherCrop}
+              </div>
+              <div className="text-[10px] text-stone-500">
+                Custom Crop
+              </div>
+            </div>
+            <div className="mt-2 text-[10px] font-bold text-amber-900 bg-amber-200/60 px-1.5 py-0.5 rounded w-fit">
+              Manual
+            </div>
+          </button>
+        </div>
+
+        {/* Custom Crop Name Input if Other is Selected */}
+        {isOtherCropSelected && (
+          <div className="mt-4 p-4 bg-amber-50 border border-amber-300 rounded-xl">
+            <label className="block text-xs font-bold text-amber-950 mb-1">
+              Enter Custom Crop Name:
             </label>
             <input
               type="text"
               value={cropState.customCropName}
               onChange={(e) => handleCustomCropNameChange(e.target.value)}
-              placeholder={t.customCropPlaceholder}
-              autoFocus
-              className="w-full max-w-md bg-white border border-amber-400 rounded-xl px-4 py-2.5 text-sm font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              placeholder="e.g. Turmeric, Cashew, Jaggery, Chia Seeds..."
+              className="w-full bg-white border border-amber-400 rounded-lg px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
             />
-            <p className="text-[11px] text-amber-800 mt-1">
-              Your custom crop will be analyzed and compared against modal market benchmarks.
-            </p>
-          </div>
-        ) : (
-          /* Structured Crop Grid */
-          <div>
-            {filteredCrops.length === 0 ? (
-              <div className="text-center py-8 bg-stone-50 rounded-xl border border-dashed border-stone-300">
-                <p className="text-stone-700 font-bold text-sm">{t.noCropsFound}</p>
-                <p className="text-stone-500 text-xs mt-1">{t.tryAnotherName}</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCategory('all');
-                    setSearchQuery('');
-                  }}
-                  className="mt-3 text-xs text-emerald-700 font-bold underline"
-                >
-                  Reset filters to All Crops
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-[360px] overflow-y-auto pr-1">
-                {filteredCrops.map((crop) => {
-                  const isSelected = cropState.selectedCrop?.id === crop.id && !isOtherCropSelected;
-
-                  return (
-                    <button
-                      key={crop.id}
-                      type="button"
-                      onClick={() => handleSelectCrop(crop)}
-                      className={`text-left p-3 rounded-xl border transition-all cursor-pointer relative flex flex-col justify-between ${
-                        isSelected
-                          ? 'bg-emerald-50 border-emerald-600 shadow-sm ring-2 ring-emerald-500/40'
-                          : 'bg-stone-50/50 border-stone-200 hover:border-emerald-300 hover:bg-white'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <span className="text-2xl mb-1">{crop.icon}</span>
-                        {isSelected && (
-                          <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center">
-                            <Check className="w-3 h-3 stroke-[3]" />
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-stone-900 line-clamp-1">
-                          {crop.localNames[language] || crop.name}
-                        </h4>
-                        <span className="text-[10px] text-stone-500 block truncate">
-                          {crop.category} • ₹{crop.modalPrice}/qtl
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
           </div>
         )}
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 2: QUANTITY AND UNIT SELECTION */}
+      {/* SECTION 2: QUANTITY & UNIT */}
       {/* ========================================================================= */}
       <section
         ref={quantitySectionRef}
@@ -614,7 +636,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
           {/* Numeric Input */}
           <div className="sm:col-span-7">
             <label className="block text-xs font-semibold text-stone-600 mb-1">
-              Quantity value (must be greater than 0)
+              Quantity value (must be greater than 0) *
             </label>
             <input
               type="number"
@@ -665,12 +687,12 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 3: QUALITY ASSESSMENT (MANUAL OR AI CAMERA) */}
+      {/* SECTION 3: MANDATORY CROP PHOTO & AI QUALITY INSPECTION */}
       {/* ========================================================================= */}
       <section
-        ref={qualitySectionRef}
+        ref={photoSectionRef}
         className={`bg-white rounded-2xl border p-5 sm:p-6 transition-all ${
-          showValidationAlert && !isQualityValid
+          showValidationAlert && !isPhotoValid
             ? 'border-red-500 ring-2 ring-red-400/30'
             : 'border-stone-200 shadow-sm'
         }`}
@@ -681,11 +703,16 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
               3
             </span>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-stone-900">
-                {t.whatQuality}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold text-stone-900">
+                  Crop Photograph & Quality Inspection
+                </h3>
+                <span className="bg-red-100 text-red-700 font-black text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Mandatory *
+                </span>
+              </div>
               <p className="text-xs text-stone-500">
-                Inspect physical grain/produce quality with photo or select standard mandi grade
+                A photograph is required to verify harvest condition, rot/mold status, and assign accurate mandi pricing.
               </p>
             </div>
           </div>
@@ -697,11 +724,11 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
             className="self-start sm:self-auto inline-flex items-center gap-1.5 text-xs text-emerald-800 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 font-bold px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
           >
             <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
-            <span>Mandi / Agmark Standards</span>
+            <span>Agmark Mandi Standards</span>
           </button>
         </div>
 
-        {/* Hidden File Inputs: Mobile Camera & Gallery/File Picker */}
+        {/* Hidden File Inputs */}
         <input
           type="file"
           ref={cameraInputRef}
@@ -720,7 +747,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
           aria-label="Upload crop photo"
         />
 
-        {/* PROMINENT CARD: 📷 Check Crop Quality with Photo */}
+        {/* PROMINENT CARD: 📷 Mandatory Crop Photo */}
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -731,6 +758,8 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
           className={`mb-6 rounded-2xl border-2 transition-all p-5 sm:p-6 ${
             isDragging
               ? 'border-emerald-500 bg-emerald-50/70 scale-[1.005]'
+              : capturedImage
+              ? 'border-emerald-400 bg-emerald-50/20'
               : 'border-dashed border-amber-300 bg-gradient-to-br from-amber-50/60 via-stone-50 to-emerald-50/30'
           }`}
         >
@@ -739,21 +768,23 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-xl">📷</span>
                 <h4 className="text-base sm:text-lg font-extrabold text-stone-900 tracking-tight">
-                  Check Crop Quality with Photo
+                  {capturedImage ? 'Crop Photo Captured' : 'Take or Upload Crop Photo *'}
                 </h4>
-                <span className="bg-amber-500 text-stone-950 font-black text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                <span className="bg-amber-500 text-stone-950 font-black text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">
                   Gemini Vision
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-stone-600 font-medium">
-                Take a photo or upload a clear crop image. Our AI checks grain size, color, moisture texture, fungal rot, and foreign matter against official Agmark mandi standards.
+                {capturedImage
+                  ? 'Photo captured. Our AI has evaluated the visual texture, grain fullness, rot/mold status, and defect limits.'
+                  : 'Take a photo or upload a clear picture of your harvest. Real AI vision checks grain maturity, moisture appearance, and inspects for fungal rot or mold.'}
               </p>
               <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-stone-500 font-medium">
                 <span className="flex items-center gap-1 text-emerald-700">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Benchmarked to Agmark library
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Benchmarked to AGMARK Standards
                 </span>
-                <span className="flex items-center gap-1 text-amber-800">
-                  <ShieldAlert className="w-3.5 h-3.5" /> Strict rot & mold detection
+                <span className="flex items-center gap-1 text-red-700 font-bold">
+                  <ShieldAlert className="w-3.5 h-3.5" /> Fungal Rot / Mold Disqualification Check
                 </span>
               </div>
             </div>
@@ -766,7 +797,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                 className="inline-flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold px-5 py-3 rounded-xl shadow-md transition-all text-xs sm:text-sm cursor-pointer active:scale-95"
               >
                 <Camera className="w-4 h-4 text-emerald-200" />
-                <span>📷 Take Photo</span>
+                <span>{capturedImage ? '🔄 Retake Photo' : '📷 Take Photo'}</span>
               </button>
 
               <button
@@ -780,40 +811,87 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
             </div>
           </div>
 
-          {/* Drag & Drop Prompt on Desktop */}
-          <div className="mt-3 pt-3 border-t border-amber-200/50 flex flex-wrap items-center justify-between text-[11px] text-stone-500">
-            <span>Or drag and drop a harvest image file directly here (JPG, PNG, WebP)</span>
-            <button
-              type="button"
-              onClick={() => setIsStandardsModalOpen(true)}
-              className="text-emerald-700 hover:underline font-bold inline-flex items-center gap-1 cursor-pointer"
-            >
-              <FileCheck className="w-3 h-3" /> View Grade A / B / C Tolerances
-            </button>
-          </div>
+          {capturedImage && (
+            <div className="mt-4 pt-4 border-t border-emerald-200 flex items-center gap-4">
+              <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-emerald-500 shadow-sm shrink-0 bg-stone-100">
+                <img
+                  src={capturedImage}
+                  alt="Farmer crop sample"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="text-xs space-y-1">
+                <div className="font-extrabold text-emerald-900 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Photo Uploaded Successfully
+                </div>
+                <p className="text-stone-600">
+                  Ready for inspection. Click retake above if you wish to provide a different angle or lighting.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* LOADING STATE FOR AI SCANNING */}
+        {/* ANIMATION 1: MULTI-STAGE PHOTO ANALYSIS ANIMATION */}
         {isAnalyzing && (
-          <div className="mb-6 bg-emerald-50/70 border-2 border-emerald-400 rounded-2xl p-6 text-center space-y-3 animate-pulse">
-            <div className="w-14 h-14 mx-auto rounded-full bg-emerald-700 text-white flex items-center justify-center shadow-lg">
-              <RefreshCw className="w-7 h-7 animate-spin" />
+          <div className="mb-6 bg-emerald-50/90 border-2 border-emerald-500 rounded-2xl p-6 shadow-md">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow">
+                <RefreshCw className="w-5 h-5 animate-spin" />
+              </div>
+              <div>
+                <h5 className="font-extrabold text-base text-emerald-950">
+                  Multistage AI Harvest Inspection in Progress...
+                </h5>
+                <p className="text-xs text-emerald-800">
+                  Evaluating {cropState.selectedCrop?.name || 'crop'} pixels against Agmark benchmarks
+                </p>
+              </div>
             </div>
-            <div>
-              <h5 className="font-extrabold text-base text-emerald-950">
-                Inspecting Crop Sample with Vision AI...
-              </h5>
-              <p className="text-xs text-emerald-800 max-w-md mx-auto mt-1">
-                Analyzing visual parameters, grain soundness, color discoloration, mold mycelium, and defect tolerances against Agmark mandi benchmarks.
-              </p>
+
+            {/* Step Progress Bar */}
+            <div className="w-full bg-emerald-200 h-2 rounded-full overflow-hidden mb-4">
+              <div
+                className="bg-emerald-600 h-full transition-all duration-500 ease-out"
+                style={{ width: `${(analysisCurrentStep / 5) * 100}%` }}
+              />
             </div>
-            <div className="inline-flex items-center gap-2 bg-white/80 border border-emerald-300 px-3 py-1 rounded-full text-[11px] font-bold text-emerald-900">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Model: Gemini Vision • APMC Reference Library
+
+            {/* Visual Step Checklist */}
+            <div className="space-y-2 text-xs">
+              {ANALYSIS_STEPS.map((s) => {
+                const isDone = s.step < analysisCurrentStep;
+                const isCurrent = s.step === analysisCurrentStep;
+
+                return (
+                  <div
+                    key={s.step}
+                    className={`flex items-center gap-2.5 p-2 rounded-lg transition-colors ${
+                      isCurrent
+                        ? 'bg-white border border-emerald-400 font-bold text-emerald-950 shadow-xs'
+                        : isDone
+                        ? 'text-emerald-800 font-medium'
+                        : 'text-stone-400'
+                    }`}
+                  >
+                    {isDone ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : isCurrent ? (
+                      <RefreshCw className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border border-stone-300 flex items-center justify-center text-[9px] shrink-0">
+                        {s.step}
+                      </div>
+                    )}
+                    <span>{s.title}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* CAMERA/ANALYSIS ERROR BANNER */}
+        {/* ERROR BANNER */}
         {cameraError && (
           <div className="mb-6 bg-red-50 border border-red-300 rounded-2xl p-4 flex items-start gap-3 text-red-900">
             <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
@@ -826,19 +904,21 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
 
         {/* ACTIVE AI ASSESSMENT DISPLAY CARD (IF COMPLETED) */}
         {cropState.aiAssessment && !isAnalyzing && (
-          <div className={`mb-6 rounded-2xl p-4 sm:p-5 border-2 transition-all ${
-            cropState.aiAssessment.rotDetected || cropState.aiAssessment.suggestedGrade === 'REJECT'
-              ? 'bg-red-50 border-red-500 shadow-md ring-2 ring-red-400/30'
-              : !cropState.aiAssessment.cropMatch
-              ? 'bg-amber-50 border-amber-500'
-              : 'bg-stone-50 border-emerald-600/90 shadow-sm'
-          }`}>
+          <div
+            className={`mb-6 rounded-2xl p-4 sm:p-5 border-2 transition-all ${
+              cropState.aiAssessment.rotDetected || cropState.aiAssessment.suggestedGrade === 'REJECT'
+                ? 'bg-red-50 border-red-500 shadow-md ring-2 ring-red-400/30'
+                : !cropState.aiAssessment.cropMatch
+                ? 'bg-amber-50 border-amber-500'
+                : 'bg-stone-50 border-emerald-600/90 shadow-sm'
+            }`}
+          >
             {/* Header with Badges */}
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200/80 pb-3 mb-3">
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-sm flex items-center gap-1.5 text-stone-900">
                   <Sparkles className="w-4 h-4 text-amber-500" />
-                  Visual AI Quality Inspection
+                  Visual AI Quality Inspection Result
                 </span>
                 {cropState.aiAssessment.isDemo && (
                   <span className="bg-amber-200 text-amber-900 font-extrabold text-[10px] px-2 py-0.5 rounded">
@@ -848,9 +928,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs text-stone-600 font-semibold">
-                  Confidence:
-                </span>
+                <span className="text-xs text-stone-600 font-semibold">Confidence:</span>
                 <span
                   className={`text-[11px] font-bold px-2 py-0.5 rounded ${
                     cropState.aiAssessment.confidenceLevel === 'High'
@@ -865,9 +943,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
               </div>
             </div>
 
-            {/* ========================================================================= */}
-            {/* CASE 1: ROT / MOLD / SEVERE SPOILAGE DETECTED (STRICT REJECTION GATE) */}
-            {/* ========================================================================= */}
+            {/* CASE 1: ROT / MOLD / SEVERE SPOILAGE DETECTED */}
             {(cropState.aiAssessment.rotDetected || cropState.aiAssessment.suggestedGrade === 'REJECT') && (
               <div className="mb-4 bg-red-100/90 border-2 border-red-500 rounded-xl p-4 text-red-950">
                 <div className="flex items-start gap-3">
@@ -879,9 +955,6 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                       <span className="bg-red-600 text-white font-black text-xs px-2.5 py-1 rounded-md uppercase tracking-wide shadow-xs">
                         🚨 LOT REJECTED / DISQUALIFIED FOR STANDARD APMC SALE
                       </span>
-                      <span className="text-xs font-bold text-red-800">
-                        Zero Tolerance Failure (Agmark / Mandi Rules)
-                      </span>
                     </div>
 
                     <h5 className="font-extrabold text-sm sm:text-base text-red-950">
@@ -889,13 +962,13 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                     </h5>
 
                     <p className="text-xs text-red-900">
-                      Under Indian Agmark & Mandi bylaws, lots showing active fungal mold mycelium, bacterial soft rot, or sour fermented odor are strictly barred from standard food-grade sale and <strong>cannot receive Grade A or Grade B</strong>.
+                      Under Indian Agmark & Mandi bylaws, lots showing active fungal mold mycelium, bacterial soft rot, or decomposition are barred from standard food-grade sale and <strong>cannot receive Grade A or Grade B</strong>.
                     </p>
 
                     {cropState.aiAssessment.rejectionReasons && cropState.aiAssessment.rejectionReasons.length > 0 && (
                       <div className="bg-white/90 rounded-lg p-2.5 border border-red-300 mt-2">
                         <span className="font-bold text-xs text-red-950 block mb-1">
-                          Disqualification Defects Found:
+                          Disqualification Reasons:
                         </span>
                         <ul className="list-disc list-inside text-xs text-red-800 space-y-0.5">
                           {cropState.aiAssessment.rejectionReasons.map((reason, idx) => (
@@ -909,7 +982,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                       <button
                         type="button"
                         onClick={handleTakePhotoClick}
-                        className="bg-red-700 hover:bg-red-800 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow"
+                        className="bg-red-700 hover:bg-red-800 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow cursor-pointer"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
                         Retake Photo with Fresh Sample
@@ -918,7 +991,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                       <button
                         type="button"
                         onClick={() => setIsStandardsModalOpen(true)}
-                        className="bg-white border border-red-400 hover:bg-red-50 text-red-900 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"
+                        className="bg-white border border-red-400 hover:bg-red-50 text-red-900 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
                       >
                         <BookOpen className="w-3.5 h-3.5 text-red-700" />
                         View Rejection Criteria & Standards
@@ -926,7 +999,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                     </div>
 
                     <p className="text-[11px] text-red-800 italic pt-1">
-                      💡 Farmer Note: If this batch is being liquidated for animal feed, bio-fuel, or processing salvage, you may manually select <strong>Grade C (-5% Price)</strong> or <strong>Custom</strong> from the cards below. The AI will not force this choice.
+                      💡 Farmer Note: If this lot is being liquidated for animal feed, biomass, or processing salvage, you may manually confirm <strong>Grade C (-5% Price)</strong> or <strong>Custom</strong> below. The AI will never silently force a grade.
                     </p>
                   </div>
                 </div>
@@ -944,7 +1017,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                     <button
                       type="button"
                       onClick={handleTakePhotoClick}
-                      className="bg-amber-800 text-white font-bold px-3 py-1.5 rounded-lg text-xs"
+                      className="bg-amber-800 text-white font-bold px-3 py-1.5 rounded-lg text-xs cursor-pointer"
                     >
                       {t.retakePhoto}
                     </button>
@@ -953,7 +1026,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                       onClick={() => {
                         cropSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
                       }}
-                      className="bg-white border border-amber-400 text-amber-900 font-semibold px-3 py-1.5 rounded-lg text-xs"
+                      className="bg-white border border-amber-400 text-amber-900 font-semibold px-3 py-1.5 rounded-lg text-xs cursor-pointer"
                     >
                       {t.changeCrop}
                     </button>
@@ -962,106 +1035,90 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
               </div>
             )}
 
-            {/* Assessment Details Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-              {/* Photo Thumbnail if available */}
-              {capturedImage && (
-                <div className="md:col-span-3">
-                  <div className="relative rounded-xl overflow-hidden border border-stone-300 aspect-square bg-stone-200">
-                    <img
-                      src={capturedImage}
-                      alt="Crop harvest photo"
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleTakePhotoClick}
-                      className="absolute bottom-1.5 right-1.5 bg-black/75 hover:bg-black text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1"
-                    >
-                      <RefreshCw className="w-2.5 h-2.5" /> {t.retakePhoto}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Assessment Breakdown */}
-              <div className={capturedImage ? 'md:col-span-9' : 'md:col-span-12'}>
-                {cropState.aiAssessment.suggestedGrade !== 'REJECT' && (
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="text-xs text-stone-500 font-medium">
-                      {t.suggestedGrade}:
-                    </span>
-                    <span className={`font-extrabold text-sm px-3 py-0.5 rounded-lg ${
+            {/* Assessment Details */}
+            <div className="space-y-3">
+              {cropState.aiAssessment.suggestedGrade !== 'REJECT' && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-stone-500 font-medium">{t.suggestedGrade}:</span>
+                  <span
+                    className={`font-extrabold text-sm px-3 py-0.5 rounded-lg ${
                       cropState.aiAssessment.suggestedGrade === 'A'
                         ? 'bg-emerald-800 text-amber-300'
                         : cropState.aiAssessment.suggestedGrade === 'B'
                         ? 'bg-blue-800 text-white'
                         : 'bg-orange-800 text-white'
-                    }`}>
-                      Grade {cropState.aiAssessment.suggestedGrade}
-                    </span>
-                    <span className="text-xs text-stone-500">
-                      ({cropState.aiAssessment.suggestedGrade === 'A' ? '+5% Price Premium' : cropState.aiAssessment.suggestedGrade === 'B' ? 'Standard Modal Rate' : '-5% Price Discount'})
-                    </span>
-                  </div>
-                )}
-
-                {/* Observations list */}
-                <div className="text-xs text-stone-700 mb-3">
-                  <span className="font-bold text-stone-900 block mb-1">
-                    Visual Observations & Agmark Parameters:
+                    }`}
+                  >
+                    Grade {cropState.aiAssessment.suggestedGrade}
                   </span>
-                  <ul className="space-y-1 list-disc list-inside text-stone-600 pl-1">
-                    {cropState.aiAssessment.observations.map((obs, idx) => (
-                      <li key={idx}>{obs}</li>
-                    ))}
-                  </ul>
+                  <span className="text-xs text-stone-500">
+                    ({cropState.aiAssessment.suggestedGrade === 'A'
+                      ? '+5% Price Premium'
+                      : cropState.aiAssessment.suggestedGrade === 'B'
+                      ? 'Standard Modal Rate'
+                      : '-5% Price Discount'})
+                  </span>
                 </div>
+              )}
 
-                {/* Limitations and Disclaimer */}
-                <div className="bg-amber-50/80 border border-amber-200 rounded-lg p-2.5 text-[11px] text-amber-900 flex items-start gap-2 mb-3">
-                  <Info className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold">{t.aiVisualEstimate}</span> • Physical testing for exact moisture % and aflatoxin requires mandi lab meters.
-                  </div>
-                </div>
-
-                {/* Grade acceptance buttons (only for non-rejected grades) */}
-                {cropState.aiAssessment.suggestedGrade !== 'REJECT' && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleAcceptAIGrade(cropState.aiAssessment!.suggestedGrade)}
-                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      Accept Suggested Grade {cropState.aiAssessment.suggestedGrade}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleTakePhotoClick}
-                      className="bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                      {t.retakePhoto}
-                    </button>
-                  </div>
-                )}
+              {/* Observations list */}
+              <div className="text-xs text-stone-700">
+                <span className="font-bold text-stone-900 block mb-1">
+                  Visual Observations & Agmark Parameters:
+                </span>
+                <ul className="space-y-1 list-disc list-inside text-stone-600 pl-1">
+                  {cropState.aiAssessment.observations.map((obs, idx) => (
+                    <li key={idx}>{obs}</li>
+                  ))}
+                </ul>
               </div>
+
+              {/* Limitations and Disclaimer */}
+              <div className="bg-amber-50/80 border border-amber-200 rounded-lg p-2.5 text-[11px] text-amber-900 flex items-start gap-2">
+                <Info className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">{t.aiVisualEstimate}</span> • Physical testing for exact moisture % and aflatoxin requires mandi lab meters.
+                </div>
+              </div>
+
+              {/* Confirmation Button for AI grade */}
+              {cropState.aiAssessment.suggestedGrade !== 'REJECT' && (
+                <div className="pt-1 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleAcceptAIGrade(cropState.aiAssessment!.suggestedGrade as QualityGrade)}
+                    className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" />
+                    Confirm Grade {cropState.aiAssessment.suggestedGrade} ({cropState.aiAssessment.suggestedGrade === 'A' ? '+5%' : 'Modal'})
+                  </button>
+                  <span className="text-xs text-stone-500">
+                    or choose a different grade manually below
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* MANUAL GRADE SELECTION CARDS (FARMER HAS FINAL SAY) */}
-        <div>
+        {/* SECTION 4: MANUAL GRADE SELECTION CARDS (FARMER HAS FINAL SAY) */}
+        <div ref={qualitySectionRef} className="pt-2">
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-stone-600">
-              {t.qualityOptionManual} (Farmer Final Choice)
-            </label>
-            <span className="text-[11px] text-stone-500">
-              Select grade to finalize lot pricing
-            </span>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                Confirm Quality Grade (Farmer Final Decision) *
+              </label>
+              <p className="text-[11px] text-stone-500">
+                The AI suggestion is advisory. You have the final say on the grade to proceed.
+              </p>
+            </div>
+            {cropState.qualityConfirmed && cropState.qualityGrade && (
+              <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                <Check className="w-3 h-3" /> Grade {cropState.qualityGrade} Confirmed
+              </span>
+            )}
           </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               {
@@ -1075,7 +1132,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                 grade: 'B' as QualityGrade,
                 title: t.gradeB,
                 desc: t.gradeBDesc,
-                badge: 'Standard Price',
+                badge: 'Standard Modal',
                 color: 'blue',
               },
               {
@@ -1134,7 +1191,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                     <span className="text-stone-400 font-medium">Deterministic Rule</span>
                     {isSelected ? (
                       <span className="text-emerald-700 font-extrabold flex items-center gap-1">
-                        <Check className="w-3 h-3 stroke-[3]" /> Active
+                        <Check className="w-3 h-3 stroke-[3]" /> Selected
                       </span>
                     ) : (
                       <span className="text-stone-400">Select</span>
@@ -1152,22 +1209,25 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
       {/* ========================================================================= */}
       <div className="bg-stone-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 border border-stone-200">
         <div className="text-xs text-stone-600 space-y-1 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start gap-2 font-bold text-stone-800">
-            <span>Progress Checklist:</span>
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 font-bold text-stone-800">
+            <span>Mandatory Requirements:</span>
             <span className={isCropValid ? 'text-emerald-700' : 'text-stone-400'}>
               {isCropValid ? '✓' : '○'} Crop
             </span>
             <span className={isQuantityValid ? 'text-emerald-700' : 'text-stone-400'}>
               {isQuantityValid ? '✓' : '○'} Quantity
             </span>
+            <span className={isPhotoValid ? 'text-emerald-700' : 'text-stone-400'}>
+              {isPhotoValid ? '✓' : '○'} Crop Photo *
+            </span>
             <span className={isQualityValid ? 'text-emerald-700' : 'text-stone-400'}>
-              {isQualityValid ? '✓' : '○'} Quality
+              {isQualityValid ? '✓' : '○'} Quality Confirmed *
             </span>
           </div>
           <p className="text-stone-500 text-[11px]">
             {isCompleteAndReady
-              ? 'All required crop parameters completed. Ready for Market Comparison.'
-              : 'Mandatory: Crop, Quantity, and Quality must all be set before market comparison.'}
+              ? 'All required crop parameters verified. Ready to compare nearby mandis.'
+              : 'Mandatory: All 4 requirements must be satisfied before discovering market returns.'}
           </p>
         </div>
 
@@ -1175,7 +1235,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
           <button
             type="button"
             onClick={onBack}
-            className="w-1/2 sm:w-auto px-4 py-3 border border-stone-300 text-stone-700 font-bold rounded-xl text-xs hover:bg-stone-200 transition-colors"
+            className="w-1/2 sm:w-auto px-4 py-3 border border-stone-300 text-stone-700 font-bold rounded-xl text-xs hover:bg-stone-200 transition-colors cursor-pointer"
           >
             ← Back
           </button>
@@ -1195,9 +1255,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
         </div>
       </div>
 
-      {/* ========================================================================= */}
       {/* AGMARK REFERENCE STANDARDS MODAL */}
-      {/* ========================================================================= */}
       {cropState.selectedCrop && (
         <ReferenceStandardsModal
           crop={cropState.selectedCrop}
@@ -1206,9 +1264,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
         />
       )}
 
-      {/* ========================================================================= */}
       {/* WEBCAM CAPTURE MODAL FOR DESKTOP */}
-      {/* ========================================================================= */}
       <WebcamCaptureModal
         isOpen={isWebcamModalOpen}
         onClose={() => setIsWebcamModalOpen(false)}

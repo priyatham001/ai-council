@@ -1,7 +1,288 @@
 import { MarketItem } from '../types/krishi';
 
 export const ALL_INDIA_MARKETS: MarketItem[] = [
-  // ANDHRA PRADESH
+  // ==========================================
+  // ANDHRA PRADESH - RAYALASEEMA (KADAPA & SURROUNDING)
+  // ==========================================
+  {
+    id: 'mkt-ap-kadapa',
+    name: 'Kadapa Central APMC Market Yard',
+    marketType: 'APMC Mandi',
+    state: 'Andhra Pradesh',
+    district: 'YSR Kadapa',
+    city: 'Kadapa',
+    latitude: 14.4673,
+    longitude: 78.8242,
+    distanceKm: 0,
+    pricePerQuintal: 2420,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 18,
+    buyer: {
+      id: 'b-ap-kadapa-1',
+      name: 'Rayalaseema Farmers Agri Consortium',
+      type: 'FPO Cooperative',
+      rating: 4.8,
+      verified: true,
+      paymentDays: 0, // Same-day UPI/Bank
+      minQuantityKg: 300,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 8:15 AM',
+  },
+  {
+    id: 'mkt-ap-proddatur',
+    name: 'Proddatur Cotton, Grain & Oilseeds Mandi',
+    marketType: 'APMC Mandi',
+    state: 'Andhra Pradesh',
+    district: 'YSR Kadapa',
+    city: 'Proddatur',
+    latitude: 14.7527,
+    longitude: 78.5524,
+    distanceKm: 0,
+    pricePerQuintal: 2440,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 19,
+    buyer: {
+      id: 'b-ap-proddatur-1',
+      name: 'Penna River Valley Agro Traders',
+      type: 'APMC Trader',
+      rating: 4.7,
+      verified: true,
+      paymentDays: 1,
+      minQuantityKg: 500,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 9:00 AM',
+  },
+  {
+    id: 'mkt-ap-pulivendula',
+    name: 'Pulivendula Agricultural Market Committee',
+    marketType: 'APMC Mandi',
+    state: 'Andhra Pradesh',
+    district: 'YSR Kadapa',
+    city: 'Pulivendula',
+    latitude: 14.4167,
+    longitude: 78.2333,
+    distanceKm: 0,
+    pricePerQuintal: 2390,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 17,
+    buyer: {
+      id: 'b-ap-pulivendula-1',
+      name: 'Kadapa Horticulture & Banana Producers (FPO)',
+      type: 'FPO Cooperative',
+      rating: 4.9,
+      verified: true,
+      paymentDays: 0,
+      minQuantityKg: 200,
+    },
+    verificationStatus: 'Government Monitored',
+    lastUpdated: 'Today, 8:30 AM',
+  },
+  {
+    id: 'mkt-ap-rayachoty',
+    name: 'Rayachoty / Rajampet APMC Yard',
+    marketType: 'APMC Mandi',
+    state: 'Andhra Pradesh',
+    district: 'Annamayya',
+    city: 'Rayachoty',
+    latitude: 14.0574,
+    longitude: 78.7523,
+    distanceKm: 0,
+    pricePerQuintal: 2400,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 18,
+    buyer: {
+      id: 'b-ap-rayachoty-1',
+      name: 'Annamayya Agri Commodity Depot',
+      type: 'Direct Miller',
+      rating: 4.6,
+      verified: true,
+      paymentDays: 1,
+      minQuantityKg: 500,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 7:45 AM',
+  },
+  {
+    id: 'mkt-ap-nandyal',
+    name: 'Nandyal Grain & Cotton Commercial Terminal',
+    marketType: 'APMC Mandi',
+    state: 'Andhra Pradesh',
+    district: 'Nandyal',
+    city: 'Nandyal',
+    latitude: 15.4854,
+    longitude: 78.4833,
+    distanceKm: 0,
+    pricePerQuintal: 2450,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 20,
+    buyer: {
+      id: 'b-ap-nandyal-1',
+      name: 'Kundu Valley Grain Millers Association',
+      type: 'Direct Miller',
+      rating: 4.8,
+      verified: true,
+      paymentDays: 0,
+      minQuantityKg: 600,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 9:10 AM',
+  },
+  {
+    id: 'mkt-ap-kurnool',
+    name: 'Kurnool Mega Agricultural Market Yard',
+    marketType: 'APMC Mandi',
+    state: 'Andhra Pradesh',
+    district: 'Kurnool',
+    city: 'Kurnool',
+    latitude: 15.8281,
+    longitude: 78.0373,
+    distanceKm: 0,
+    pricePerQuintal: 2435,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 21,
+    buyer: {
+      id: 'b-ap-kurnool-1',
+      name: 'Tungabhadra Agro Processing Hub',
+      type: 'Agri Processor',
+      rating: 4.7,
+      verified: true,
+      paymentDays: 1,
+      minQuantityKg: 800,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 8:40 AM',
+  },
+  {
+    id: 'mkt-ap-anantapur',
+    name: 'Anantapur APMC Groundnut & Pulse Yard',
+    marketType: 'APMC Mandi',
+    state: 'Andhra Pradesh',
+    district: 'Anantapur',
+    city: 'Anantapur',
+    latitude: 14.6819,
+    longitude: 77.6006,
+    distanceKm: 0,
+    pricePerQuintal: 2460,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 20,
+    buyer: {
+      id: 'b-ap-anantapur-1',
+      name: 'Rayalaseema Oilseed Extractors',
+      type: 'Agri Processor',
+      rating: 4.8,
+      verified: true,
+      paymentDays: 0,
+      minQuantityKg: 500,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 9:20 AM',
+  },
+  {
+    id: 'mkt-ap-tirupati',
+    name: 'Tirupati Central Wholesale Produce Mandi',
+    marketType: 'APMC Mandi',
+    state: 'Andhra Pradesh',
+    district: 'Tirupati',
+    city: 'Tirupati',
+    latitude: 13.6288,
+    longitude: 79.4192,
+    distanceKm: 0,
+    pricePerQuintal: 2470,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 22,
+    buyer: {
+      id: 'b-ap-tirupati-1',
+      name: 'Seven Hills Agri Fresh Link',
+      type: 'APMC Trader',
+      rating: 4.8,
+      verified: true,
+      paymentDays: 0,
+      minQuantityKg: 400,
+    },
+    verificationStatus: 'Government Monitored',
+    lastUpdated: 'Today, 8:00 AM',
+  },
+  {
+    id: 'mkt-ap-nellore',
+    name: 'Nellore / Kavali Rice & Grain Mandi',
+    marketType: 'APMC Mandi',
+    state: 'Andhra Pradesh',
+    district: 'SPSR Nellore',
+    city: 'Nellore',
+    latitude: 14.4426,
+    longitude: 79.9865,
+    distanceKm: 0,
+    pricePerQuintal: 2480,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 20,
+    buyer: {
+      id: 'b-ap-nellore-1',
+      name: 'Nellore Sona Masoori Rice Exporters',
+      type: 'Export House',
+      rating: 4.9,
+      verified: true,
+      paymentDays: 1,
+      minQuantityKg: 1000,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 8:50 AM',
+  },
+
+  // ==========================================
+  // ANDHRA PRADESH - COASTAL & GODAVARI DELTA
+  // ==========================================
+  {
+    id: 'mkt-ap-guntur',
+    name: 'Guntur Asia Mirchi Yard & Grain Terminal',
+    marketType: 'APMC Mandi',
+    state: 'Andhra Pradesh',
+    district: 'Guntur',
+    city: 'Guntur',
+    latitude: 16.3067,
+    longitude: 80.4365,
+    distanceKm: 0,
+    pricePerQuintal: 2510,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 22,
+    buyer: {
+      id: 'b-ap-3',
+      name: 'Krishna-Godavari Spice & Grain Exporters',
+      type: 'Export House',
+      rating: 4.9,
+      verified: true,
+      paymentDays: 1,
+      minQuantityKg: 1500,
+    },
+    verificationStatus: 'Government Monitored',
+    lastUpdated: 'Today, 7:50 AM',
+  },
+  {
+    id: 'mkt-ap-vijayawada',
+    name: 'Gollapudi Wholesale Grain Market (Vijayawada)',
+    marketType: 'APMC Mandi',
+    state: 'Andhra Pradesh',
+    district: 'NTR / Krishna',
+    city: 'Vijayawada',
+    latitude: 16.5417,
+    longitude: 80.5962,
+    distanceKm: 0,
+    pricePerQuintal: 2490,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 20,
+    buyer: {
+      id: 'b-ap-2',
+      name: 'Amaravati Agri Trading Co.',
+      type: 'APMC Trader',
+      rating: 4.6,
+      verified: true,
+      paymentDays: 1,
+      minQuantityKg: 1000,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 9:15 AM',
+  },
   {
     id: 'mkt-ap-bhimavaram',
     name: 'Bhimavaram Agri Commodity Yard (APMC)',
@@ -21,61 +302,11 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
       type: 'Direct Miller',
       rating: 4.8,
       verified: true,
-      paymentDays: 0, // Same-day direct bank/UPI transfer
+      paymentDays: 0,
       minQuantityKg: 500,
     },
     verificationStatus: 'Verified APMC',
     lastUpdated: 'Today, 8:30 AM',
-  },
-  {
-    id: 'mkt-ap-vijayawada',
-    name: 'Gollapudi Wholesale Grain Market',
-    marketType: 'APMC Mandi',
-    state: 'Andhra Pradesh',
-    district: 'NTR / Krishna',
-    city: 'Vijayawada',
-    latitude: 16.5417,
-    longitude: 80.5962,
-    distanceKm: 0,
-    pricePerQuintal: 2390,
-    marketFeePercent: 1.0,
-    unloadingChargePerQtl: 20,
-    buyer: {
-      id: 'b-ap-2',
-      name: 'Amaravati Agri Trading Co.',
-      type: 'APMC Trader',
-      rating: 4.6,
-      verified: true,
-      paymentDays: 1,
-      minQuantityKg: 1000,
-    },
-    verificationStatus: 'Verified APMC',
-    lastUpdated: 'Today, 9:15 AM',
-  },
-  {
-    id: 'mkt-ap-guntur',
-    name: 'Guntur Asia Mirchi Yard & Grain Terminal',
-    marketType: 'APMC Mandi',
-    state: 'Andhra Pradesh',
-    district: 'Guntur',
-    city: 'Guntur',
-    latitude: 16.3067,
-    longitude: 80.4365,
-    distanceKm: 0,
-    pricePerQuintal: 2420,
-    marketFeePercent: 1.0,
-    unloadingChargePerQtl: 22,
-    buyer: {
-      id: 'b-ap-3',
-      name: 'Krishna-Godavari Spice & Grain Exporters',
-      type: 'Export House',
-      rating: 4.9,
-      verified: true,
-      paymentDays: 1,
-      minQuantityKg: 1500,
-    },
-    verificationStatus: 'Government Monitored',
-    lastUpdated: 'Today, 7:50 AM',
   },
   {
     id: 'mkt-ap-tadepalligudem',
@@ -87,7 +318,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 16.8123,
     longitude: 81.5273,
     distanceKm: 0,
-    pricePerQuintal: 2340,
+    pricePerQuintal: 2380,
     marketFeePercent: 1.0,
     unloadingChargePerQtl: 16,
     buyer: {
@@ -102,11 +333,63 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     verificationStatus: 'Certified Buyer',
     lastUpdated: 'Today, 10:00 AM',
   },
+  {
+    id: 'mkt-ap-ongole',
+    name: 'Ongole APMC Tobacco & Pulse Market',
+    marketType: 'APMC Mandi',
+    state: 'Andhra Pradesh',
+    district: 'Prakasam',
+    city: 'Ongole',
+    latitude: 15.5057,
+    longitude: 80.0499,
+    distanceKm: 0,
+    pricePerQuintal: 2430,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 19,
+    buyer: {
+      id: 'b-ap-ongole-1',
+      name: 'Prakasam Farmer Producer Company',
+      type: 'FPO Cooperative',
+      rating: 4.7,
+      verified: true,
+      paymentDays: 0,
+      minQuantityKg: 400,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 8:20 AM',
+  },
+  {
+    id: 'mkt-ap-visakhapatnam',
+    name: 'Anakapalle Jaggery & Grain Mandi (Vizag)',
+    marketType: 'APMC Mandi',
+    state: 'Andhra Pradesh',
+    district: 'Anakapalli / Visakhapatnam',
+    city: 'Anakapalle',
+    latitude: 17.6913,
+    longitude: 83.0039,
+    distanceKm: 0,
+    pricePerQuintal: 2470,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 20,
+    buyer: {
+      id: 'b-ap-vizag-1',
+      name: 'North Coastal AP Agro Link',
+      type: 'APMC Trader',
+      rating: 4.7,
+      verified: true,
+      paymentDays: 1,
+      minQuantityKg: 600,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 9:30 AM',
+  },
 
-  // TELANGANA
+  // ==========================================
+  // TELANGANA (WARANGAL & SURROUNDING)
+  // ==========================================
   {
     id: 'mkt-ts-warangal',
-    name: 'Enumamula Grain & Cotton Market Yard',
+    name: 'Enumamula Grain & Cotton Market Yard (Warangal)',
     marketType: 'APMC Mandi',
     state: 'Telangana',
     district: 'Warangal',
@@ -114,20 +397,70 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 17.9689,
     longitude: 79.5941,
     distanceKm: 0,
-    pricePerQuintal: 2410,
+    pricePerQuintal: 2460,
     marketFeePercent: 1.0,
     unloadingChargePerQtl: 20,
     buyer: {
       id: 'b-ts-1',
-      name: 'Kakatiya Agri Commodities',
+      name: 'Kakatiya Agri Commodities Consortium',
       type: 'APMC Trader',
-      rating: 4.7,
+      rating: 4.8,
       verified: true,
       paymentDays: 0,
       minQuantityKg: 500,
     },
     verificationStatus: 'Verified APMC',
     lastUpdated: 'Today, 9:00 AM',
+  },
+  {
+    id: 'mkt-ts-jangaon',
+    name: 'Jangaon APMC Grain & Cotton Yard',
+    marketType: 'APMC Mandi',
+    state: 'Telangana',
+    district: 'Jangaon',
+    city: 'Jangaon',
+    latitude: 17.7214,
+    longitude: 79.1558,
+    distanceKm: 0,
+    pricePerQuintal: 2430,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 18,
+    buyer: {
+      id: 'b-ts-jangaon-1',
+      name: 'Jangaon Rythu Bandhu Producers',
+      type: 'FPO Cooperative',
+      rating: 4.7,
+      verified: true,
+      paymentDays: 0,
+      minQuantityKg: 400,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 8:40 AM',
+  },
+  {
+    id: 'mkt-ts-mahabubabad',
+    name: 'Mahabubabad Agri Market Committee',
+    marketType: 'APMC Mandi',
+    state: 'Telangana',
+    district: 'Mahabubabad',
+    city: 'Mahabubabad',
+    latitude: 17.5982,
+    longitude: 80.0038,
+    distanceKm: 0,
+    pricePerQuintal: 2410,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 18,
+    buyer: {
+      id: 'b-ts-mbad-1',
+      name: 'Bayyaram Agro Traders',
+      type: 'Direct Miller',
+      rating: 4.6,
+      verified: true,
+      paymentDays: 1,
+      minQuantityKg: 500,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 8:15 AM',
   },
   {
     id: 'mkt-ts-karimnagar',
@@ -139,14 +472,14 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 18.4386,
     longitude: 79.1288,
     distanceKm: 0,
-    pricePerQuintal: 2375,
+    pricePerQuintal: 2445,
     marketFeePercent: 1.0,
     unloadingChargePerQtl: 19,
     buyer: {
       id: 'b-ts-2',
       name: 'Telangana Rythu Mitra Agro',
       type: 'Agri Processor',
-      rating: 4.6,
+      rating: 4.7,
       verified: true,
       paymentDays: 1,
       minQuantityKg: 800,
@@ -155,8 +488,58 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     lastUpdated: 'Today, 8:45 AM',
   },
   {
+    id: 'mkt-ts-siddipet',
+    name: 'Siddipet Integrated Market Yard',
+    marketType: 'APMC Mandi',
+    state: 'Telangana',
+    district: 'Siddipet',
+    city: 'Siddipet',
+    latitude: 18.1018,
+    longitude: 78.8520,
+    distanceKm: 0,
+    pricePerQuintal: 2450,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 19,
+    buyer: {
+      id: 'b-ts-siddipet-1',
+      name: 'Siddipet Rythu Sangham',
+      type: 'FPO Cooperative',
+      rating: 4.8,
+      verified: true,
+      paymentDays: 0,
+      minQuantityKg: 300,
+    },
+    verificationStatus: 'Government Monitored',
+    lastUpdated: 'Today, 9:20 AM',
+  },
+  {
+    id: 'mkt-ts-khammam',
+    name: 'Khammam APMC Mirchi & Cotton Yard',
+    marketType: 'APMC Mandi',
+    state: 'Telangana',
+    district: 'Khammam',
+    city: 'Khammam',
+    latitude: 17.2473,
+    longitude: 80.1514,
+    distanceKm: 0,
+    pricePerQuintal: 2475,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 21,
+    buyer: {
+      id: 'b-ts-khammam-1',
+      name: 'Khammam Commodity Exporters',
+      type: 'Export House',
+      rating: 4.9,
+      verified: true,
+      paymentDays: 1,
+      minQuantityKg: 1000,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 7:55 AM',
+  },
+  {
     id: 'mkt-ts-hyderabad',
-    name: 'Bowenpally / Malakpet Wholesale Market',
+    name: 'Bowenpally / Malakpet Wholesale Terminal (Hyderabad)',
     marketType: 'APMC Mandi',
     state: 'Telangana',
     district: 'Hyderabad',
@@ -164,7 +547,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 17.4728,
     longitude: 78.4871,
     distanceKm: 0,
-    pricePerQuintal: 2460,
+    pricePerQuintal: 2520,
     marketFeePercent: 1.0,
     unloadingChargePerQtl: 25,
     buyer: {
@@ -179,25 +562,52 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     verificationStatus: 'Government Monitored',
     lastUpdated: 'Today, 7:15 AM',
   },
-
-  // MAHARASHTRA
   {
-    id: 'mkt-mh-nashik',
-    name: 'Nashik / Lasalgaon APMC Onion & Grain Yard',
+    id: 'mkt-ts-nizamabad',
+    name: 'Nizamabad APMC Turmeric & Grain Hub',
+    marketType: 'APMC Mandi',
+    state: 'Telangana',
+    district: 'Nizamabad',
+    city: 'Nizamabad',
+    latitude: 18.6725,
+    longitude: 78.0941,
+    distanceKm: 0,
+    pricePerQuintal: 2490,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 20,
+    buyer: {
+      id: 'b-ts-nizamabad-1',
+      name: 'Telangana Turmeric & Grain Syndicate',
+      type: 'Export House',
+      rating: 4.8,
+      verified: true,
+      paymentDays: 1,
+      minQuantityKg: 800,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 8:30 AM',
+  },
+
+  // ==========================================
+  // MAHARASHTRA (NASHIK & SURROUNDING)
+  // ==========================================
+  {
+    id: 'mkt-mh-lasalgaon',
+    name: 'Lasalgaon APMC Mega Onion & Grain Yard (Nashik)',
     marketType: 'APMC Mandi',
     state: 'Maharashtra',
     district: 'Nashik',
-    city: 'Nashik',
-    latitude: 20.0059,
-    longitude: 73.7917,
+    city: 'Lasalgaon',
+    latitude: 20.1472,
+    longitude: 74.2250,
     distanceKm: 0,
-    pricePerQuintal: 2430,
+    pricePerQuintal: 2480,
     marketFeePercent: 1.05,
     unloadingChargePerQtl: 20,
     buyer: {
-      id: 'b-mh-1',
-      name: 'Sahyadri Agro Federation',
-      type: 'FPO Cooperative',
+      id: 'b-mh-lasalgaon-1',
+      name: 'Lasalgaon Wholesale Onion & Grain Merchants Association',
+      type: 'APMC Trader',
       rating: 4.9,
       verified: true,
       paymentDays: 0,
@@ -207,29 +617,129 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     lastUpdated: 'Today, 8:00 AM',
   },
   {
-    id: 'mkt-mh-nagpur',
-    name: 'Nagpur Kalamna Grain & Orange APMC Market',
+    id: 'mkt-mh-pimpalgaon',
+    name: 'Pimpalgaon Baswant APMC Tomato & Onion Mandi',
     marketType: 'APMC Mandi',
     state: 'Maharashtra',
-    district: 'Nagpur',
-    city: 'Nagpur',
-    latitude: 21.1685,
-    longitude: 79.1368,
+    district: 'Nashik',
+    city: 'Pimpalgaon Baswant',
+    latitude: 20.1706,
+    longitude: 73.9850,
     distanceKm: 0,
-    pricePerQuintal: 2400,
-    marketFeePercent: 1.0,
-    unloadingChargePerQtl: 18,
+    pricePerQuintal: 2470,
+    marketFeePercent: 1.05,
+    unloadingChargePerQtl: 19,
     buyer: {
-      id: 'b-mh-2',
-      name: 'Vidarbha Farmer Grain Syndicate',
+      id: 'b-mh-pimpalgaon-1',
+      name: 'Sahyadri Agro Farmers Federation',
+      type: 'FPO Cooperative',
+      rating: 4.9,
+      verified: true,
+      paymentDays: 0,
+      minQuantityKg: 300,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 8:15 AM',
+  },
+  {
+    id: 'mkt-mh-nashik-city',
+    name: 'Nashik Dindori Road APMC Sub-Market',
+    marketType: 'APMC Mandi',
+    state: 'Maharashtra',
+    district: 'Nashik',
+    city: 'Nashik',
+    latitude: 20.0125,
+    longitude: 73.7917,
+    distanceKm: 0,
+    pricePerQuintal: 2450,
+    marketFeePercent: 1.05,
+    unloadingChargePerQtl: 20,
+    buyer: {
+      id: 'b-mh-1',
+      name: 'Nashik District Agri Marketing Society',
       type: 'APMC Trader',
       rating: 4.7,
       verified: true,
       paymentDays: 1,
+      minQuantityKg: 400,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 8:30 AM',
+  },
+  {
+    id: 'mkt-mh-sinnar',
+    name: 'Sinnar APMC Agricultural Yard',
+    marketType: 'APMC Mandi',
+    state: 'Maharashtra',
+    district: 'Nashik',
+    city: 'Sinnar',
+    latitude: 19.8514,
+    longitude: 73.9961,
+    distanceKm: 0,
+    pricePerQuintal: 2430,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 18,
+    buyer: {
+      id: 'b-mh-sinnar-1',
+      name: 'Godavari Agri Processor & Millers',
+      type: 'Direct Miller',
+      rating: 4.6,
+      verified: true,
+      paymentDays: 0,
+      minQuantityKg: 500,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 8:50 AM',
+  },
+  {
+    id: 'mkt-mh-yeola',
+    name: 'Yeola APMC Onion & Grain Yard',
+    marketType: 'APMC Mandi',
+    state: 'Maharashtra',
+    district: 'Nashik',
+    city: 'Yeola',
+    latitude: 20.0422,
+    longitude: 74.4889,
+    distanceKm: 0,
+    pricePerQuintal: 2440,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 19,
+    buyer: {
+      id: 'b-mh-yeola-1',
+      name: 'Yeola Kisan Agro Hub',
+      type: 'FPO Cooperative',
+      rating: 4.7,
+      verified: true,
+      paymentDays: 1,
+      minQuantityKg: 500,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 9:00 AM',
+  },
+  {
+    id: 'mkt-mh-ahmednagar',
+    name: 'Ahmednagar (Ahilyanagar) APMC Central Mandi',
+    marketType: 'APMC Mandi',
+    state: 'Maharashtra',
+    district: 'Ahilyanagar',
+    city: 'Ahmednagar',
+    latitude: 19.0952,
+    longitude: 74.7496,
+    distanceKm: 0,
+    pricePerQuintal: 2460,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 20,
+    buyer: {
+      id: 'b-mh-ahmednagar-1',
+      name: 'Ahilyanagar Agro Commodities',
+      type: 'APMC Trader',
+      rating: 4.8,
+      verified: true,
+      paymentDays: 0,
       minQuantityKg: 600,
     },
     verificationStatus: 'Verified APMC',
-    lastUpdated: 'Today, 9:20 AM',
+    lastUpdated: 'Today, 8:40 AM',
   },
   {
     id: 'mkt-mh-pune',
@@ -241,7 +751,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 18.4965,
     longitude: 73.8647,
     distanceKm: 0,
-    pricePerQuintal: 2480,
+    pricePerQuintal: 2530,
     marketFeePercent: 1.1,
     unloadingChargePerQtl: 24,
     buyer: {
@@ -256,8 +766,85 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     verificationStatus: 'Government Monitored',
     lastUpdated: 'Today, 8:10 AM',
   },
+  {
+    id: 'mkt-mh-mumbai',
+    name: 'Vashi APMC Navi Mumbai (Terminal Mandi)',
+    marketType: 'APMC Mandi',
+    state: 'Maharashtra',
+    district: 'Thane / Navi Mumbai',
+    city: 'Navi Mumbai',
+    latitude: 19.0760,
+    longitude: 73.0070,
+    distanceKm: 0,
+    pricePerQuintal: 2580,
+    marketFeePercent: 1.2,
+    unloadingChargePerQtl: 28,
+    buyer: {
+      id: 'b-mh-vashi-1',
+      name: 'Mumbai Metropolitan Grain Exporters',
+      type: 'Export House',
+      rating: 4.9,
+      verified: true,
+      paymentDays: 1,
+      minQuantityKg: 1000,
+    },
+    verificationStatus: 'Government Monitored',
+    lastUpdated: 'Today, 7:00 AM',
+  },
+  {
+    id: 'mkt-mh-latur',
+    name: 'Latur Mega Pulse & Soybean APMC Terminal',
+    marketType: 'APMC Mandi',
+    state: 'Maharashtra',
+    district: 'Latur',
+    city: 'Latur',
+    latitude: 18.4088,
+    longitude: 76.5604,
+    distanceKm: 0,
+    pricePerQuintal: 2510,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 20,
+    buyer: {
+      id: 'b-mh-latur-1',
+      name: 'Marathwada Dal & Oilseed Processors',
+      type: 'Agri Processor',
+      rating: 4.9,
+      verified: true,
+      paymentDays: 0,
+      minQuantityKg: 500,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 8:20 AM',
+  },
+  {
+    id: 'mkt-mh-nagpur',
+    name: 'Nagpur Kalamna Grain & Orange APMC Market',
+    marketType: 'APMC Mandi',
+    state: 'Maharashtra',
+    district: 'Nagpur',
+    city: 'Nagpur',
+    latitude: 21.1685,
+    longitude: 79.1368,
+    distanceKm: 0,
+    pricePerQuintal: 2440,
+    marketFeePercent: 1.0,
+    unloadingChargePerQtl: 18,
+    buyer: {
+      id: 'b-mh-2',
+      name: 'Vidarbha Farmer Grain Syndicate',
+      type: 'APMC Trader',
+      rating: 4.7,
+      verified: true,
+      paymentDays: 1,
+      minQuantityKg: 600,
+    },
+    verificationStatus: 'Verified APMC',
+    lastUpdated: 'Today, 9:20 AM',
+  },
 
+  // ==========================================
   // KARNATAKA
+  // ==========================================
   {
     id: 'mkt-ka-bengaluru',
     name: 'Yeshwanthpur APMC Yard Bengaluru',
@@ -268,7 +855,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 13.0238,
     longitude: 77.5529,
     distanceKm: 0,
-    pricePerQuintal: 2490,
+    pricePerQuintal: 2540,
     marketFeePercent: 1.0,
     unloadingChargePerQtl: 22,
     buyer: {
@@ -293,7 +880,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 15.3942,
     longitude: 75.1102,
     distanceKm: 0,
-    pricePerQuintal: 2420,
+    pricePerQuintal: 2440,
     marketFeePercent: 1.0,
     unloadingChargePerQtl: 19,
     buyer: {
@@ -309,10 +896,12 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     lastUpdated: 'Today, 9:00 AM',
   },
 
+  // ==========================================
   // TAMIL NADU
+  // ==========================================
   {
     id: 'mkt-tn-coimbatore',
-    name: 'Coimbatore Regulated Market (RMC Mettupalayam Rd)',
+    name: 'Coimbatore Regulated Market (RMC)',
     marketType: 'APMC Mandi',
     state: 'Tamil Nadu',
     district: 'Coimbatore',
@@ -320,12 +909,12 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 11.0168,
     longitude: 76.9558,
     distanceKm: 0,
-    pricePerQuintal: 2470,
+    pricePerQuintal: 2490,
     marketFeePercent: 1.0,
     unloadingChargePerQtl: 20,
     buyer: {
       id: 'b-tn-1',
-      name: 'Kongu Agro Producers',
+      name: 'Kongu Agro Producers FPO',
       type: 'FPO Cooperative',
       rating: 4.8,
       verified: true,
@@ -345,7 +934,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 9.9252,
     longitude: 78.1198,
     distanceKm: 0,
-    pricePerQuintal: 2410,
+    pricePerQuintal: 2430,
     marketFeePercent: 1.0,
     unloadingChargePerQtl: 18,
     buyer: {
@@ -361,7 +950,9 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     lastUpdated: 'Today, 8:20 AM',
   },
 
+  // ==========================================
   // PUNJAB & HARYANA
+  // ==========================================
   {
     id: 'mkt-pb-ludhiana',
     name: 'Ludhiana New Grain Market (Gill Road)',
@@ -372,13 +963,13 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 30.8926,
     longitude: 75.8573,
     distanceKm: 0,
-    pricePerQuintal: 2470,
+    pricePerQuintal: 2490,
     marketFeePercent: 1.5,
     unloadingChargePerQtl: 18,
     buyer: {
       id: 'b-pb-1',
       name: 'Punjab State Agri Marketing Federation (Markfed)',
-      type: 'Government Monitored' as any,
+      type: 'Direct Miller',
       rating: 4.9,
       verified: true,
       paymentDays: 1,
@@ -397,7 +988,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 31.6163,
     longitude: 74.8821,
     distanceKm: 0,
-    pricePerQuintal: 2450,
+    pricePerQuintal: 2470,
     marketFeePercent: 1.5,
     unloadingChargePerQtl: 18,
     buyer: {
@@ -413,7 +1004,9 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     lastUpdated: 'Today, 8:15 AM',
   },
 
+  // ==========================================
   // MADHYA PRADESH
+  // ==========================================
   {
     id: 'mkt-mp-indore',
     name: 'Chhavani Krishi Upaj Mandi Indore',
@@ -424,7 +1017,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 22.7196,
     longitude: 75.8577,
     distanceKm: 0,
-    pricePerQuintal: 2435,
+    pricePerQuintal: 2450,
     marketFeePercent: 1.0,
     unloadingChargePerQtl: 17,
     buyer: {
@@ -440,7 +1033,9 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     lastUpdated: 'Today, 9:10 AM',
   },
 
+  // ==========================================
   // RAJASTHAN
+  // ==========================================
   {
     id: 'mkt-rj-jaipur',
     name: 'Muhana Terminal Mandi Jaipur',
@@ -451,7 +1046,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 26.8048,
     longitude: 75.7601,
     distanceKm: 0,
-    pricePerQuintal: 2460,
+    pricePerQuintal: 2480,
     marketFeePercent: 1.2,
     unloadingChargePerQtl: 20,
     buyer: {
@@ -467,10 +1062,12 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     lastUpdated: 'Today, 8:50 AM',
   },
 
+  // ==========================================
   // GUJARAT
+  // ==========================================
   {
     id: 'mkt-gj-rajkot',
-    name: 'Rajkot APMC Bedi Yard (Cotton & Oilseeds)',
+    name: 'Rajkot APMC Bedi Yard',
     marketType: 'APMC Mandi',
     state: 'Gujarat',
     district: 'Rajkot',
@@ -478,7 +1075,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 22.3392,
     longitude: 70.8144,
     distanceKm: 0,
-    pricePerQuintal: 2450,
+    pricePerQuintal: 2460,
     marketFeePercent: 1.0,
     unloadingChargePerQtl: 18,
     buyer: {
@@ -494,7 +1091,9 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     lastUpdated: 'Today, 9:00 AM',
   },
 
-  // WEST BENGAL
+  // ==========================================
+  // WEST BENGAL, UP & BIHAR
+  // ==========================================
   {
     id: 'mkt-wb-burdwan',
     name: 'Burdwan Sadar APMC Rice & Grain Yard',
@@ -505,7 +1104,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 23.2324,
     longitude: 87.8615,
     distanceKm: 0,
-    pricePerQuintal: 2380,
+    pricePerQuintal: 2400,
     marketFeePercent: 1.0,
     unloadingChargePerQtl: 19,
     buyer: {
@@ -520,8 +1119,6 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     verificationStatus: 'Verified APMC',
     lastUpdated: 'Today, 8:40 AM',
   },
-
-  // UTTAR PRADESH & BIHAR
   {
     id: 'mkt-up-varanasi',
     name: 'Varanasi Paharia Mandi Samiti',
@@ -532,7 +1129,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 25.3524,
     longitude: 82.9912,
     distanceKm: 0,
-    pricePerQuintal: 2400,
+    pricePerQuintal: 2420,
     marketFeePercent: 1.5,
     unloadingChargePerQtl: 20,
     buyer: {
@@ -557,7 +1154,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     latitude: 25.5941,
     longitude: 85.1376,
     distanceKm: 0,
-    pricePerQuintal: 2370,
+    pricePerQuintal: 2390,
     marketFeePercent: 1.0,
     unloadingChargePerQtl: 18,
     buyer: {
@@ -571,7 +1168,7 @@ export const ALL_INDIA_MARKETS: MarketItem[] = [
     },
     verificationStatus: 'Verified APMC',
     lastUpdated: 'Today, 8:15 AM',
-  }
+  },
 ];
 
 // Haversine formula to compute great-circle distance between two coordinates in kilometers
@@ -594,11 +1191,24 @@ export function calculateHaversineDistance(
   return Math.round(R * c * 10) / 10;
 }
 
-// Estimates road distance factoring typical Indian highway detour coefficient (approx 1.22x)
+// Estimates actual highway/road distance factoring Indian rural-to-mandi road winding factor (1.24x)
 export function estimateRoadDistance(straightLineDistanceKm: number): number {
-  if (straightLineDistanceKm <= 5) return straightLineDistanceKm + 1;
-  return Math.round(straightLineDistanceKm * 1.22);
+  if (straightLineDistanceKm <= 2) return Math.max(1, straightLineDistanceKm);
+  if (straightLineDistanceKm <= 10) return Math.round(straightLineDistanceKm * 1.18);
+  return Math.round(straightLineDistanceKm * 1.25);
 }
+
+export interface MarketDiscoveryOptions {
+  farmerLat: number;
+  farmerLng: number;
+  farmerState?: string;
+  farmerDistrict?: string;
+  baseModalPrice?: number;
+  minMarkets?: number;
+}
+
+// Progressive search radius: 25 km -> 50 km -> 100 km -> 150 km -> 250 km
+export const SEARCH_RADII_KM = [25, 50, 100, 150, 250, 400];
 
 // Discovers nearby and relevant markets dynamically for ANY location in India
 export function discoverMarketsForLocation(
@@ -608,8 +1218,8 @@ export function discoverMarketsForLocation(
   farmerDistrict?: string,
   baseModalPrice: number = 2320
 ): MarketItem[] {
-  // Compute distance from farmer's coordinate to each known market
-  const marketsWithDistance = ALL_INDIA_MARKETS.map((market) => {
+  // Compute straight-line & road distance for all markets
+  const allCalculated = ALL_INDIA_MARKETS.map((market) => {
     const straightDist = calculateHaversineDistance(
       farmerLat,
       farmerLng,
@@ -617,11 +1227,12 @@ export function discoverMarketsForLocation(
       market.longitude
     );
     const roadDist = estimateRoadDistance(straightDist);
-    const travelTimeHours = Math.round((roadDist / 38) * 10) / 10; // ~38 km/h avg rural transport speed
+    const travelTimeHours = Math.round((roadDist / 38) * 10) / 10; // ~38 km/h avg rural tempo/truck speed
 
     // Adjust market price relative to crop modal price
-    const stateBonus = market.state.toLowerCase() === farmerState?.toLowerCase() ? 0 : 30;
-    const priceVariance = (market.pricePerQuintal % 120) - 40;
+    const stateBonus =
+      market.state.toLowerCase() === farmerState?.toLowerCase() ? 0 : 25;
+    const priceVariance = (market.pricePerQuintal % 140) - 40;
     const adjustedPrice = Math.max(100, baseModalPrice + priceVariance + stateBonus);
 
     return {
@@ -633,9 +1244,18 @@ export function discoverMarketsForLocation(
     };
   });
 
-  // Sort by straight-line distance
-  marketsWithDistance.sort((a, b) => a.distanceKm - b.distanceKm);
+  // Sort by straight-line distance (closest first)
+  allCalculated.sort((a, b) => a.distanceKm - b.distanceKm);
 
-  // Return top closest markets (at least 4-6 markets)
-  return marketsWithDistance.slice(0, 6);
+  // Progressive radius expansion: find markets within closest tier
+  // If at least 3 markets exist within a tier, use that tier + next step to give farmer real choice
+  for (const radius of SEARCH_RADII_KM) {
+    const inRadius = allCalculated.filter((m) => m.distanceKm <= radius);
+    if (inRadius.length >= 3) {
+      return inRadius.slice(0, 6);
+    }
+  }
+
+  // Fallback: return the 5 closest markets in India
+  return allCalculated.slice(0, 6);
 }

@@ -30,17 +30,22 @@ export interface CropItem {
   qualityProfile: CropQualityProfile;
 }
 
-export interface LocationData {
+export type FarmerLocation = {
   latitude: number;
   longitude: number;
   country: string;
   state: string;
   district: string;
   city?: string;
+  town?: string;
   village?: string;
   formattedAddress: string;
-  source: 'gps' | 'search' | 'manual' | 'map' | 'demo';
-}
+  placeId?: string;
+  source: 'gps' | 'manual' | 'search' | 'map' | 'demo';
+};
+
+// LocationData is an alias for FarmerLocation to ensure single source of truth across all components
+export type LocationData = FarmerLocation;
 
 export interface AIQualityFactors {
   appearance: 'good' | 'medium' | 'poor';
@@ -48,13 +53,18 @@ export interface AIQualityFactors {
   visible_damage: 'none' | 'low' | 'medium' | 'high';
   discoloration: 'none' | 'low' | 'medium' | 'high';
   freshness: 'good' | 'medium' | 'poor';
+  ripeness?: string;
+  visibleRot?: boolean;
+  visibleMold?: boolean;
 }
 
 export interface AIQualityAssessment {
   cropDetected: string;
   cropMatch: boolean;
+  imageQuality?: 'good' | 'blurry' | 'dark' | 'insufficient';
+  status?: 'ACCEPTABLE' | 'REJECT' | 'MISMATCH' | 'INSUFFICIENT_IMAGE' | 'ERROR' | 'AI_UNAVAILABLE';
   suggestedGrade: QualityGrade | 'REJECT';
-  verdict?: 'ACCEPT' | 'REJECT' | 'WARNING' | 'INSUFFICIENT_IMAGE';
+  verdict?: 'ACCEPT' | 'REJECT' | 'WARNING' | 'INSUFFICIENT_IMAGE' | 'ERROR';
   rotDetected?: boolean;
   pestDamageDetected?: boolean;
   rejectionReasons?: string[];
@@ -69,6 +79,7 @@ export interface AIQualityAssessment {
   imageUrl?: string;
   isDemo?: boolean;
   analyzedAt: string;
+  error?: string;
 }
 
 export interface CropSelectionState {
@@ -77,7 +88,8 @@ export interface CropSelectionState {
   quantityValue: number | '';
   quantityUnit: WeightUnit;
   normalizedKilograms: number;
-  qualityGrade: QualityGrade | null;
+  cropPhoto: string | null; // Mandatory crop photograph base64 / blob URL
+  qualityGrade: QualityGrade | null; // Initial state MUST be null! Never auto-assign Grade A/B/C
   qualitySource: 'manual' | 'ai' | null;
   qualityConfirmed: boolean;
   aiAssessment: AIQualityAssessment | null;

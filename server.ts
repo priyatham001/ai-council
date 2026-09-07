@@ -48,162 +48,178 @@ function getGeminiClient(): GoogleGenAI | null {
 
 // AI Crop Vision Analysis Endpoint
 app.post('/api/analyze-crop', async (req, res) => {
+  const requestStartTime = Date.now();
   try {
     const { image, cropId, cropName, category, qualityProfile } = req.body;
 
+    console.log('[AI Vision] Incoming crop analysis request received');
+    console.log(`[AI Vision] Selected crop: "${cropName}" (ID: ${cropId}, Category: ${category || 'standard'})`);
+
     if (!image) {
+      console.warn('[AI Vision] Missing image data in request payload');
       return res.status(400).json({ error: 'Image data is required' });
     }
+
+    // Strip data:image/...;base64, prefix if present
+    let base64Data = image;
+    let mimeType = 'image/jpeg';
+    if (image.startsWith('data:')) {
+      const parts = image.split(',');
+      const mimeMatch = parts[0].match(/:(.*?);/);
+      if (mimeMatch) {
+        mimeType = mimeMatch[1];
+      }
+      base64Data = parts[1];
+    }
+
+    const approxSizeBytes = Math.round((base64Data.length * 3) / 4);
+    const approxSizeKb = (approxSizeBytes / 1024).toFixed(1);
+    console.log(`[AI Vision] Image received - MIME: ${mimeType}, Size: ~${approxSizeKb} KB`);
 
     const standard = getCropQualityStandard(cropId || cropName || 'generic', category);
     const ai = getGeminiClient();
 
-    // If Gemini API is available, analyze with Gemini Flash Vision
-    if (ai) {
-      try {
-        // Strip data:image/...;base64, prefix if present
-        let base64Data = image;
-        let mimeType = 'image/jpeg';
-        if (image.startsWith('data:')) {
-          const parts = image.split(',');
-          const mimeMatch = parts[0].match(/:(.*?);/);
-          if (mimeMatch) {
-            mimeType = mimeMatch[1];
-          }
-          base64Data = parts[1];
-        }
+    if (!ai) {
+      console.warn('[AI Vision] Gemini client not configured (GEMINI_API_KEY is not set)');
+      return res.status(503).json({
+        status: 'AI_UNAVAILABLE',
+        verdict: 'ERROR',
+        error: 'AI analysis service is currently unavailable. Please verify GEMINI_API_KEY or proceed with manual assayer review.',
+        cropDetected: cropName || 'Unknown',
+        cropMatch: true,
+        suggestedGrade: 'REJECT',
+        confidence: 'low',
+        needsManualReview: true,
+        observations: ['AI Vision service is offline or not configured with valid API credentials.'],
+      });
+    }
 
-        const prompt = `You are KrishiSetu's certified agricultural harvest inspector evaluating an Indian farmer's crop sample from a photograph.
+    const inspectionPrompt = `You are KrishiSetu's senior certified agricultural harvest inspector evaluating an Indian farmer's crop photograph under AGMARK and Mandi quality standards.
 Expected Crop: "${cropName}" (Category: ${category || standard.category}).
 
 OFFICIAL AGMARK / MANDI BENCHMARK STANDARDS FOR THIS CROP:
 - Grade A Standards: ${standard.gradeA.visualStandards.join('; ')}
 - Grade B Standards (FAQ): ${standard.gradeB.visualStandards.join('; ')}
 - Grade C Standards (Secondary): ${standard.gradeC.visualStandards.join('; ')}
-- CRITICAL REJECTION DISQUALIFIERS: ${standard.rejectionDisqualifiers.join('; ')}
+- Critical Disqualifiers: ${standard.rejectionDisqualifiers.join('; ')}
 
-CRITICAL INSPECTION RULES:
+MANDATORY INSPECTION RULES:
 1. ROT / MOLD / SPOILAGE DETECTION (HIGHEST PRIORITY):
-   - Under NO circumstances should an image showing rot, fungal mold, mycelium, soft watery decomposition, black rot lesions, pest bore infestation, or severe decay be assigned Grade A or Grade B!
+   - You must inspect the ACTUAL pixels of the photo.
+   - Under NO circumstances should an image showing rot, fungal mold mycelium, soft watery decomposition, black rot spots, pest infestation, or decay be assigned Grade A or Grade B!
    - If ANY rot, mold, decomposition, or severe damage is observed, you MUST set:
-     * "suggestedGrade": "REJECT"
+     * "status": "REJECT"
      * "verdict": "REJECT"
-     * "rotDetected": true
-     * "confidence": "High"
-     * Add explicit details of the rot/mold in "rejectionReasons" and "observations".
+     * "suggestedGrade": "REJECT"
+     * "qualityFactors.visibleRot": true
+     * "qualityFactors.visibleMold": true or as observed
+     * "confidence": "high"
+     * Add explicit details of the rot/decay in "observations".
 2. CROP IDENTITY MATCH:
-   - Verify if the photo actually shows the expected crop ("${cropName}").
-   - If the photo shows a completely different crop, an animal, a shoe, furniture, or a non-agricultural object, set "cropMatch": false, "verdict": "WARNING", "suggestedGrade": "REJECT", and explain in "observations".
-3. BLURRY / INSUFFICIENT IMAGES:
-   - If the image is blurry, out of focus, or too dark to clearly inspect grain/skin textures, set "verdict": "INSUFFICIENT_IMAGE", "confidence": "Low", "confidenceScore": 0.4, "needsManualReview": true.
+   - Verify if the photo actually depicts the expected crop ("${cropName}").
+   - If the photo shows a completely different crop (e.g. Tomato when Paddy was selected), an animal, a shoe, furniture, or a non-agricultural object:
+     * "cropMatch": false
+     * "status": "MISMATCH"
+     * "verdict": "WARNING"
+     * "suggestedGrade": "REJECT"
+     * "needsManualReview": true
+3. IMAGE CLARITY & QUALITY:
+   - If the photo is too dark, blurry, out of focus, or does not clearly show produce details:
+     * "imageQuality": "blurry" | "dark" | "insufficient"
+     * "status": "INSUFFICIENT_IMAGE"
+     * "verdict": "INSUFFICIENT_IMAGE"
+     * "suggestedGrade": "REJECT"
+     * "confidence": "low"
+     * "needsManualReview": true
 4. VALID HEALTHY CROPS:
-   - If produce is clean, uniform, free of defects, assign "suggestedGrade": "A", "verdict": "ACCEPT".
-   - If standard typical fair average quality with minor blemishes, assign "suggestedGrade": "B", "verdict": "ACCEPT".
-   - If sound but with noticeable cosmetic defects, uneven sizing, or discoloration, assign "suggestedGrade": "C", "verdict": "ACCEPT".
+   - Grade A: Clean, uniform, free of defects, optimal ripeness.
+   - Grade B (FAQ): Normal fair average quality, minor cosmetic blemishes, sound produce.
+   - Grade C: Sound but with noticeable cosmetic defects, uneven sizing, or discoloration.
 5. MANDATORY LABORATORY DISCLAIMER:
-   - Moisture %, oil content %, gluten, and chemical/pesticide residue CANNOT be determined from a 2D photograph and require physical instruments (e.g., moisture meter, chemical assay). Always list this in "limitations".
+   - Moisture %, oil %, gluten, and chemical/pesticide residue CANNOT be determined from a 2D photograph. Always list this in "limitations".
 
-Respond with STRICT JSON ONLY. Do not wrap in markdown or backticks:
+Respond with STRICT JSON ONLY matching this exact structure (no markdown, no backticks):
 {
-  "cropDetected": string,
-  "cropMatch": boolean,
-  "verdict": "ACCEPT" | "REJECT" | "WARNING" | "INSUFFICIENT_IMAGE",
+  "cropDetected": "${cropName}",
+  "cropMatch": true,
+  "imageQuality": "good",
+  "status": "ACCEPTABLE",
+  "verdict": "ACCEPT",
   "suggestedGrade": "A" | "B" | "C" | "REJECT",
-  "rotDetected": boolean,
-  "pestDamageDetected": boolean,
-  "rejectionReasons": string[],
-  "referenceStandardMatched": string,
-  "standardCriteriaChecked": string[],
-  "confidence": "High" | "Medium" | "Low",
-  "confidenceScore": number,
-  "observations": string[],
+  "confidence": "high" | "medium" | "low",
+  "confidenceScore": 0.90,
+  "rotDetected": false,
+  "pestDamageDetected": false,
+  "observations": [
+    "Observation 1 about grain/fruit appearance and color",
+    "Observation 2 about defects or lack thereof",
+    "Observation 3 about comparison with Mandi standards"
+  ],
   "qualityFactors": {
-    "appearance": "good" | "medium" | "poor",
-    "uniformity": "high" | "medium" | "low",
-    "visible_damage": "none" | "low" | "medium" | "high",
-    "discoloration": "none" | "low" | "medium" | "high",
-    "freshness": "good" | "medium" | "poor"
+    "ripeness": "Optimal harvest maturity" | "Immature" | "Overripe" | "Not applicable",
+    "visibleRot": false,
+    "visibleMold": false,
+    "discoloration": "none" | "low" | "moderate" | "severe",
+    "physicalDamage": "none" | "low" | "moderate" | "high",
+    "uniformity": "high" | "moderate" | "poor",
+    "freshness": "good" | "fair" | "poor"
   },
-  "limitations": string[],
-  "needsManualReview": boolean
+  "needsManualReview": false,
+  "limitations": [
+    "AI visual estimate — not an accredited laboratory chemical certification",
+    "Exact moisture % requires a physical moisture meter"
+  ]
 }`;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: [
+    console.log('[AI Vision] Gemini request started with model gemini-2.5-flash');
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
             {
-              role: 'user',
-              parts: [
-                {
-                  inlineData: {
-                    mimeType,
-                    data: base64Data,
-                  },
-                },
-                {
-                  text: prompt,
-                },
-              ],
+              inlineData: {
+                mimeType,
+                data: base64Data,
+              },
+            },
+            {
+              text: inspectionPrompt,
             },
           ],
-        });
+        },
+      ],
+    });
 
-        const rawText = response.text || '';
-        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          return res.json(parsed);
-        }
-      } catch (geminiError: any) {
-        console.warn('Gemini vision analysis error, using fallback analyzer:', geminiError?.message);
-      }
+    const elapsed = Date.now() - requestStartTime;
+    console.log(`[AI Vision] Gemini response received in ${elapsed}ms`);
+
+    const rawText = response.text || '';
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.warn('[AI Vision] Failed to parse JSON from Gemini response');
+      return res.status(502).json({
+        status: 'ERROR',
+        verdict: 'ERROR',
+        error: 'Could not parse structured analysis from vision response.',
+        needsManualReview: true,
+      });
     }
 
-    // Deterministic fallback response when Gemini key is absent or network fails
-    // Note: We flag this as a sample/demo inspection and do NOT guarantee Grade A without confirmation
-    const fallbackResponse = {
-      cropDetected: cropName || 'Selected Crop',
-      cropMatch: true,
-      verdict: 'ACCEPT',
-      suggestedGrade: 'B',
-      rotDetected: false,
-      pestDamageDetected: false,
-      rejectionReasons: [],
-      referenceStandardMatched: standard.cropName,
-      standardCriteriaChecked: [
-        'Checked against Agmark FAQ visual standard',
-        'Verified absence of large rot clusters in primary field of view',
-        'Assessed color maturity and grain/surface texture',
-      ],
-      confidence: 'Medium',
-      confidenceScore: 0.82,
-      observations: [
-        `Visual traits align with standard Mandi FAQ criteria for ${cropName}`,
-        'Clean harvest appearance with acceptable surface uniformity',
-        'No major fungal mycelium or severe rot lesions visible in primary frame',
-      ],
-      qualityFactors: {
-        appearance: 'medium',
-        uniformity: 'medium',
-        visible_damage: 'low',
-        discoloration: 'low',
-        freshness: 'good',
-      },
-      limitations: [
-        'Exact moisture % cannot be verified from a photograph (requires moisture meter)',
-        'Internal chemical values (oil %, gluten, aflatoxin) require physical laboratory testing',
-        'AI visual estimation does not replace physical Mandi assayer certification',
-      ],
-      needsManualReview: true,
-      isDemo: !process.env.GEMINI_API_KEY,
-    };
+    const parsed = JSON.parse(jsonMatch[0]);
+    console.log(`[AI Vision] Parsing success - Crop Match: ${parsed.cropMatch}, Status: ${parsed.status || parsed.verdict}, Suggested Grade: ${parsed.suggestedGrade}`);
+    console.log(`[AI Vision] Final AI status: ${parsed.status || parsed.verdict}`);
 
-    res.json(fallbackResponse);
+    return res.json(parsed);
   } catch (error: any) {
-    console.error('Error in /api/analyze-crop:', error);
+    const elapsed = Date.now() - requestStartTime;
+    console.error(`[AI Vision] Error in /api/analyze-crop after ${elapsed}ms:`, error?.message || error);
     res.status(500).json({
-      error: 'Crop image processing error',
-      details: error?.message,
+      status: 'ERROR',
+      verdict: 'ERROR',
+      error: 'Crop image inspection error: ' + (error?.message || 'Server failure'),
+      needsManualReview: true,
     });
   }
 });

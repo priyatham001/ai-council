@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { Language, LocationData } from '../../types/krishi';
 import { TRANSLATIONS } from '../../utils/i18n';
-import { MapPin, Search, Navigation, Check, AlertCircle, Loader2, Sparkles } from 'lucide-react';
+import {
+  ALL_INDIAN_LOCATIONS,
+  searchIndianLocations,
+  findClosestIndianLocation,
+  LocationPreset,
+} from '../../data/indianLocationsData';
+import { MapPin, Search, Navigation, Check, AlertCircle, Loader2, Sparkles, Building2 } from 'lucide-react';
 
 interface LocationSelectorProps {
   language: Language;
@@ -10,148 +16,24 @@ interface LocationSelectorProps {
   onContinue: () => void;
 }
 
-// Preset popular agricultural districts/hubs across Indian states for 1-click testing
-const POPULAR_INDIAN_LOCATIONS: LocationData[] = [
-  {
-    latitude: 16.5449,
-    longitude: 81.5212,
-    country: 'India',
-    state: 'Andhra Pradesh',
-    district: 'West Godavari',
-    city: 'Bhimavaram',
-    formattedAddress: 'Bhimavaram, West Godavari, Andhra Pradesh, India',
-    source: 'search',
-  },
-  {
-    latitude: 20.0059,
-    longitude: 73.7917,
-    country: 'India',
-    state: 'Maharashtra',
-    district: 'Nashik',
-    city: 'Nashik',
-    formattedAddress: 'Nashik, Maharashtra, India',
-    source: 'search',
-  },
-  {
-    latitude: 17.9689,
-    longitude: 79.5941,
-    country: 'India',
-    state: 'Telangana',
-    district: 'Warangal',
-    city: 'Warangal',
-    formattedAddress: 'Enumamula / Warangal, Telangana, India',
-    source: 'search',
-  },
-  {
-    latitude: 30.8926,
-    longitude: 75.8573,
-    country: 'India',
-    state: 'Punjab',
-    district: 'Ludhiana',
-    city: 'Ludhiana',
-    formattedAddress: 'Ludhiana Grain Hub, Punjab, India',
-    source: 'search',
-  },
-  {
-    latitude: 13.0238,
-    longitude: 77.5529,
-    country: 'India',
-    state: 'Karnataka',
-    district: 'Bengaluru Urban',
-    city: 'Bengaluru',
-    formattedAddress: 'Yeshwanthpur, Bengaluru, Karnataka, India',
-    source: 'search',
-  },
-  {
-    latitude: 11.0168,
-    longitude: 76.9558,
-    country: 'India',
-    state: 'Tamil Nadu',
-    district: 'Coimbatore',
-    city: 'Coimbatore',
-    formattedAddress: 'Coimbatore, Tamil Nadu, India',
-    source: 'search',
-  },
-  {
-    latitude: 22.7196,
-    longitude: 75.8577,
-    country: 'India',
-    state: 'Madhya Pradesh',
-    district: 'Indore',
-    city: 'Indore',
-    formattedAddress: 'Indore Mandi Region, Madhya Pradesh, India',
-    source: 'search',
-  },
-  {
-    latitude: 22.3392,
-    longitude: 70.8144,
-    country: 'India',
-    state: 'Gujarat',
-    district: 'Rajkot',
-    city: 'Rajkot',
-    formattedAddress: 'Rajkot, Saurashtra, Gujarat, India',
-    source: 'search',
-  },
-  {
-    latitude: 26.8048,
-    longitude: 75.7601,
-    country: 'India',
-    state: 'Rajasthan',
-    district: 'Jaipur',
-    city: 'Jaipur',
-    formattedAddress: 'Muhana Mandi, Jaipur, Rajasthan, India',
-    source: 'search',
-  },
-  {
-    latitude: 23.2324,
-    longitude: 87.8615,
-    country: 'India',
-    state: 'West Bengal',
-    district: 'Purba Bardhaman',
-    city: 'Burdwan',
-    formattedAddress: 'Burdwan, West Bengal, India',
-    source: 'search',
-  },
-  {
-    latitude: 25.3524,
-    longitude: 82.9912,
-    country: 'India',
-    state: 'Uttar Pradesh',
-    district: 'Varanasi',
-    city: 'Varanasi',
-    formattedAddress: 'Varanasi, Uttar Pradesh, India',
-    source: 'search',
-  },
-  {
-    latitude: 25.5941,
-    longitude: 85.1376,
-    country: 'India',
-    state: 'Bihar',
-    district: 'Patna',
-    city: 'Patna',
-    formattedAddress: 'Bazar Samiti, Patna, Bihar, India',
-    source: 'search',
-  },
-];
-
 const INDIAN_STATES = [
   'Andhra Pradesh',
-  'Bihar',
-  'Chhattisgarh',
-  'Gujarat',
-  'Haryana',
-  'Karnataka',
-  'Madhya Pradesh',
-  'Maharashtra',
-  'Punjab',
-  'Rajasthan',
-  'Tamil Nadu',
   'Telangana',
+  'Maharashtra',
+  'Karnataka',
+  'Tamil Nadu',
+  'Punjab',
+  'Haryana',
+  'Madhya Pradesh',
+  'Rajasthan',
+  'Gujarat',
   'Uttar Pradesh',
   'West Bengal',
+  'Bihar',
   'Odisha',
-  'Assam',
+  'Chhattisgarh',
   'Kerala',
+  'Assam',
   'Jharkhand',
   'Uttarakhand',
   'Himachal Pradesh',
@@ -173,16 +55,13 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   const [districtInput, setDistrictInput] = useState(currentLocation.district || '');
   const [villageInput, setVillageInput] = useState(currentLocation.village || '');
 
-  // Filtered presets based on search query
-  const filteredPresets = searchQuery.trim()
-    ? POPULAR_INDIAN_LOCATIONS.filter(
-        (loc) =>
-          loc.formattedAddress.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          loc.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          loc.state.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          loc.district.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : POPULAR_INDIAN_LOCATIONS;
+  // Live dynamic search from our comprehensive Indian locations database
+  const searchResults = searchQuery.trim()
+    ? searchIndianLocations(searchQuery)
+    : [];
+
+  // Popular regions for quick 1-click select
+  const popularPresets = ALL_INDIAN_LOCATIONS.filter((l) => l.popular);
 
   const handleUseGps = () => {
     setGpsError(null);
@@ -196,45 +75,77 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       async (position) => {
         setIsDetectingGps(false);
         const { latitude, longitude } = position.coords;
+
+        // Determine closest Indian district / state using spatial lookup
+        const closest = findClosestIndianLocation(latitude, longitude);
+
         const newLoc: LocationData = {
           latitude,
           longitude,
           country: 'India',
-          state: 'GPS Detected State',
-          district: 'Local District',
-          formattedAddress: `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)} (GPS Farm Location)`,
+          state: closest.state,
+          district: closest.district,
+          city: closest.name.split(' (')[0],
+          formattedAddress: `${closest.name}, ${closest.state}, India (GPS)`,
           source: 'gps',
         };
         onSelectLocation(newLoc);
       },
       (err) => {
         setIsDetectingGps(false);
-        setGpsError(`Could not access location: ${err.message}. You can search or select your village below.`);
+        setGpsError(`Could not access GPS: ${err.message}. Please search your district or town below.`);
       },
       { timeout: 10000, enableHighAccuracy: true }
     );
   };
 
+  const handleSelectPreset = (preset: LocationPreset) => {
+    const newLoc: LocationData = {
+      latitude: preset.latitude,
+      longitude: preset.longitude,
+      country: 'India',
+      state: preset.state,
+      district: preset.district,
+      city: preset.name.split(' (')[0],
+      town: preset.name.split(' (')[0],
+      formattedAddress: `${preset.name}, ${preset.state}, India`,
+      source: 'search',
+    };
+    onSelectLocation(newLoc);
+    setSearchQuery('');
+  };
+
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const townName = villageInput.trim() || districtInput.trim() || selectedState;
-    // Find approximate coords from presets or default center
-    const matchedPreset = POPULAR_INDIAN_LOCATIONS.find(
-      (p) => p.state.toLowerCase() === selectedState.toLowerCase()
-    );
+    const query = [villageInput, districtInput, selectedState].filter(Boolean).join(' ');
 
-    const lat = matchedPreset ? matchedPreset.latitude + (Math.random() * 0.1 - 0.05) : 20.5937;
-    const lng = matchedPreset ? matchedPreset.longitude + (Math.random() * 0.1 - 0.05) : 78.9629;
+    // Try finding exact or nearest coordinates from database
+    const matches = searchIndianLocations(query);
+    if (matches.length > 0) {
+      const best = matches[0];
+      onSelectLocation({
+        ...best,
+        village: villageInput.trim() || undefined,
+        formattedAddress: `${villageInput.trim() ? villageInput.trim() + ', ' : ''}${best.formattedAddress}`,
+        source: 'manual',
+      });
+      return;
+    }
+
+    // Default to center of state
+    const stateMatch = ALL_INDIAN_LOCATIONS.find((l) => l.state.toLowerCase() === selectedState.toLowerCase());
+    const lat = stateMatch ? stateMatch.latitude : 14.4673;
+    const lng = stateMatch ? stateMatch.longitude : 78.8242;
 
     const newLoc: LocationData = {
       latitude: lat,
       longitude: lng,
       country: 'India',
       state: selectedState,
-      district: districtInput.trim() || 'District Center',
+      district: districtInput.trim() || stateMatch?.district || 'District Center',
       village: villageInput.trim() || undefined,
-      city: townName,
-      formattedAddress: `${townName}${districtInput ? ', ' + districtInput : ''}, ${selectedState}, India`,
+      city: villageInput.trim() || districtInput.trim() || stateMatch?.name || selectedState,
+      formattedAddress: `${villageInput ? villageInput + ', ' : ''}${districtInput ? districtInput + ', ' : ''}${selectedState}, India`,
       source: 'manual',
     };
 
@@ -253,7 +164,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
           {t.locationPrompt}
         </h2>
         <p className="text-stone-600 text-sm mt-1 max-w-xl mx-auto">
-          KrishiSetu dynamically discovers nearby wholesale mandis, private yards, and mills within your state and across neighboring districts.
+          KrishiSetu is genuine location-driven. Select your farm district to discover nearby APMC mandis, mills, and calculate accurate highway transport.
         </p>
       </div>
 
@@ -297,7 +208,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t.searchLocationPlaceholder}
+                placeholder="Search Kadapa, Warangal, Nashik, Kurnool..."
                 className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
               />
             </div>
@@ -311,6 +222,40 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-xs text-red-700">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{gpsError}</span>
+          </div>
+        )}
+
+        {/* Dynamic Search Dropdown / Results */}
+        {searchQuery.trim().length > 0 && (
+          <div className="mt-4 border-t border-stone-100 pt-3">
+            <div className="text-xs font-bold text-stone-500 uppercase mb-2">
+              Found {searchResults.length} location{searchResults.length === 1 ? '' : 's'} matching "{searchQuery}"
+            </div>
+            {searchResults.length === 0 ? (
+              <div className="p-4 bg-stone-50 rounded-xl text-center text-xs text-stone-500">
+                No matching location found. Use the manual form below to specify your state and district.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                {searchResults.slice(0, 9).map((loc, idx) => (
+                  <button
+                    key={`${loc.formattedAddress}-${idx}`}
+                    type="button"
+                    onClick={() => {
+                      onSelectLocation(loc);
+                      setSearchQuery('');
+                    }}
+                    className="text-left p-2.5 rounded-xl border border-stone-200 hover:border-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-stone-900">{loc.city || loc.district}</div>
+                      <div className="text-[11px] text-stone-500">{loc.district}, {loc.state}</div>
+                    </div>
+                    <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -334,7 +279,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
               {currentLocation.formattedAddress}
             </h3>
             <p className="text-xs text-stone-600 mt-0.5 font-mono">
-              Coordinates: {currentLocation.latitude.toFixed(4)}° N, {currentLocation.longitude.toFixed(4)}° E
+              Coordinates: {currentLocation.latitude.toFixed(4)}° N, {currentLocation.longitude.toFixed(4)}° E • {currentLocation.district}, {currentLocation.state}
             </p>
           </div>
         </div>
@@ -348,26 +293,27 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         </button>
       </div>
 
-      {/* Fast Preset Agricultural Hubs Across India */}
+      {/* Popular Agricultural Hubs Across India */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500">
-            Quick Select: Major Agricultural Hubs Across India
+          <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500 flex items-center gap-1.5">
+            <Building2 className="w-3.5 h-3.5 text-stone-400" />
+            Quick Select: Major Agricultural Hubs in India
           </h3>
-          <span className="text-[11px] text-stone-400">12 Indian Regions</span>
+          <span className="text-[11px] text-stone-400">Click any location to test market discovery</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-          {filteredPresets.map((loc) => {
+          {popularPresets.map((loc) => {
             const isSelected =
               Math.abs(loc.latitude - currentLocation.latitude) < 0.05 &&
               Math.abs(loc.longitude - currentLocation.longitude) < 0.05;
 
             return (
               <button
-                key={loc.formattedAddress}
+                key={loc.name}
                 type="button"
-                onClick={() => onSelectLocation(loc)}
+                onClick={() => handleSelectPreset(loc)}
                 className={`text-left p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                   isSelected
                     ? 'bg-emerald-50 border-emerald-600 ring-2 ring-emerald-500/30 font-bold'
@@ -376,7 +322,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
               >
                 <div>
                   <div className="text-xs font-bold text-stone-900">
-                    {loc.city || loc.district}
+                    {loc.name}
                   </div>
                   <div className="text-[11px] text-stone-500 truncate max-w-[200px]">
                     {loc.district}, {loc.state}
@@ -426,7 +372,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
               type="text"
               value={districtInput}
               onChange={(e) => setDistrictInput(e.target.value)}
-              placeholder="e.g. West Godavari, Nashik, Warangal..."
+              placeholder="e.g. Kadapa, Warangal, Nashik..."
               className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-600"
             />
           </div>
@@ -440,7 +386,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                 type="text"
                 value={villageInput}
                 onChange={(e) => setVillageInput(e.target.value)}
-                placeholder="e.g. Bhimavaram, Lasalgaon, Village..."
+                placeholder="e.g. Proddatur, Lasalgaon..."
                 className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-600"
               />
             </div>

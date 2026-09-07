@@ -19,15 +19,16 @@ export const App: React.FC = () => {
   // Step Navigation: 1 (Location) -> 2 (Crop Details) -> 3 (Market Comparison) -> 4 (Deal Summary)
   const [currentStep, setCurrentStep] = useState<number>(2); // Start directly on Step 2 as requested!
 
-  // Location State (Default: Bhimavaram, West Godavari, AP — dynamically changeable to any location in India)
+  // Location State (Default: Kadapa, YSR District, Andhra Pradesh — dynamically discovered across India)
   const [location, setLocation] = useState<LocationData>({
-    latitude: 16.5449,
-    longitude: 81.5212,
+    latitude: 14.4673,
+    longitude: 78.8242,
     country: 'India',
     state: 'Andhra Pradesh',
-    district: 'West Godavari',
-    city: 'Bhimavaram',
-    formattedAddress: 'Bhimavaram, West Godavari, Andhra Pradesh, India',
+    district: 'YSR Kadapa',
+    city: 'Kadapa',
+    town: 'Kadapa',
+    formattedAddress: 'Kadapa (YSR District), Andhra Pradesh, India',
     source: 'search',
   });
 
@@ -39,16 +40,17 @@ export const App: React.FC = () => {
     quantityValue: 10,
     quantityUnit: 'quintal',
     normalizedKilograms: 1000, // 10 quintals = 1,000 kg
-    qualityGrade: 'B',
-    qualitySource: 'manual',
-    qualityConfirmed: true,
+    cropPhoto: null,
+    qualityGrade: null, // Farmer must inspect & confirm grade
+    qualitySource: null,
+    qualityConfirmed: false,
     aiAssessment: null,
   });
 
   // Step 3 Selected Market Result for Step 4 Deal Slip
   const [selectedMarketResult, setSelectedMarketResult] = useState<MarketAnalysisResult | null>(null);
 
-  // Hard Gate validation check
+  // Hard Gate validation check (Crop + Quantity + Mandatory Photo + Confirmed Quality)
   const isCropValid =
     Boolean(cropState.selectedCrop && cropState.selectedCrop.id !== 'other_custom') ||
     Boolean(cropState.customCropName.trim().length > 0);
@@ -56,16 +58,24 @@ export const App: React.FC = () => {
   const isQuantityValid =
     typeof cropState.quantityValue === 'number' && cropState.quantityValue > 0;
 
+  const isPhotoValid = Boolean(cropState.cropPhoto || cropState.aiAssessment?.imageUrl);
+
   const isQualityValid =
     Boolean(cropState.qualityGrade) && cropState.qualityConfirmed;
 
-  const canNavigateToStep3 = isCropValid && isQuantityValid && isQualityValid;
+  const canNavigateToStep3 = isCropValid && isQuantityValid && isPhotoValid && isQualityValid;
 
   const handleUpdateCropState = (newState: Partial<CropSelectionState>) => {
     setCropState((prev) => ({
       ...prev,
       ...newState,
     }));
+  };
+
+  const handleSelectLocation = (newLoc: LocationData) => {
+    setLocation(newLoc);
+    setSelectedMarketResult(null); // Reset stale market deal selection
+    setCurrentStep(2);
   };
 
   const handleStepClick = (targetStep: number) => {
@@ -100,10 +110,7 @@ export const App: React.FC = () => {
           <LocationSelector
             language={language}
             currentLocation={location}
-            onSelectLocation={(newLoc) => {
-              setLocation(newLoc);
-              setCurrentStep(2);
-            }}
+            onSelectLocation={handleSelectLocation}
             onContinue={() => setCurrentStep(2)}
           />
         )}
