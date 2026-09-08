@@ -11,6 +11,7 @@ import { CROP_DATABASE, filterCrops } from '../../data/cropsData';
 import { TRANSLATIONS } from '../../utils/i18n';
 import { normalizeToKilograms } from '../../utils/pricing';
 import { analyzeCropPhoto, preValidateImage } from '../../services/cropVisionService';
+import { generateCropSampleImage } from '../../data/cropSampleImages';
 import { ReferenceStandardsModal } from './ReferenceStandardsModal';
 import { WebcamCaptureModal } from './WebcamCaptureModal';
 import {
@@ -41,13 +42,16 @@ interface CropDetailsStepProps {
   onBack: () => void;
 }
 
-// Multi-stage analysis animation steps
-const ANALYSIS_STEPS = [
-  { step: 1, title: 'Reading crop image pixels & clarity...', durationMs: 700 },
-  { step: 2, title: 'Verifying crop species & identity...', durationMs: 800 },
-  { step: 3, title: 'Inspecting surface (rot, mold, pest, freshness)...', durationMs: 900 },
-  { step: 4, title: 'Benchmarking against Agmark Mandi visual criteria...', durationMs: 800 },
-  { step: 5, title: 'Finalizing visual quality assessment...', durationMs: 500 },
+// 8 Lifecycle stages for AI quality assessment
+const LIFECYCLE_STAGES = [
+  { id: 1, label: 'Photo received' },
+  { id: 2, label: 'Image quality checked' },
+  { id: 3, label: 'Identifying crop...' },
+  { id: 4, label: 'Inspecting freshness' },
+  { id: 5, label: 'Checking maturity' },
+  { id: 6, label: 'Detecting visible damage' },
+  { id: 7, label: 'Checking deterioration' },
+  { id: 8, label: 'Preparing quality assessment' },
 ];
 
 export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
@@ -298,6 +302,18 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
     await triggerAIAnalysis(base64Data);
   };
 
+  const handleSelectTestSample = async (grade: 'A' | 'B' | 'C' | 'REJECT') => {
+    if (!cropState.selectedCrop) {
+      setShowValidationAlert(true);
+      cropSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    const sampleDataUrl = generateCropSampleImage(cropState.selectedCrop.name, grade);
+    setCapturedImage(sampleDataUrl);
+    onUpdateCropState({ cropPhoto: sampleDataUrl });
+    await triggerAIAnalysis(sampleDataUrl);
+  };
+
   const handleDropPhoto = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -331,7 +347,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
 
     setCameraError(null);
     setIsAnalyzing(true);
-    setAnalysisCurrentStep(1);
+    setAnalysisCurrentStep(2); // Stage 1 & 2: photo received & image quality checked
 
     // Client-side quick brightness check
     const preCheck = await preValidateImage(imageData);
@@ -341,16 +357,14 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
       return;
     }
 
-    // Step animation interval
-    let step = 1;
+    // Step animation interval across stages 3 to 7
+    let currentStage = 2;
     const stepInterval = setInterval(() => {
-      step += 1;
-      if (step <= 4) {
-        setAnalysisCurrentStep(step);
-      } else {
-        clearInterval(stepInterval);
+      currentStage += 1;
+      if (currentStage <= 7) {
+        setAnalysisCurrentStep(currentStage);
       }
-    }, 750);
+    }, 650);
 
     try {
       const assessment = await analyzeCropPhoto({
@@ -360,13 +374,15 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
 
       assessment.imageUrl = imageData;
       clearInterval(stepInterval);
-      setAnalysisCurrentStep(5);
+      setAnalysisCurrentStep(8); // Stage 8: Preparing quality assessment
 
-      // We NEVER auto-assign the final grade!
-      // The farmer must confirm or select their grade.
+      // Initial state MUST be null! Never auto-assign Grade A/B/C!
+      // Farmer confirmation is strictly required.
       onUpdateCropState({
         aiAssessment: assessment,
         cropPhoto: imageData,
+        qualityGrade: null,
+        qualityConfirmed: false,
       });
     } catch (err: any) {
       console.warn('AI analysis error:', err);
@@ -377,6 +393,19 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
         setIsAnalyzing(false);
       }, 500);
     }
+  };
+
+  // Retake photo: clears photo, AI result, suggestedGrade, confirmedQuality. Requires new photo.
+  const handleRetakePhoto = () => {
+    setCapturedImage(null);
+    setCameraError(null);
+    onUpdateCropState({
+      cropPhoto: null,
+      qualityGrade: null,
+      qualitySource: null,
+      qualityConfirmed: false,
+      aiAssessment: null,
+    });
   };
 
   // Accept AI suggested grade (Farmer Confirmation)
@@ -525,7 +554,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t.searchCropPlaceholder}
+            placeholder={t.searchCropsPlaceholder}
             className="w-full pl-10 pr-4 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
           />
           {searchQuery && (
@@ -797,7 +826,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                 className="inline-flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold px-5 py-3 rounded-xl shadow-md transition-all text-xs sm:text-sm cursor-pointer active:scale-95"
               >
                 <Camera className="w-4 h-4 text-emerald-200" />
-                <span>{capturedImage ? '🔄 Retake Photo' : '📷 Take Photo'}</span>
+                <span>{capturedImage ? '🔄 Retake / Rescan' : '📷 AI Crop Camera'}</span>
               </button>
 
               <button
@@ -807,6 +836,90 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
               >
                 <Upload className="w-4 h-4 text-stone-600" />
                 <span>🖼️ Upload Photo</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick One-Click Crop Samples for Instant AI Quality Testing */}
+          <div className="mt-4 pt-4 border-t border-stone-200/80">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+              <span className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                Instant AI Testing Samples ({cropState.selectedCrop ? cropState.selectedCrop.name : 'Select a crop above'}):
+              </span>
+              <span className="text-[10px] text-stone-500 font-medium">
+                Click any reference harvest sample to trigger Gemini 3.8 Flash Vision
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                type="button"
+                onClick={() => handleSelectTestSample('A')}
+                disabled={isAnalyzing}
+                className="p-2.5 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-50 text-left transition-all cursor-pointer shadow-xs group disabled:opacity-50"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-extrabold text-emerald-900 group-hover:text-emerald-700">
+                    Grade A Sample
+                  </span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                </div>
+                <p className="text-[10px] text-stone-600 line-clamp-1">
+                  Pristine luster, zero rot
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectTestSample('B')}
+                disabled={isAnalyzing}
+                className="p-2.5 rounded-xl border border-blue-300 bg-white hover:bg-blue-50 text-left transition-all cursor-pointer shadow-xs group disabled:opacity-50"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-extrabold text-blue-900 group-hover:text-blue-700">
+                    Grade B FAQ
+                  </span>
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                </div>
+                <p className="text-[10px] text-stone-600 line-clamp-1">
+                  Standard market quality
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectTestSample('C')}
+                disabled={isAnalyzing}
+                className="p-2.5 rounded-xl border border-amber-300 bg-white hover:bg-amber-50 text-left transition-all cursor-pointer shadow-xs group disabled:opacity-50"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-extrabold text-amber-900 group-hover:text-amber-700">
+                    Grade C Sample
+                  </span>
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                </div>
+                <p className="text-[10px] text-stone-600 line-clamp-1">
+                  Irregular size & blemishes
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectTestSample('REJECT')}
+                disabled={isAnalyzing}
+                className="p-2.5 rounded-xl border border-red-300 bg-white hover:bg-red-50 text-left transition-all cursor-pointer shadow-xs group disabled:opacity-50"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-extrabold text-red-900 group-hover:text-red-700 flex items-center gap-1">
+                    <ShieldAlert className="w-3 h-3 text-red-600" />
+                    Rot / Mold
+                  </span>
+                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                </div>
+                <p className="text-[10px] text-red-700 line-clamp-1 font-semibold">
+                  Fungal defect (Reject)
+                </p>
               </button>
             </div>
           </div>
@@ -834,59 +947,72 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
 
         {/* ANIMATION 1: MULTI-STAGE PHOTO ANALYSIS ANIMATION */}
         {isAnalyzing && (
-          <div className="mb-6 bg-emerald-50/90 border-2 border-emerald-500 rounded-2xl p-6 shadow-md">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow">
-                <RefreshCw className="w-5 h-5 animate-spin" />
+          <div className="mb-6 bg-stone-900 text-white rounded-2xl p-5 sm:p-6 shadow-xl border border-emerald-500/40">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              {/* Uploaded crop image with laser scanning bar and badges */}
+              <div className="relative w-52 h-52 sm:w-60 sm:h-60 rounded-xl overflow-hidden border-2 border-emerald-400 shadow-lg bg-stone-950 shrink-0">
+                {capturedImage && (
+                  <img
+                    src={capturedImage}
+                    alt="Crop sample"
+                    className="w-full h-full object-cover opacity-85"
+                  />
+                )}
+                {/* Subtle moving scanning line across the image */}
+                <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_#10b981] animate-scan-laser pointer-events-none" />
+
+                {/* Small visual analysis badges around the crop */}
+                <div className="absolute top-2 left-2 bg-black/75 backdrop-blur-xs text-[10px] font-bold text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/40 animate-pulse">
+                  Freshness
+                </div>
+                <div className="absolute top-2 right-2 bg-black/75 backdrop-blur-xs text-[10px] font-bold text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/40 animate-pulse">
+                  Maturity
+                </div>
+                <div className="absolute top-1/2 -translate-y-1/2 left-2 bg-black/75 backdrop-blur-xs text-[10px] font-bold text-rose-300 px-2 py-0.5 rounded-full border border-rose-500/40 animate-pulse">
+                  Damage
+                </div>
+                <div className="absolute top-1/2 -translate-y-1/2 right-2 bg-black/75 backdrop-blur-xs text-[10px] font-bold text-sky-300 px-2 py-0.5 rounded-full border border-sky-500/40 animate-pulse">
+                  Color
+                </div>
+                <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-xs text-[10px] font-bold text-red-400 px-2 py-0.5 rounded-full border border-red-500/40 animate-pulse">
+                  Rot
+                </div>
+                <div className="absolute bottom-2 right-2 bg-black/75 backdrop-blur-xs text-[10px] font-bold text-teal-300 px-2 py-0.5 rounded-full border border-teal-500/40 animate-pulse">
+                  Uniformity
+                </div>
               </div>
-              <div>
-                <h5 className="font-extrabold text-base text-emerald-950">
-                  Multistage AI Harvest Inspection in Progress...
-                </h5>
-                <p className="text-xs text-emerald-800">
-                  Evaluating {cropState.selectedCrop?.name || 'crop'} pixels against Agmark benchmarks
-                </p>
-              </div>
-            </div>
 
-            {/* Step Progress Bar */}
-            <div className="w-full bg-emerald-200 h-2 rounded-full overflow-hidden mb-4">
-              <div
-                className="bg-emerald-600 h-full transition-all duration-500 ease-out"
-                style={{ width: `${(analysisCurrentStep / 5) * 100}%` }}
-              />
-            </div>
+              {/* Lifecycle stages display */}
+              <div className="flex-1 space-y-2.5 w-full">
+                <div className="flex items-center gap-2 text-emerald-400 font-extrabold text-sm border-b border-stone-800 pb-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-amber-400 animate-spin" />
+                  <span>🤖 AI Crop Quality Assessment</span>
+                </div>
+                <div className="space-y-1.5 text-xs font-medium">
+                  {LIFECYCLE_STAGES.map((st) => {
+                    const isDone = st.id < analysisCurrentStep;
+                    const isCurrent = st.id === analysisCurrentStep;
 
-            {/* Visual Step Checklist */}
-            <div className="space-y-2 text-xs">
-              {ANALYSIS_STEPS.map((s) => {
-                const isDone = s.step < analysisCurrentStep;
-                const isCurrent = s.step === analysisCurrentStep;
-
-                return (
-                  <div
-                    key={s.step}
-                    className={`flex items-center gap-2.5 p-2 rounded-lg transition-colors ${
-                      isCurrent
-                        ? 'bg-white border border-emerald-400 font-bold text-emerald-950 shadow-xs'
-                        : isDone
-                        ? 'text-emerald-800 font-medium'
-                        : 'text-stone-400'
-                    }`}
-                  >
-                    {isDone ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    ) : isCurrent ? (
-                      <RefreshCw className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
-                    ) : (
-                      <div className="w-4 h-4 rounded-full border border-stone-300 flex items-center justify-center text-[9px] shrink-0">
-                        {s.step}
+                    return (
+                      <div
+                        key={st.id}
+                        className={`flex items-center gap-2.5 transition-colors ${
+                          isDone
+                            ? 'text-emerald-400'
+                            : isCurrent
+                            ? 'text-amber-300 font-bold'
+                            : 'text-stone-500'
+                        }`}
+                      >
+                        <span className="w-4 text-center font-mono font-bold">
+                          {isDone ? '✓' : isCurrent ? '⟳' : '○'}
+                        </span>
+                        <span>{st.label}</span>
                       </div>
-                    )}
-                    <span>{s.title}</span>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -898,14 +1024,23 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
             <div className="text-xs">
               <span className="font-bold block text-sm">Inspection Alert</span>
               <p className="mt-0.5">{cameraError}</p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleRetakePhoto}
+                  className="bg-red-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs cursor-pointer"
+                >
+                  Retry with New Photo
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* ACTIVE AI ASSESSMENT DISPLAY CARD (IF COMPLETED) */}
+        {/* RESULT REVEAL: ACTIVE AI ASSESSMENT DISPLAY CARD */}
         {cropState.aiAssessment && !isAnalyzing && (
           <div
-            className={`mb-6 rounded-2xl p-4 sm:p-5 border-2 transition-all ${
+            className={`mb-6 rounded-2xl p-4 sm:p-6 border-2 transition-all ${
               cropState.aiAssessment.rotDetected || cropState.aiAssessment.suggestedGrade === 'REJECT'
                 ? 'bg-red-50 border-red-500 shadow-md ring-2 ring-red-400/30'
                 : !cropState.aiAssessment.cropMatch
@@ -918,7 +1053,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-sm flex items-center gap-1.5 text-stone-900">
                   <Sparkles className="w-4 h-4 text-amber-500" />
-                  Visual AI Quality Inspection Result
+                  AI analysis complete
                 </span>
                 {cropState.aiAssessment.isDemo && (
                   <span className="bg-amber-200 text-amber-900 font-extrabold text-[10px] px-2 py-0.5 rounded">
@@ -938,54 +1073,53 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                       : 'bg-red-100 text-red-800'
                   }`}
                 >
-                  {cropState.aiAssessment.confidenceLevel} Confidence
+                  {cropState.aiAssessment.confidenceLevel || 'High'}
                 </span>
               </div>
             </div>
 
-            {/* CASE 1: ROT / MOLD / SEVERE SPOILAGE DETECTED */}
-            {(cropState.aiAssessment.rotDetected || cropState.aiAssessment.suggestedGrade === 'REJECT') && (
-              <div className="mb-4 bg-red-100/90 border-2 border-red-500 rounded-xl p-4 text-red-950">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center shrink-0 shadow">
+            {/* CASE 1: REJECT / ROT / SEVERE SPOILAGE DETECTED */}
+            {(cropState.aiAssessment.rotDetected || cropState.aiAssessment.suggestedGrade === 'REJECT') ? (
+              <div className="mb-4 bg-red-100/95 border-2 border-red-500 rounded-xl p-4 sm:p-5 text-red-950">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center shrink-0 shadow">
                     <ShieldAlert className="w-5 h-5" />
                   </div>
-                  <div className="space-y-1.5 flex-1">
+                  <div className="space-y-2 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="bg-red-600 text-white font-black text-xs px-2.5 py-1 rounded-md uppercase tracking-wide shadow-xs">
-                        🚨 LOT REJECTED / DISQUALIFIED FOR STANDARD APMC SALE
+                        ⚠️ Significant Quality Problem Detected
+                      </span>
+                      <span className="bg-red-200 text-red-900 font-bold text-xs px-2 py-0.5 rounded">
+                        Suggested Result: REJECT / MANUAL REVIEW
                       </span>
                     </div>
 
-                    <h5 className="font-extrabold text-sm sm:text-base text-red-950">
-                      Severe Rot, Mold, or Spoilage Detected in Sample
-                    </h5>
+                    <div className="text-xs text-red-900 space-y-1">
+                      <p className="font-bold">AI observed:</p>
+                      <ul className="list-disc list-inside space-y-0.5 font-medium pl-1 text-red-900">
+                        <li>Visible deterioration</li>
+                        <li>Poor freshness</li>
+                        <li>Severe visible damage</li>
+                        {cropState.aiAssessment.observations?.map((obs, idx) => (
+                          <li key={idx} className="font-normal">{obs}</li>
+                        ))}
+                      </ul>
+                    </div>
 
-                    <p className="text-xs text-red-900">
-                      Under Indian Agmark & Mandi bylaws, lots showing active fungal mold mycelium, bacterial soft rot, or decomposition are barred from standard food-grade sale and <strong>cannot receive Grade A or Grade B</strong>.
-                    </p>
-
-                    {cropState.aiAssessment.rejectionReasons && cropState.aiAssessment.rejectionReasons.length > 0 && (
-                      <div className="bg-white/90 rounded-lg p-2.5 border border-red-300 mt-2">
-                        <span className="font-bold text-xs text-red-950 block mb-1">
-                          Disqualification Reasons:
-                        </span>
-                        <ul className="list-disc list-inside text-xs text-red-800 space-y-0.5">
-                          {cropState.aiAssessment.rejectionReasons.map((reason, idx) => (
-                            <li key={idx} className="font-semibold">{reason}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                    <div className="bg-white/95 rounded-lg p-3 border border-red-300 mt-2 text-xs text-red-900 font-bold flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                      <span>This crop should not be treated as premium quality based on the photograph. Do not show Grade A.</span>
+                    </div>
 
                     <div className="pt-2 flex flex-wrap items-center gap-2.5">
                       <button
                         type="button"
-                        onClick={handleTakePhotoClick}
-                        className="bg-red-700 hover:bg-red-800 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow cursor-pointer"
+                        onClick={handleRetakePhoto}
+                        className="bg-red-700 hover:bg-red-800 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow cursor-pointer transition-colors"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
-                        Retake Photo with Fresh Sample
+                        [ 🔄 Analyze Another Photo ]
                       </button>
 
                       <button
@@ -994,20 +1128,18 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                         className="bg-white border border-red-400 hover:bg-red-50 text-red-900 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
                       >
                         <BookOpen className="w-3.5 h-3.5 text-red-700" />
-                        View Rejection Criteria & Standards
+                        View Agmark Rejection Standards
                       </button>
                     </div>
 
                     <p className="text-[11px] text-red-800 italic pt-1">
-                      💡 Farmer Note: If this lot is being liquidated for animal feed, biomass, or processing salvage, you may manually confirm <strong>Grade C (-5% Price)</strong> or <strong>Custom</strong> below. The AI will never silently force a grade.
+                      💡 Farmer Note: For animal feed, biomass, or processing salvage, you may select Grade C or Custom below.
                     </p>
                   </div>
                 </div>
               </div>
-            )}
-
-            {/* CASE 2: CROP MISMATCH */}
-            {!cropState.aiAssessment.cropMatch && !cropState.aiAssessment.rotDetected && cropState.aiAssessment.suggestedGrade !== 'REJECT' && (
+            ) : !cropState.aiAssessment.cropMatch ? (
+              /* CASE 2: CROP MISMATCH */
               <div className="mb-4 bg-amber-100/90 border border-amber-400 rounded-xl p-3 flex items-start gap-2.5 text-xs text-amber-950">
                 <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                 <div>
@@ -1016,10 +1148,10 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                   <div className="mt-2 flex gap-2">
                     <button
                       type="button"
-                      onClick={handleTakePhotoClick}
+                      onClick={handleRetakePhoto}
                       className="bg-amber-800 text-white font-bold px-3 py-1.5 rounded-lg text-xs cursor-pointer"
                     >
-                      {t.retakePhoto}
+                      [ 🔄 Analyze Another Photo ]
                     </button>
                     <button
                       type="button"
@@ -1033,15 +1165,13 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                   </div>
                 </div>
               </div>
-            )}
-
-            {/* Assessment Details */}
-            <div className="space-y-3">
-              {cropState.aiAssessment.suggestedGrade !== 'REJECT' && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-stone-500 font-medium">{t.suggestedGrade}:</span>
+            ) : (
+              /* CASE 3: STANDARD QUALITY GRADE RESULT (GRADE A, B, C) */
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2.5 bg-white p-3 rounded-xl border border-stone-200">
+                  <span className="text-xs text-stone-600 font-bold">Suggested Quality:</span>
                   <span
-                    className={`font-extrabold text-sm px-3 py-0.5 rounded-lg ${
+                    className={`font-black text-sm px-3 py-1 rounded-lg ${
                       cropState.aiAssessment.suggestedGrade === 'A'
                         ? 'bg-emerald-800 text-amber-300'
                         : cropState.aiAssessment.suggestedGrade === 'B'
@@ -1051,7 +1181,7 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                   >
                     Grade {cropState.aiAssessment.suggestedGrade}
                   </span>
-                  <span className="text-xs text-stone-500">
+                  <span className="text-xs font-semibold text-stone-500">
                     ({cropState.aiAssessment.suggestedGrade === 'A'
                       ? '+5% Price Premium'
                       : cropState.aiAssessment.suggestedGrade === 'B'
@@ -1059,45 +1189,53 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
                       : '-5% Price Discount'})
                   </span>
                 </div>
-              )}
 
-              {/* Observations list */}
-              <div className="text-xs text-stone-700">
-                <span className="font-bold text-stone-900 block mb-1">
-                  Visual Observations & Agmark Parameters:
-                </span>
-                <ul className="space-y-1 list-disc list-inside text-stone-600 pl-1">
-                  {cropState.aiAssessment.observations.map((obs, idx) => (
-                    <li key={idx}>{obs}</li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Limitations and Disclaimer */}
-              <div className="bg-amber-50/80 border border-amber-200 rounded-lg p-2.5 text-[11px] text-amber-900 flex items-start gap-2">
-                <Info className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold">{t.aiVisualEstimate}</span> • Physical testing for exact moisture % and aflatoxin requires mandi lab meters.
+                {/* Why? Bullet points of observations */}
+                <div className="text-xs text-stone-800">
+                  <span className="font-extrabold text-stone-900 block mb-1">
+                    Why?
+                  </span>
+                  <ul className="space-y-1 list-disc list-inside text-stone-600 pl-1">
+                    {cropState.aiAssessment.observations.map((obs, idx) => (
+                      <li key={idx} className="font-medium">{obs}</li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
 
-              {/* Confirmation Button for AI grade */}
-              {cropState.aiAssessment.suggestedGrade !== 'REJECT' && (
-                <div className="pt-1 flex flex-wrap items-center gap-2">
+                {/* Limitations and Disclaimer */}
+                <div className="bg-amber-50/80 border border-amber-200 rounded-lg p-2.5 text-[11px] text-amber-900 flex items-start gap-2">
+                  <Info className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">{t.aiVisualEstimate}</span> • Physical testing for moisture % and internal quality is verified at Mandi lab meters.
+                  </div>
+                </div>
+
+                {/* Action Buttons: Confirm AI Grade or Retake */}
+                <div className="pt-2 flex flex-wrap items-center gap-3">
                   <button
                     type="button"
                     onClick={() => handleAcceptAIGrade(cropState.aiAssessment!.suggestedGrade as QualityGrade)}
-                    className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    className={`font-extrabold px-5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow cursor-pointer transition-all ${
+                      cropState.qualityConfirmed && cropState.qualityGrade === cropState.aiAssessment.suggestedGrade
+                        ? 'bg-emerald-800 text-white ring-2 ring-emerald-500'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    }`}
                   >
                     <Check className="w-4 h-4" />
-                    Confirm Grade {cropState.aiAssessment.suggestedGrade} ({cropState.aiAssessment.suggestedGrade === 'A' ? '+5%' : 'Modal'})
+                    [ ✓ Confirm Grade {cropState.aiAssessment.suggestedGrade} ]
                   </button>
-                  <span className="text-xs text-stone-500">
-                    or choose a different grade manually below
-                  </span>
+
+                  <button
+                    type="button"
+                    onClick={handleRetakePhoto}
+                    className="bg-white border border-stone-300 hover:bg-stone-100 text-stone-800 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-stone-600" />
+                    [ 🔄 Analyze Another Photo ]
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1119,15 +1257,29 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
             )}
           </div>
 
+          {/* If lot is disqualified / rejected, show notice and do not show Grade A */}
+          {(cropState.aiAssessment?.rotDetected || cropState.aiAssessment?.suggestedGrade === 'REJECT') && (
+            <div className="mb-3 bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-900 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>
+                <strong>Grade A Omitted:</strong> Severe rot or mold was detected. This lot should not be treated as premium quality. Please select Grade C or Custom below.
+              </span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              {
-                grade: 'A' as QualityGrade,
-                title: t.gradeA,
-                desc: t.gradeADesc,
-                badge: '+5% Price',
-                color: 'emerald',
-              },
+              ...(!(cropState.aiAssessment?.rotDetected || cropState.aiAssessment?.suggestedGrade === 'REJECT')
+                ? [
+                    {
+                      grade: 'A' as QualityGrade,
+                      title: t.gradeA,
+                      desc: t.gradeADesc,
+                      badge: '+5% Price',
+                      color: 'emerald',
+                    },
+                  ]
+                : []),
               {
                 grade: 'B' as QualityGrade,
                 title: t.gradeB,

@@ -1,5 +1,4 @@
 import { AIQualityAssessment, CropItem, QualityGrade } from '../types/krishi';
-import { getCropQualityStandard } from '../data/cropQualityStandards';
 
 interface AnalyzeCropRequest {
   imageFileOrBase64: string;
@@ -24,7 +23,7 @@ export async function preValidateImage(base64Data: string): Promise<{
           return resolve({
             valid: false,
             issue: 'too_small',
-            message: 'Image resolution is too low. Please upload a clear photo of at least 300x300 pixels.',
+            message: 'Image resolution is too low. Please capture a clear photo of your produce.',
           });
         }
 
@@ -46,14 +45,13 @@ export async function preValidateImage(base64Data: string): Promise<{
             const r = data[i];
             const g = data[i + 1];
             const b = data[i + 2];
-            // Standard luminance formula
             const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
             totalBrightness += brightness;
           }
 
           const avgBrightness = totalBrightness / pixelCount;
 
-          if (avgBrightness < 15) {
+          if (avgBrightness < 12) {
             return resolve({
               valid: false,
               issue: 'too_dark',
@@ -61,7 +59,7 @@ export async function preValidateImage(base64Data: string): Promise<{
             });
           }
 
-          if (avgBrightness > 250) {
+          if (avgBrightness > 252) {
             return resolve({
               valid: false,
               issue: 'too_bright',
@@ -76,7 +74,7 @@ export async function preValidateImage(base64Data: string): Promise<{
       };
 
       img.onerror = () => {
-        resolve({ valid: false, issue: 'corrupt', message: 'Could not load image. Please provide a standard JPG or PNG.' });
+        resolve({ valid: false, issue: 'corrupt', message: 'Could not load image file. Please provide a standard JPG or PNG.' });
       };
 
       img.src = base64Data;
@@ -90,113 +88,132 @@ export async function preValidateImage(base64Data: string): Promise<{
 export function validateAIResponse(data: any, expectedCropName: string): AIQualityAssessment | null {
   if (!data || typeof data !== 'object') return null;
 
-  const validGrades = ['A', 'B', 'C', 'REJECT', 'Custom'];
-  let suggestedGrade: QualityGrade | 'REJECT' = validGrades.includes(data.suggestedGrade)
-    ? data.suggestedGrade
-    : 'B';
-
-  const rotDetected = Boolean(
-    data.rotDetected ||
+  const rawGrade = data.grade !== undefined ? data.grade : data.suggestedGrade;
+  const isRotOrMold = Boolean(
     data.qualityFactors?.visibleRot === true ||
-    data.suggestedGrade === 'REJECT' ||
-    data.status === 'REJECT' ||
-    data.verdict === 'REJECT'
+    data.qualityFactors?.visibleMold === true ||
+    rawGrade === 'REJECT' ||
+    data.status === 'REJECT'
   );
-  const pestDamageDetected = Boolean(data.pestDamageDetected || data.qualityFactors?.visible_damage === 'high');
 
-  let status: 'ACCEPTABLE' | 'REJECT' | 'MISMATCH' | 'INSUFFICIENT_IMAGE' | 'ERROR' | 'AI_UNAVAILABLE' =
-    data.status || 'ACCEPTABLE';
+  const isMismatch = Boolean(data.cropMatch === false || data.status === 'CROP_MISMATCH');
+  const isUnclear = Boolean(
+    data.status === 'IMAGE_UNCLEAR' ||
+    data.status === 'INSUFFICIENT_IMAGE' ||
+    data.imageQuality === 'insufficient'
+  );
 
-  let verdict: 'ACCEPT' | 'REJECT' | 'WARNING' | 'INSUFFICIENT_IMAGE' | 'ERROR' = 'ACCEPT';
-
-  if (data.status === 'AI_UNAVAILABLE' || data.verdict === 'ERROR') {
-    status = 'AI_UNAVAILABLE';
-    verdict = 'ERROR';
-  } else if (rotDetected || suggestedGrade === 'REJECT' || data.verdict === 'REJECT' || data.status === 'REJECT') {
-    status = 'REJECT';
-    verdict = 'REJECT';
+  // CRITICAL: NO DEFAULT GRADE!
+  // If unclear, mismatch, or server error -> grade MUST BE NULL!
+  let suggestedGrade: QualityGrade | 'REJECT' | null = null;
+  if (isRotOrMold) {
     suggestedGrade = 'REJECT';
-  } else if (data.cropMatch === false || data.status === 'MISMATCH' || data.verdict === 'WARNING') {
-    status = 'MISMATCH';
-    verdict = 'WARNING';
+  } else if (isMismatch || isUnclear) {
+    suggestedGrade = null;
+  } else if (rawGrade === 'A' || rawGrade === 'B' || rawGrade === 'C') {
+    suggestedGrade = rawGrade;
+  } else if (rawGrade === 'REJECT') {
     suggestedGrade = 'REJECT';
-  } else if (data.status === 'INSUFFICIENT_IMAGE' || data.verdict === 'INSUFFICIENT_IMAGE') {
-    status = 'INSUFFICIENT_IMAGE';
-    verdict = 'INSUFFICIENT_IMAGE';
+  } else {
+    suggestedGrade = null; // NEVER default to 'B'
   }
+
+  const status = isRotOrMold
+    ? 'REJECT'
+    : isMismatch
+    ? 'CROP_MISMATCH'
+    : isUnclear
+    ? 'IMAGE_UNCLEAR'
+    : data.status || 'ANALYZED';
+
+  const verdict = isRotOrMold
+    ? 'REJECT'
+    : isMismatch
+    ? 'WARNING'
+    : isUnclear
+    ? 'INSUFFICIENT_IMAGE'
+    : 'ACCEPT';
 
   const confidenceScore =
     typeof data.confidenceScore === 'number'
-      ? Math.max(0, Math.min(1, data.confidenceScore))
-      : 0.85;
+      ? data.confidenceScore
+      : data.confidence === 'high'
+      ? 0.92
+      : data.confidence === 'low'
+      ? 0.45
+      : 0.75;
 
-  let confidenceLevel: 'High' | 'Medium' | 'Low' = 'Medium';
-  const confStr = String(data.confidenceLevel || data.confidence || '').toLowerCase();
-  if (confStr.includes('high') || confidenceScore >= 0.85) {
-    confidenceLevel = 'High';
-  } else if (confStr.includes('low') || confidenceScore < 0.65) {
-    confidenceLevel = 'Low';
-  }
+  const confidenceLevel =
+    data.confidence === 'high'
+      ? 'High'
+      : data.confidence === 'low'
+      ? 'Low'
+      : 'Medium';
 
-  const rejectionReasons: string[] = Array.isArray(data.rejectionReasons) && data.rejectionReasons.length > 0
-    ? data.rejectionReasons.map(String)
-    : rotDetected
-    ? ['Visible fungal rot, mold spores, or decomposing necrotic tissue observed in harvest sample']
-    : [];
-
-  const observations: string[] = Array.isArray(data.observations) && data.observations.length > 0
+  const observations = Array.isArray(data.observations) && data.observations.length > 0
     ? data.observations.map(String)
     : [
-        'Visible grain / fruit texture inspected from surface lighting',
-        'Overall color uniformity consistent with harvest sample',
-        'Evaluated against Agmark / Mandi FAQ visual standards',
+        `Harvest sample inspected against certified standards`,
+        `Assessed visible freshness and surface characteristics`,
       ];
 
-  const limitations: string[] = Array.isArray(data.limitations) && data.limitations.length > 0
+  const limitations = Array.isArray(data.limitations) && data.limitations.length > 0
     ? data.limitations.map(String)
     : [
-        'AI visual estimate — not an accredited laboratory chemical certification',
-        'Exact moisture % requires a physical moisture meter',
-        'Internal oil %, protein %, and pesticide residues require laboratory assay',
+        'Assessment is based only on visible characteristics in the photograph.',
+        'AI visual quality assessment is an estimate based on visible characteristics and does not replace certified physical or laboratory inspection.',
       ];
 
   const qualityFactors = {
-    appearance: (data.qualityFactors?.appearance || (rotDetected ? 'poor' : 'good')) as 'good' | 'medium' | 'poor',
-    uniformity: (data.qualityFactors?.uniformity === 'poor' ? 'low' : data.qualityFactors?.uniformity === 'high' ? 'high' : 'medium') as 'high' | 'medium' | 'low',
-    visible_damage: (rotDetected ? 'high' : (data.qualityFactors?.visible_damage || data.qualityFactors?.physicalDamage === 'none' ? 'none' : 'low')) as 'none' | 'low' | 'medium' | 'high',
-    discoloration: (rotDetected ? 'high' : (data.qualityFactors?.discoloration || 'none')) as 'none' | 'low' | 'medium' | 'high',
-    freshness: (rotDetected ? 'poor' : (data.qualityFactors?.freshness || 'good')) as 'good' | 'medium' | 'poor',
-    ripeness: data.qualityFactors?.ripeness || (rotDetected ? 'Overripe / Decayed' : 'Optimal harvest maturity'),
-    visibleRot: rotDetected,
-    visibleMold: Boolean(data.qualityFactors?.visibleMold || rotDetected),
+    appearance: data.qualityFactors?.appearance || (isRotOrMold ? 'poor' : 'good'),
+    uniformity: (data.qualityFactors?.uniformity || (isRotOrMold ? 'poor' : 'good')) as any,
+    visible_damage: (isRotOrMold ? 'high' : data.qualityFactors?.physicalDamage || 'none') as any,
+    physicalDamage: (isRotOrMold ? 'high' : data.qualityFactors?.physicalDamage || 'none') as any,
+    discoloration: (isRotOrMold ? 'severe' : data.qualityFactors?.discoloration || 'none') as any,
+    freshness: (isRotOrMold ? 'poor' : data.qualityFactors?.freshness || 'good') as any,
+    maturity: data.qualityFactors?.maturity || (isRotOrMold ? 'deteriorating' : 'appropriate'),
+    visibleRot: isRotOrMold,
+    visibleMold: Boolean(data.qualityFactors?.visibleMold || isRotOrMold),
+    insectDamage: data.qualityFactors?.insectDamage || 'none_visible',
+    cleanliness: data.qualityFactors?.cleanliness || 'good',
   };
 
   return {
-    cropDetected: String(data.cropDetected || expectedCropName),
-    cropMatch: Boolean(data.cropMatch !== false && status !== 'MISMATCH'),
-    imageQuality: data.imageQuality || 'good',
+    cropDetected: data.detectedCrop || data.cropDetected || expectedCropName,
+    detectedCrop: data.detectedCrop || data.cropDetected || expectedCropName,
+    selectedCrop: data.selectedCrop || expectedCropName,
+    cropMatch: !isMismatch,
+    imageQuality: data.imageQuality || (isUnclear ? 'insufficient' : 'good'),
     status,
     suggestedGrade,
     verdict,
-    rotDetected,
-    pestDamageDetected,
-    rejectionReasons,
-    referenceStandardMatched: data.referenceStandardMatched || expectedCropName,
-    standardCriteriaChecked: Array.isArray(data.standardCriteriaChecked)
-      ? data.standardCriteriaChecked.map(String)
-      : ['Evaluated against AGMARK Mandi Standards'],
+    rotDetected: isRotOrMold,
+    pestDamageDetected: Boolean(
+      qualityFactors.insectDamage === 'moderate' || qualityFactors.insectDamage === 'severe'
+    ),
+    rejectionReasons: isRotOrMold
+      ? observations.filter((o) =>
+          o.toLowerCase().includes('rot') ||
+          o.toLowerCase().includes('mold') ||
+          o.toLowerCase().includes('deteriorat') ||
+          o.toLowerCase().includes('decay') ||
+          o.toLowerCase().includes('damage')
+        )
+      : [],
     confidenceScore,
     confidenceLevel,
     observations,
     qualityFactors,
     limitations,
-    needsManualReview: Boolean(data.needsManualReview || rotDetected || verdict === 'INSUFFICIENT_IMAGE' || status === 'MISMATCH'),
+    needsManualReview: Boolean(
+      data.needsManualReview || isRotOrMold || isMismatch || isUnclear || suggestedGrade === null
+    ),
     analyzedAt: new Date().toISOString(),
     error: data.error,
   };
 }
 
-// Calls server-side Gemini Vision API (/api/analyze-crop)
+// Calls server-side Gemini Vision API (/api/crop/analyze)
 export async function analyzeCropPhoto(
   request: AnalyzeCropRequest
 ): Promise<AIQualityAssessment> {
@@ -207,11 +224,13 @@ export async function analyzeCropPhoto(
   if (!preCheck.valid) {
     return {
       cropDetected: selectedCrop.name,
+      detectedCrop: selectedCrop.name,
+      selectedCrop: selectedCrop.name,
       cropMatch: true,
       imageQuality: preCheck.issue === 'too_dark' ? 'dark' : 'insufficient',
-      status: 'INSUFFICIENT_IMAGE',
+      status: 'IMAGE_UNCLEAR',
       verdict: 'INSUFFICIENT_IMAGE',
-      suggestedGrade: 'REJECT',
+      suggestedGrade: null, // CRITICAL: null when unclear
       rotDetected: false,
       pestDamageDetected: false,
       rejectionReasons: [preCheck.message || 'Image clarity is insufficient for visual analysis.'],
@@ -219,11 +238,11 @@ export async function analyzeCropPhoto(
       confidenceLevel: 'Low',
       observations: [preCheck.message || 'Image cannot be analyzed.'],
       qualityFactors: {
-        appearance: 'poor',
-        uniformity: 'low',
-        visible_damage: 'none',
-        discoloration: 'none',
         freshness: 'poor',
+        uniformity: 'poor',
+        discoloration: 'none',
+        visibleRot: false,
+        visibleMold: false,
       },
       limitations: ['Please take a clear photo in good daylight.'],
       needsManualReview: true,
@@ -232,17 +251,18 @@ export async function analyzeCropPhoto(
     };
   }
 
-  // 2. Call server-side Gemini endpoint
+  // 2. Call server-side Gemini endpoint (POST /api/crop/analyze)
   try {
-    const response = await fetch('/api/analyze-crop', {
+    const response = await fetch('/api/crop/analyze', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         image: imageFileOrBase64,
-        cropId: selectedCrop.id,
+        crop: selectedCrop.name,
         cropName: selectedCrop.name,
+        cropId: selectedCrop.id,
         category: selectedCrop.category,
         qualityProfile: selectedCrop.qualityProfile,
       }),
@@ -250,33 +270,37 @@ export async function analyzeCropPhoto(
 
     if (!response.ok) {
       const errJson = await response.json().catch(() => ({}));
-      if (errJson?.status === 'AI_UNAVAILABLE') {
-        return {
-          cropDetected: selectedCrop.name,
-          cropMatch: true,
-          status: 'AI_UNAVAILABLE',
-          verdict: 'ERROR',
-          suggestedGrade: 'REJECT',
-          rotDetected: false,
-          pestDamageDetected: false,
-          confidenceScore: 0,
-          confidenceLevel: 'Low',
-          observations: [errJson.error || 'AI Vision service is temporarily unavailable.'],
-          qualityFactors: {
-            appearance: 'medium',
-            uniformity: 'medium',
-            visible_damage: 'low',
-            discoloration: 'low',
-            freshness: 'good',
-          },
-          limitations: ['Manual inspection required at Mandi gate.'],
-          needsManualReview: true,
-          analyzedAt: new Date().toISOString(),
-          error: errJson.error || 'AI vision service unavailable',
-        };
-      }
-
-      throw new Error(errJson.error || `Server error: ${response.status}`);
+      return {
+        cropDetected: selectedCrop.name,
+        detectedCrop: selectedCrop.name,
+        selectedCrop: selectedCrop.name,
+        cropMatch: true,
+        imageQuality: 'insufficient',
+        status: 'ERROR',
+        verdict: 'ERROR',
+        suggestedGrade: null, // CRITICAL: NEVER default to Grade B!
+        rotDetected: false,
+        pestDamageDetected: false,
+        confidenceScore: 0,
+        confidenceLevel: 'Low',
+        observations: [
+          errJson.error || 'AI Vision service is temporarily unavailable.',
+          'Please select your produce quality grade manually or capture another photo.',
+        ],
+        qualityFactors: {
+          freshness: 'fair',
+          uniformity: 'fair',
+          discoloration: 'none',
+          visibleRot: false,
+          visibleMold: false,
+        },
+        limitations: [
+          'AI visual quality assessment is an estimate and does not replace certified physical inspection.',
+        ],
+        needsManualReview: true,
+        analyzedAt: new Date().toISOString(),
+        error: errJson.error || `Server error: ${response.status}`,
+      };
     }
 
     const json = await response.json();
@@ -290,21 +314,26 @@ export async function analyzeCropPhoto(
     console.error('Error in analyzeCropPhoto:', err);
     return {
       cropDetected: selectedCrop.name,
+      detectedCrop: selectedCrop.name,
+      selectedCrop: selectedCrop.name,
       cropMatch: true,
       status: 'ERROR',
       verdict: 'ERROR',
-      suggestedGrade: 'REJECT',
+      suggestedGrade: null, // CRITICAL: null on failure
       rotDetected: false,
       pestDamageDetected: false,
       confidenceScore: 0,
       confidenceLevel: 'Low',
-      observations: ['Could not complete AI vision analysis: ' + (err.message || 'Network error')],
+      observations: [
+        'Could not complete AI vision analysis: ' + (err.message || 'Network error'),
+        'Farmer can confirm quality grade manually to continue.',
+      ],
       qualityFactors: {
-        appearance: 'medium',
-        uniformity: 'medium',
-        visible_damage: 'low',
-        discoloration: 'low',
-        freshness: 'good',
+        freshness: 'fair',
+        uniformity: 'fair',
+        discoloration: 'none',
+        visibleRot: false,
+        visibleMold: false,
       },
       limitations: ['Farmer can confirm quality grade manually to continue.'],
       needsManualReview: true,

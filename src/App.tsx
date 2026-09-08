@@ -11,6 +11,8 @@ import { LocationSelector } from './components/step1/LocationSelector';
 import { CropDetailsStep } from './components/step2/CropDetailsStep';
 import { MarketComparisonStep } from './components/step3/MarketComparisonStep';
 import { DealSummaryStep } from './components/step4/DealSummaryStep';
+import { GoogleMapsProvider } from './components/map/GoogleMapsProvider';
+import { KisanAIChatbot } from './components/chat/KisanAIChatbot';
 
 export const App: React.FC = () => {
   // Global Language state (English, Hindi, Marathi, Telugu)
@@ -92,83 +94,95 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col selection:bg-emerald-200 selection:text-emerald-950 font-sans">
-      {/* Persistent Header with Language & Location controls */}
-      <Header
-        language={language}
-        onLanguageChange={setLanguage}
-        currentStep={currentStep}
-        onStepClick={handleStepClick}
-        location={location}
-        onChangeLocationClick={() => setCurrentStep(1)}
-        canNavigateToStep3={canNavigateToStep3}
-      />
+    <GoogleMapsProvider>
+      <div className="min-h-screen bg-stone-50 flex flex-col selection:bg-emerald-200 selection:text-emerald-950 font-sans">
+        {/* Persistent Header with Language & Location controls */}
+        <Header
+          language={language}
+          onLanguageChange={setLanguage}
+          currentStep={currentStep}
+          onStepClick={handleStepClick}
+          location={location}
+          onChangeLocationClick={() => setCurrentStep(1)}
+          canNavigateToStep3={canNavigateToStep3}
+        />
 
-      {/* Main Flow Pages */}
-      <main className="flex-1">
-        {currentStep === 1 && (
-          <LocationSelector
-            language={language}
-            currentLocation={location}
-            onSelectLocation={handleSelectLocation}
-            onContinue={() => setCurrentStep(2)}
-          />
-        )}
+        {/* Main Flow Pages */}
+        <main className="flex-1">
+          {currentStep === 1 && (
+            <LocationSelector
+              language={language}
+              currentLocation={location}
+              onSelectLocation={handleSelectLocation}
+              onContinue={() => setCurrentStep(2)}
+            />
+          )}
 
-        {currentStep === 2 && (
-          <CropDetailsStep
-            language={language}
-            cropState={cropState}
-            onUpdateCropState={handleUpdateCropState}
-            onContinue={() => {
-              if (canNavigateToStep3) {
-                setCurrentStep(3);
-              }
-            }}
-            onBack={() => setCurrentStep(1)}
-          />
-        )}
+          {currentStep === 2 && (
+            <CropDetailsStep
+              language={language}
+              cropState={cropState}
+              onUpdateCropState={handleUpdateCropState}
+              onContinue={() => {
+                if (canNavigateToStep3) {
+                  setCurrentStep(3);
+                }
+              }}
+              onBack={() => setCurrentStep(1)}
+            />
+          )}
 
-        {currentStep === 3 && (
-          <MarketComparisonStep
-            language={language}
-            location={location}
-            cropState={cropState}
-            onSelectMarketForDeal={(mktResult) => {
-              setSelectedMarketResult(mktResult);
-              setCurrentStep(4);
-            }}
-            onBack={() => setCurrentStep(2)}
-          />
-        )}
+          {currentStep === 3 && (
+            <MarketComparisonStep
+              language={language}
+              location={location}
+              cropState={cropState}
+              onSelectMarketForDeal={(mktResult) => {
+                setSelectedMarketResult(mktResult);
+                setCurrentStep(4);
+              }}
+              onBack={() => setCurrentStep(2)}
+            />
+          )}
 
-        {currentStep === 4 && selectedMarketResult && (
-          <DealSummaryStep
-            language={language}
-            location={location}
-            cropState={cropState}
-            marketResult={selectedMarketResult}
-            onRestart={() => {
-              setCurrentStep(2);
-            }}
-            onBack={() => setCurrentStep(3)}
-          />
-        )}
-      </main>
+          {currentStep === 4 && selectedMarketResult && (
+            <DealSummaryStep
+              language={language}
+              location={location}
+              cropState={cropState}
+              marketResult={selectedMarketResult}
+              onRestart={() => {
+                setCurrentStep(2);
+              }}
+              onBack={() => setCurrentStep(3)}
+            />
+          )}
+        </main>
 
-      {/* Simple Farmer-First Footer */}
-      <footer className="bg-stone-900 text-stone-400 text-xs py-6 border-t border-stone-800">
-        <div className="max-w-7xl mx-auto px-4 text-center space-y-2">
-          <p className="font-semibold text-stone-300">
-            🌾 KrishiSetu • Farmer Crop to Market Intelligence Platform
-          </p>
-          <p className="text-[11px] text-stone-500 max-w-2xl mx-auto">
-            Providing transparent mandi price discovery, deterministic quality grade adjustments, and route optimization across India.
-            AI quality assessments are surface estimates and do not replace certified physical laboratory testing.
-          </p>
-        </div>
-      </footer>
-    </div>
+        {/* Simple Farmer-First Footer */}
+        <footer className="bg-stone-900 text-stone-400 text-xs py-6 border-t border-stone-800">
+          <div className="max-w-7xl mx-auto px-4 text-center space-y-2">
+            <p className="font-semibold text-stone-300">
+              🌾 KrishiSetu • Farmer Crop to Market Intelligence Platform
+            </p>
+            <p className="text-[11px] text-stone-500 max-w-2xl mx-auto">
+              Providing transparent mandi price discovery, deterministic quality grade adjustments, and route optimization across India.
+              AI quality assessments are surface estimates and do not replace certified physical laboratory testing.
+            </p>
+          </div>
+        </footer>
+        {/* Floating Kisan AI Chatbot */}
+        <KisanAIChatbot
+          language={language}
+          cropName={cropState.selectedCrop?.name}
+          userLocation={{
+            latitude: location.latitude,
+            longitude: location.longitude,
+            name: location.district || location.city || location.state,
+          }}
+        />
+      </div>
+    </GoogleMapsProvider>
   );
 };
 

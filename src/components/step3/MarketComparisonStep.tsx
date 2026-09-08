@@ -43,6 +43,11 @@ export const MarketComparisonStep: React.FC<MarketComparisonStepProps> = ({
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
 
+  // Clear selectedMarketId and old rankings immediately on location change (ZERO stale markets)
+  React.useEffect(() => {
+    setSelectedMarketId(null);
+  }, [location.latitude, location.longitude, location.district, location.state]);
+
   // Discover markets based on farmer's location & base modal price of selected crop
   const basePrice = cropState.selectedCrop?.modalPrice || 2320;
   const rawMarkets = useMemo(() => {
@@ -53,7 +58,7 @@ export const MarketComparisonStep: React.FC<MarketComparisonStepProps> = ({
       location.district,
       basePrice
     );
-  }, [location, basePrice]);
+  }, [location.latitude, location.longitude, location.state, location.district, basePrice]);
 
   // Evaluate net returns deterministically
   const marketResults = useMemo(() => {

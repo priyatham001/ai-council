@@ -31,39 +31,61 @@ export interface CropItem {
 }
 
 export type FarmerLocation = {
+  id?: string;
   latitude: number;
   longitude: number;
   country: string;
   state: string;
   district: string;
+  subDistrict?: string;
+  mandal?: string;
+  taluka?: string;
+  tehsil?: string;
   city?: string;
   town?: string;
   village?: string;
+  pincode?: string;
   formattedAddress: string;
   placeId?: string;
-  source: 'gps' | 'manual' | 'search' | 'map' | 'demo';
+  source: 'gps' | 'manual' | 'search' | 'map' | 'demo' | 'csv';
 };
 
 // LocationData is an alias for FarmerLocation to ensure single source of truth across all components
 export type LocationData = FarmerLocation;
 
 export interface AIQualityFactors {
-  appearance: 'good' | 'medium' | 'poor';
-  uniformity: 'high' | 'medium' | 'low';
-  visible_damage: 'none' | 'low' | 'medium' | 'high';
-  discoloration: 'none' | 'low' | 'medium' | 'high';
-  freshness: 'good' | 'medium' | 'poor';
+  appearance?: 'good' | 'medium' | 'poor';
+  uniformity: 'high' | 'medium' | 'low' | 'good' | 'fair' | 'poor';
+  visible_damage?: 'none' | 'low' | 'medium' | 'high';
+  physicalDamage?: 'none' | 'low' | 'moderate' | 'high';
+  discoloration: 'none' | 'low' | 'medium' | 'moderate' | 'severe';
+  freshness: 'good' | 'medium' | 'fair' | 'poor';
+  maturity?: 'appropriate' | 'immature' | 'overripe' | 'deteriorating';
   ripeness?: string;
   visibleRot?: boolean;
   visibleMold?: boolean;
+  insectDamage?: 'none_visible' | 'low' | 'moderate' | 'severe' | 'unknown';
+  cleanliness?: 'good' | 'fair' | 'poor';
 }
 
 export interface AIQualityAssessment {
   cropDetected: string;
+  detectedCrop?: string;
+  selectedCrop?: string;
   cropMatch: boolean;
   imageQuality?: 'good' | 'blurry' | 'dark' | 'insufficient';
-  status?: 'ACCEPTABLE' | 'REJECT' | 'MISMATCH' | 'INSUFFICIENT_IMAGE' | 'ERROR' | 'AI_UNAVAILABLE';
-  suggestedGrade: QualityGrade | 'REJECT';
+  status?:
+    | 'ANALYZED'
+    | 'ACCEPTABLE'
+    | 'REJECT'
+    | 'MISMATCH'
+    | 'CROP_MISMATCH'
+    | 'INSUFFICIENT_IMAGE'
+    | 'IMAGE_UNCLEAR'
+    | 'NEEDS_CLEARER_IMAGE'
+    | 'ERROR'
+    | 'AI_UNAVAILABLE';
+  suggestedGrade: QualityGrade | 'REJECT' | null;
   verdict?: 'ACCEPT' | 'REJECT' | 'WARNING' | 'INSUFFICIENT_IMAGE' | 'ERROR';
   rotDetected?: boolean;
   pestDamageDetected?: boolean;

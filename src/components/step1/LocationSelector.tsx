@@ -1,13 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Language, LocationData } from '../../types/krishi';
 import { TRANSLATIONS } from '../../utils/i18n';
 import {
-  ALL_INDIAN_LOCATIONS,
-  searchIndianLocations,
-  findClosestIndianLocation,
-  LocationPreset,
-} from '../../data/indianLocationsData';
-import { MapPin, Search, Navigation, Check, AlertCircle, Loader2, Sparkles, Building2 } from 'lucide-react';
+  AdministrativeUnit,
+  MASTER_LOCATIONS,
+  queryLocations,
+  findClosestUnit,
+  getSubDistrictLabel,
+} from '../../data/indiaWideLocations';
+import {
+  reverseGeocodeLocation,
+  forwardGeocodeAddress,
+} from '../../services/googleMapsService';
+import { useMapsContext } from '../map/GoogleMapsProvider';
+import { GooglePlacesSearch } from './GooglePlacesSearch';
+import {
+  MapPin,
+  Search,
+  Navigation,
+  Check,
+  AlertCircle,
+  Loader2,
+  Sparkles,
+  Building2,
+  ChevronRight,
+  RefreshCw,
+} from 'lucide-react';
 
 interface LocationSelectorProps {
   language: Language;
@@ -15,29 +33,6 @@ interface LocationSelectorProps {
   onSelectLocation: (loc: LocationData) => void;
   onContinue: () => void;
 }
-
-const INDIAN_STATES = [
-  'Andhra Pradesh',
-  'Telangana',
-  'Maharashtra',
-  'Karnataka',
-  'Tamil Nadu',
-  'Punjab',
-  'Haryana',
-  'Madhya Pradesh',
-  'Rajasthan',
-  'Gujarat',
-  'Uttar Pradesh',
-  'West Bengal',
-  'Bihar',
-  'Odisha',
-  'Chhattisgarh',
-  'Kerala',
-  'Assam',
-  'Jharkhand',
-  'Uttarakhand',
-  'Himachal Pradesh',
-];
 
 export const LocationSelector: React.FC<LocationSelectorProps> = ({
   language,
@@ -50,19 +45,173 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   const [isDetectingGps, setIsDetectingGps] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
 
-  // Manual fallback state
-  const [selectedState, setSelectedState] = useState(currentLocation.state || 'Andhra Pradesh');
-  const [districtInput, setDistrictInput] = useState(currentLocation.district || '');
+  // States list (dynamic from API with fallback to MASTER_LOCATIONS)
+  const [availableStates, setAvailableStates] = useState<string[]>([]);
+  const [selectedState, setSelectedState] = useState(currentLocation.state || 'Maharashtra');
+
+  // Districts list for selected state
+  const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
+  const [selectedDistrict, setSelectedDistrict] = useState(currentLocation.district || '');
+
+  // Subdistricts (Talukas / Mandals / Tehsils) for selected district
+  const [availableSubDistricts, setAvailableSubDistricts] = useState<string[]>([]);
+  const [selectedSubDistrict, setSelectedSubDistrict] = useState(
+    currentLocation.subDistrict || currentLocation.taluka || currentLocation.mandal || ''
+  );
+
+  // Village list / input
+  const [availableVillages, setAvailableVillages] = useState<AdministrativeUnit[]>([]);
   const [villageInput, setVillageInput] = useState(currentLocation.village || '');
 
-  // Live dynamic search from our comprehensive Indian locations database
-  const searchResults = searchQuery.trim()
-    ? searchIndianLocations(searchQuery)
-    : [];
+  // Dynamic label for subdistrict
+  const subDistrictLabel = useMemo(() => {
+    return getSubDistrictLabel(selectedState);
+  }, [selectedState]);
 
-  // Popular regions for quick 1-click select
-  const popularPresets = ALL_INDIAN_LOCATIONS.filter((l) => l.popular);
+  const { hasApiKey } = useMapsContext();
 
+  // Sync state dropdowns whenever currentLocation changes
+  useEffect(() => {
+    if (currentLocation) {
+      if (currentLocation.state && currentLocation.state !== selectedState) {
+        setSelectedState(currentLocation.state);
+      }
+      if (currentLocation.district && currentLocation.district !== selectedDistrict) {
+        setSelectedDistrict(currentLocation.district);
+      }
+      const sub = currentLocation.subDistrict || currentLocation.taluka || currentLocation.mandal;
+      if (sub && sub !== selectedSubDistrict) {
+        setSelectedSubDistrict(sub);
+      }
+      const v = currentLocation.village || currentLocation.city;
+      if (v && v !== villageInput) {
+        setVillageInput(v);
+      }
+    }
+  }, [currentLocation]);
+
+  // Fetch states on mount
+  useEffect(() => {
+    fetch('/api/locations/states')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.states && Array.isArray(data.states) && data.states.length > 0) {
+          setAvailableStates(data.states);
+        } else {
+          fallbackStates();
+        }
+      })
+      .catch(() => {
+        fallbackStates();
+      });
+
+    function fallbackStates() {
+      const set = new Set<string>();
+      MASTER_LOCATIONS.forEach((l) => set.add(l.state));
+      setAvailableStates(Array.from(set).sort((a, b) => a.localeCompare(b)));
+    }
+  }, []);
+
+  // Fetch districts whenever selectedState changes
+  useEffect(() => {
+    if (!selectedState) return;
+
+    fetch(`/api/locations/districts?state=${encodeURIComponent(selectedState)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.districts && Array.isArray(data.districts)) {
+          setAvailableDistricts(data.districts);
+          if (!data.districts.includes(selectedDistrict)) {
+            setSelectedDistrict(data.districts[0] || '');
+          }
+        }
+      })
+      .catch(() => {
+        const matches = MASTER_LOCATIONS.filter(
+          (l) => l.state.toLowerCase() === selectedState.toLowerCase()
+        );
+        const dists = Array.from(new Set(matches.map((m) => m.district))).sort((a, b) =>
+          a.localeCompare(b)
+        );
+        setAvailableDistricts(dists);
+        if (!dists.includes(selectedDistrict)) {
+          setSelectedDistrict(dists[0] || '');
+        }
+      });
+  }, [selectedState]);
+
+  // Fetch subdistricts (talukas/mandals) whenever district changes
+  useEffect(() => {
+    if (!selectedState || !selectedDistrict) return;
+
+    fetch(
+      `/api/locations/subdistricts?state=${encodeURIComponent(
+        selectedState
+      )}&district=${encodeURIComponent(selectedDistrict)}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.subDistricts && Array.isArray(data.subDistricts)) {
+          setAvailableSubDistricts(data.subDistricts);
+          if (!data.subDistricts.includes(selectedSubDistrict)) {
+            setSelectedSubDistrict(data.subDistricts[0] || '');
+          }
+        }
+      })
+      .catch(() => {
+        const matches = MASTER_LOCATIONS.filter(
+          (l) =>
+            l.state.toLowerCase() === selectedState.toLowerCase() &&
+            l.district.toLowerCase() === selectedDistrict.toLowerCase()
+        );
+        const subDists = Array.from(new Set(matches.map((m) => m.subDistrict))).sort((a, b) =>
+          a.localeCompare(b)
+        );
+        setAvailableSubDistricts(subDists);
+        if (!subDists.includes(selectedSubDistrict)) {
+          setSelectedSubDistrict(subDists[0] || '');
+        }
+      });
+  }, [selectedState, selectedDistrict]);
+
+  // Fetch villages for subdistrict
+  useEffect(() => {
+    if (!selectedState || !selectedDistrict) return;
+
+    const queryParams = new URLSearchParams({
+      state: selectedState,
+      district: selectedDistrict,
+    });
+    if (selectedSubDistrict) {
+      queryParams.set('subdistrict', selectedSubDistrict);
+    }
+
+    fetch(`/api/locations/villages?${queryParams.toString()}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.villages && Array.isArray(data.villages)) {
+          setAvailableVillages(data.villages);
+        }
+      })
+      .catch(() => {
+        const matches = MASTER_LOCATIONS.filter(
+          (l) =>
+            l.state.toLowerCase() === selectedState.toLowerCase() &&
+            l.district.toLowerCase() === selectedDistrict.toLowerCase() &&
+            (!selectedSubDistrict ||
+              l.subDistrict.toLowerCase() === selectedSubDistrict.toLowerCase())
+        );
+        setAvailableVillages(matches);
+      });
+  }, [selectedState, selectedDistrict, selectedSubDistrict]);
+
+  // Live dynamic search from India-wide locations database
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    return queryLocations(searchQuery, 12);
+  }, [searchQuery]);
+
+  // GPS Action with precise spatial lookup and Google Geocoding
   const handleUseGps = () => {
     setGpsError(null);
     if (!navigator.geolocation) {
@@ -73,79 +222,117 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     setIsDetectingGps(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        setIsDetectingGps(false);
         const { latitude, longitude } = position.coords;
 
-        // Determine closest Indian district / state using spatial lookup
-        const closest = findClosestIndianLocation(latitude, longitude);
-
-        const newLoc: LocationData = {
-          latitude,
-          longitude,
-          country: 'India',
-          state: closest.state,
-          district: closest.district,
-          city: closest.name.split(' (')[0],
-          formattedAddress: `${closest.name}, ${closest.state}, India (GPS)`,
-          source: 'gps',
-        };
-        onSelectLocation(newLoc);
+        try {
+          // Attempt Google Geocoding with fallback to spatial master data
+          const detected = await reverseGeocodeLocation(latitude, longitude);
+          setIsDetectingGps(false);
+          onSelectLocation(detected);
+        } catch (err: any) {
+          setIsDetectingGps(false);
+          const closest = findClosestUnit(latitude, longitude);
+          const newLoc: LocationData = {
+            id: closest.id,
+            latitude,
+            longitude,
+            country: 'India',
+            state: closest.state,
+            district: closest.district,
+            subDistrict: closest.subDistrict,
+            taluka: closest.subDistrictType === 'Taluka' ? closest.subDistrict : undefined,
+            mandal: closest.subDistrictType === 'Mandal' ? closest.subDistrict : undefined,
+            tehsil: closest.subDistrictType === 'Tehsil' ? closest.subDistrict : undefined,
+            city: closest.name,
+            village: closest.type === 'village' ? closest.name : undefined,
+            formattedAddress: `${closest.name}, ${closest.subDistrictType}: ${closest.subDistrict}, ${closest.district}, ${closest.state} (Field GPS)`,
+            source: 'gps',
+          };
+          onSelectLocation(newLoc);
+        }
       },
       (err) => {
         setIsDetectingGps(false);
-        setGpsError(`Could not access GPS: ${err.message}. Please search your district or town below.`);
+        setGpsError(
+          `Could not access GPS (${err.message}). Please choose your farm's state, district, and taluka/mandal below.`
+        );
       },
       { timeout: 10000, enableHighAccuracy: true }
     );
   };
 
-  const handleSelectPreset = (preset: LocationPreset) => {
+  // Preset quick selects
+  const handleSelectUnit = (unit: AdministrativeUnit) => {
     const newLoc: LocationData = {
-      latitude: preset.latitude,
-      longitude: preset.longitude,
+      id: unit.id,
+      latitude: unit.latitude,
+      longitude: unit.longitude,
       country: 'India',
-      state: preset.state,
-      district: preset.district,
-      city: preset.name.split(' (')[0],
-      town: preset.name.split(' (')[0],
-      formattedAddress: `${preset.name}, ${preset.state}, India`,
+      state: unit.state,
+      district: unit.district,
+      subDistrict: unit.subDistrict,
+      taluka: unit.subDistrictType === 'Taluka' ? unit.subDistrict : undefined,
+      mandal: unit.subDistrictType === 'Mandal' ? unit.subDistrict : undefined,
+      tehsil: unit.subDistrictType === 'Tehsil' ? unit.subDistrict : undefined,
+      city: unit.name,
+      village: unit.type === 'village' ? unit.name : undefined,
+      formattedAddress: `${unit.name}, ${unit.subDistrictType}: ${unit.subDistrict}, ${unit.district}, ${unit.state}`,
       source: 'search',
     };
     onSelectLocation(newLoc);
     setSearchQuery('');
   };
 
-  const handleManualSubmit = (e: React.FormEvent) => {
+  // Manual submission across State -> District -> Sub-District -> Village
+  const handleManualApply = async (e: React.FormEvent) => {
     e.preventDefault();
-    const query = [villageInput, districtInput, selectedState].filter(Boolean).join(' ');
 
-    // Try finding exact or nearest coordinates from database
-    const matches = searchIndianLocations(query);
-    if (matches.length > 0) {
-      const best = matches[0];
-      onSelectLocation({
-        ...best,
-        village: villageInput.trim() || undefined,
-        formattedAddress: `${villageInput.trim() ? villageInput.trim() + ', ' : ''}${best.formattedAddress}`,
-        source: 'manual',
-      });
+    // Check if entered village matches an existing record in availableVillages
+    const matched = availableVillages.find(
+      (v) =>
+        v.name.toLowerCase() === villageInput.trim().toLowerCase() ||
+        v.normalizedName === villageInput.trim().toLowerCase()
+    );
+
+    if (matched) {
+      handleSelectUnit(matched);
       return;
     }
 
-    // Default to center of state
-    const stateMatch = ALL_INDIAN_LOCATIONS.find((l) => l.state.toLowerCase() === selectedState.toLowerCase());
-    const lat = stateMatch ? stateMatch.latitude : 14.4673;
-    const lng = stateMatch ? stateMatch.longitude : 78.8242;
+    // Try Google Geocoding for precise village/mandal coordinates if available
+    const addressQuery = `${villageInput.trim() || selectedSubDistrict || selectedDistrict}, ${selectedSubDistrict || ''}, ${selectedDistrict}, ${selectedState}`;
+    const geocoded = await forwardGeocodeAddress(addressQuery);
+    if (geocoded) {
+      onSelectLocation(geocoded);
+      return;
+    }
+
+    // Otherwise find closest unit in the district
+    const districtMatches = MASTER_LOCATIONS.filter(
+      (l) =>
+        l.state.toLowerCase() === selectedState.toLowerCase() &&
+        l.district.toLowerCase() === selectedDistrict.toLowerCase()
+    );
+
+    const baseUnit = districtMatches[0] || findClosestUnit(19.9975, 73.7898);
+    const vName = villageInput.trim() || baseUnit.name;
 
     const newLoc: LocationData = {
-      latitude: lat,
-      longitude: lng,
+      id: `manual-${Date.now()}`,
+      latitude: baseUnit.latitude,
+      longitude: baseUnit.longitude,
       country: 'India',
       state: selectedState,
-      district: districtInput.trim() || stateMatch?.district || 'District Center',
-      village: villageInput.trim() || undefined,
-      city: villageInput.trim() || districtInput.trim() || stateMatch?.name || selectedState,
-      formattedAddress: `${villageInput ? villageInput + ', ' : ''}${districtInput ? districtInput + ', ' : ''}${selectedState}, India`,
+      district: selectedDistrict,
+      subDistrict: selectedSubDistrict || baseUnit.subDistrict,
+      taluka: subDistrictLabel === 'Taluka' ? selectedSubDistrict : undefined,
+      mandal: subDistrictLabel === 'Mandal' ? selectedSubDistrict : undefined,
+      tehsil: subDistrictLabel === 'Tehsil' ? selectedSubDistrict : undefined,
+      village: vName,
+      city: baseUnit.name,
+      formattedAddress: `${vName}, ${subDistrictLabel}: ${
+        selectedSubDistrict || baseUnit.subDistrict
+      }, ${selectedDistrict}, ${selectedState}`,
       source: 'manual',
     };
 
@@ -153,23 +340,23 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-6 px-4">
+    <div className="max-w-4xl mx-auto py-6 px-4 space-y-6">
       {/* Title & Subtitle */}
-      <div className="text-center mb-8">
+      <div className="text-center">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold mb-2">
-          <Sparkles className="w-3.5 h-3.5" />
-          {t.step1Title} • India-Wide Farm Coverage
+          <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+          India-Wide Farm Intelligence
         </div>
         <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 font-outfit">
-          {t.locationPrompt}
+          🌾 Select Your Farm Location
         </h2>
         <p className="text-stone-600 text-sm mt-1 max-w-xl mx-auto">
-          KrishiSetu is genuine location-driven. Select your farm district to discover nearby APMC mandis, mills, and calculate accurate highway transport.
+          Where is your farm or produce located? Discover genuine nearby APMC mandis, buyers, and exact highway transport.
         </p>
       </div>
 
       {/* Primary Actions: GPS Button + Search Bar */}
-      <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-5 sm:p-6 mb-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-5 sm:p-6">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
           {/* GPS Button */}
           <div className="md:col-span-5">
@@ -182,17 +369,17 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
               {isDetectingGps ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {t.gettingLocation}
+                  Detecting GPS field location...
                 </>
               ) : (
                 <>
                   <Navigation className="w-4 h-4 text-amber-300" />
-                  {t.useCurrentLocation}
+                  📍 Use Current GPS Location
                 </>
               )}
             </button>
             <p className="text-[11px] text-stone-500 text-center mt-1.5 font-medium">
-              {t.gpsAccuracy}
+              Accurate to field level coordinates
             </p>
           </div>
 
@@ -202,19 +389,36 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
 
           {/* Search Box */}
           <div className="md:col-span-5">
-            <div className="relative">
-              <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search Kadapa, Warangal, Nashik, Kurnool..."
-                className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
-              />
-            </div>
-            <p className="text-[11px] text-stone-500 mt-1.5">
-              Type village, taluk/mandal, or district name
-            </p>
+            {hasApiKey ? (
+              <div>
+                <GooglePlacesSearch
+                  onSelectLocation={(loc) => {
+                    onSelectLocation(loc);
+                  }}
+                  placeholder="Search village, mandi, taluka or city across India..."
+                />
+                <p className="text-[11px] text-stone-500 mt-1.5 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-emerald-600 shrink-0" />
+                  Google Places (New API) + KrishiSetu Mandi Database
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div className="relative">
+                  <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search village, town, mandal, taluka or district..."
+                    className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
+                  />
+                </div>
+                <p className="text-[11px] text-stone-500 mt-1.5">
+                  Instant search across Maharashtra, AP, Telangana & All India
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -225,7 +429,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
           </div>
         )}
 
-        {/* Dynamic Search Dropdown / Results */}
+        {/* Dynamic Search Dropdown with Full Administrative Hierarchy */}
         {searchQuery.trim().length > 0 && (
           <div className="mt-4 border-t border-stone-100 pt-3">
             <div className="text-xs font-bold text-stone-500 uppercase mb-2">
@@ -233,25 +437,31 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
             </div>
             {searchResults.length === 0 ? (
               <div className="p-4 bg-stone-50 rounded-xl text-center text-xs text-stone-500">
-                No matching location found. Use the manual form below to specify your state and district.
+                No matching village or town found. Please choose your state and district in the manual selector below.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                {searchResults.slice(0, 9).map((loc, idx) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {searchResults.map((loc) => (
                   <button
-                    key={`${loc.formattedAddress}-${idx}`}
+                    key={loc.id}
                     type="button"
-                    onClick={() => {
-                      onSelectLocation(loc);
-                      setSearchQuery('');
-                    }}
-                    className="text-left p-2.5 rounded-xl border border-stone-200 hover:border-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center justify-between"
+                    onClick={() => handleSelectUnit(loc)}
+                    className="text-left p-3 rounded-xl border border-stone-200 hover:border-emerald-600 hover:bg-emerald-50/50 transition-colors cursor-pointer flex items-center justify-between gap-2"
                   >
                     <div>
-                      <div className="text-xs font-bold text-stone-900">{loc.city || loc.district}</div>
-                      <div className="text-[11px] text-stone-500">{loc.district}, {loc.state}</div>
+                      <div className="text-xs font-extrabold text-stone-900 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                        <span>{loc.name}</span>
+                        <span className="text-[10px] text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded uppercase font-bold">
+                          {loc.type}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-stone-600 mt-0.5">
+                        🌾 {loc.subDistrictType}: <strong className="text-stone-800">{loc.subDistrict}</strong> • District:{' '}
+                        <strong className="text-stone-800">{loc.district}</strong>, {loc.state}
+                      </div>
                     </div>
-                    <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-stone-400 shrink-0" />
                   </button>
                 ))}
               </div>
@@ -261,7 +471,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       </div>
 
       {/* Current Selected Location Banner */}
-      <div className="bg-amber-50 border-2 border-amber-400/80 rounded-2xl p-4 sm:p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+      <div className="bg-amber-50 border-2 border-amber-400/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500 text-stone-950 flex items-center justify-center text-xl shrink-0 font-bold shadow-sm">
             📍
@@ -269,7 +479,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[11px] uppercase tracking-wider font-extrabold text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded">
-                Active Farm Location
+                Confirmed Farm Location
               </span>
               <span className="text-xs text-amber-800 font-medium capitalize">
                 Via {currentLocation.source}
@@ -279,7 +489,8 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
               {currentLocation.formattedAddress}
             </h3>
             <p className="text-xs text-stone-600 mt-0.5 font-mono">
-              Coordinates: {currentLocation.latitude.toFixed(4)}° N, {currentLocation.longitude.toFixed(4)}° E • {currentLocation.district}, {currentLocation.state}
+              Coordinates: {currentLocation.latitude.toFixed(4)}° N, {currentLocation.longitude.toFixed(4)}° E •{' '}
+              {currentLocation.district}, {currentLocation.state}
             </p>
           </div>
         </div>
@@ -293,27 +504,133 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         </button>
       </div>
 
-      {/* Popular Agricultural Hubs Across India */}
-      <div className="mb-6">
+      {/* Manual Hierarchical Selector: State -> District -> Taluka/Mandal -> Village */}
+      <div className="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm">
+        <div className="border-b border-stone-100 pb-3 mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-stone-900 flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-emerald-700" />
+              Choose Farm Location Manually Across India
+            </h3>
+            <p className="text-xs text-stone-500 mt-0.5">
+              Select your administrative hierarchy to discover local markets accurately
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleManualApply} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* 1. State */}
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">
+                State *
+              </label>
+              <select
+                value={selectedState}
+                onChange={(e) => setSelectedState(e.target.value)}
+                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-stone-900 focus:bg-white focus:ring-2 focus:ring-emerald-600"
+              >
+                {availableStates.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 2. District */}
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">
+                District *
+              </label>
+              <select
+                value={selectedDistrict}
+                onChange={(e) => setSelectedDistrict(e.target.value)}
+                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-stone-900 focus:bg-white focus:ring-2 focus:ring-emerald-600"
+              >
+                {availableDistricts.map((dist) => (
+                  <option key={dist} value={dist}>
+                    {dist}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 3. Sub-District (Dynamic Label: Taluka / Mandal / Tehsil) */}
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">
+                {subDistrictLabel} *
+              </label>
+              <select
+                value={selectedSubDistrict}
+                onChange={(e) => setSelectedSubDistrict(e.target.value)}
+                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-stone-900 focus:bg-white focus:ring-2 focus:ring-emerald-600"
+              >
+                {availableSubDistricts.map((sub) => (
+                  <option key={sub} value={sub}>
+                    {sub}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 4. Village / Town */}
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">
+                Village / Town *
+              </label>
+              <input
+                type="text"
+                value={villageInput}
+                onChange={(e) => setVillageInput(e.target.value)}
+                placeholder="e.g. Lasalgaon, Vinchur, Proddatur..."
+                list="village-datalist"
+                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-stone-900 focus:bg-white focus:ring-2 focus:ring-emerald-600"
+              />
+              <datalist id="village-datalist">
+                {availableVillages.map((v) => (
+                  <option key={v.id} value={v.name} />
+                ))}
+              </datalist>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <span className="text-[11px] text-stone-500">
+              💡 {selectedState} administrative structure: State → District → {subDistrictLabel} → Village
+            </span>
+
+            <button
+              type="submit"
+              className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
+            >
+              Apply Selected Farm Location
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Popular Agricultural Hubs (Maharashtra & Across India) */}
+      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500 flex items-center gap-1.5">
             <Building2 className="w-3.5 h-3.5 text-stone-400" />
-            Quick Select: Major Agricultural Hubs in India
+            Quick Select: Prominent Agricultural Hubs
           </h3>
-          <span className="text-[11px] text-stone-400">Click any location to test market discovery</span>
+          <span className="text-[11px] text-stone-400">Click to discover local APMC mandis</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-          {popularPresets.map((loc) => {
+          {MASTER_LOCATIONS.filter((l) => l.popular).map((loc) => {
             const isSelected =
               Math.abs(loc.latitude - currentLocation.latitude) < 0.05 &&
               Math.abs(loc.longitude - currentLocation.longitude) < 0.05;
 
             return (
               <button
-                key={loc.name}
+                key={loc.id}
                 type="button"
-                onClick={() => handleSelectPreset(loc)}
+                onClick={() => handleSelectUnit(loc)}
                 className={`text-left p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                   isSelected
                     ? 'bg-emerald-50 border-emerald-600 ring-2 ring-emerald-500/30 font-bold'
@@ -321,8 +638,11 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                 }`}
               >
                 <div>
-                  <div className="text-xs font-bold text-stone-900">
-                    {loc.name}
+                  <div className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                    <span>{loc.name}</span>
+                    <span className="text-[10px] text-stone-500 font-normal">
+                      ({loc.subDistrictType}: {loc.subDistrict})
+                    </span>
                   </div>
                   <div className="text-[11px] text-stone-500 truncate max-w-[200px]">
                     {loc.district}, {loc.state}
@@ -337,67 +657,6 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
             );
           })}
         </div>
-      </div>
-
-      {/* Manual State & District Selector */}
-      <div className="bg-white rounded-2xl border border-stone-200 p-5">
-        <h3 className="text-sm font-bold text-stone-900 mb-3 flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-emerald-700" />
-          {t.manualLocationTitle}
-        </h3>
-
-        <form onSubmit={handleManualSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-          <div>
-            <label className="block text-xs font-semibold text-stone-600 mb-1">
-              {t.selectState}
-            </label>
-            <select
-              value={selectedState}
-              onChange={(e) => setSelectedState(e.target.value)}
-              className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-600"
-            >
-              {INDIAN_STATES.map((st) => (
-                <option key={st} value={st}>
-                  {st}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-stone-600 mb-1">
-              {t.selectDistrict}
-            </label>
-            <input
-              type="text"
-              value={districtInput}
-              onChange={(e) => setDistrictInput(e.target.value)}
-              placeholder="e.g. Kadapa, Warangal, Nashik..."
-              className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-600"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="block text-xs font-semibold text-stone-600 mb-1">
-                {t.enterTownVillage}
-              </label>
-              <input
-                type="text"
-                value={villageInput}
-                onChange={(e) => setVillageInput(e.target.value)}
-                placeholder="e.g. Proddatur, Lasalgaon..."
-                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-600"
-              />
-            </div>
-            <button
-              type="submit"
-              className="self-end bg-emerald-800 hover:bg-emerald-900 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors shrink-0"
-            >
-              Apply
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );

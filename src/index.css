@@ -19,6 +19,22 @@
   animation: shake 0.4s ease-in-out;
 }
 
+@keyframes scanLaser {
+  0% {
+    top: 4%;
+  }
+  50% {
+    top: 94%;
+  }
+  100% {
+    top: 4%;
+  }
+}
+
+.animate-scan-laser {
+  animation: scanLaser 2.5s ease-in-out infinite;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
