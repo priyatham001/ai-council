@@ -1,6 +1,11 @@
 {
-  "name": "AI Council",
-  "description": "One Question. Multiple AIs. One Better Answer.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "KrishiSetu - Kisan Crop & Market Platform",
+  "description": "Farmer-first crop-to-market discovery platform with AI crop quality camera, deterministic pricing, and India-wide Google Maps market routing.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

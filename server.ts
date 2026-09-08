@@ -1,187 +1,823 @@
-import 'dotenv/config';
-import express, { Request, Response } from 'express';
+import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-
-import { orchestrator } from './lib/ai/orchestrator';
+import dotenv from 'dotenv';
+import multer from 'multer';
+import { GoogleGenAI } from '@google/genai';
+import { getCropQualityStandard, CROP_QUALITY_STANDARDS } from './src/data/cropQualityStandards';
 import {
-  saveAnalysis,
-  getAnalysesList,
-  getAnalysisById,
-  deleteAnalysisById,
-  isMongoDbConnected,
-} from './lib/mongodb';
-import { validateQuestion, validateMode } from './lib/validation';
-import { processUploadedFile } from './lib/blob';
-import { HealthResponse } from './types/ai';
+  MASTER_LOCATIONS,
+  queryLocations,
+  AdministrativeUnit,
+  getSubDistrictLabel,
+} from './src/data/indiaWideLocations';
+import {
+  INDIA_WIDE_MARKET_DATABASE,
+  findGeographicMarkets,
+  haversineKm,
+  calculateRoadDistance,
+} from './src/data/indiaWideMarkets';
+
+dotenv.config();
 
 const app = express();
 const PORT = 3000;
 
-// Body parser with 20mb limit for uploads
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+// Body parsing with generous limit for photo uploads
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
-// ===================== API ROUTES =====================
-
-// 1. Health check
-app.get(['/api/health', '/health'], async (_req: Request, res: Response) => {
-  try {
-    const providers = orchestrator.getAvailableProviders();
-    const mongoConnected = await isMongoDbConnected();
-
-    const health: HealthResponse = {
-      status: 'ok',
-      mongodb: mongoConnected,
-      providers: {
-        gemini: providers.find((p) => p.id === 'gemini')?.configured ?? false,
-        openai: providers.find((p) => p.id === 'openai')?.configured ?? false,
-        anthropic: providers.find((p) => p.id === 'anthropic')?.configured ?? false,
-        mistral: providers.find((p) => p.id === 'mistral')?.configured ?? false,
-      },
-      totalConfigured: providers.filter((p) => p.configured).length,
-      demoModeAvailable: true,
-      timestamp: new Date().toISOString(),
-    };
-
-    res.status(200).json(health);
-  } catch (err) {
-    res.status(500).json({ status: 'degraded', error: 'Health check failed.' });
-  }
+// Multer memory storage for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB
 });
 
-// 2. Models status metadata (strictly no secrets)
-app.get(['/api/models', '/models'], (_req: Request, res: Response) => {
-  try {
-    const providers = orchestrator.getAvailableProviders();
-    const totalConfigured = providers.filter((p) => p.configured).length;
-    res.status(200).json({
-      providers,
-      totalConfigured,
-      demoAvailable: true,
-    });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to retrieve provider metadata.' });
-  }
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'KrishiSetu AI Crop Vision & India-Wide Market Discovery Engine',
+    timestamp: new Date().toISOString(),
+  });
 });
 
-// 3. Main Council Analysis pipeline
-app.post(['/api/council/analyze', '/council/analyze'], async (req: Request, res: Response) => {
-  try {
-    const { question, mode, selectedProviders, files, enableDemoMode } = req.body;
+// Reference quality standards endpoint for Agmark/Mandi inspection benchmarks
+app.get('/api/reference-standards', (req, res) => {
+  const cropId = req.query.cropId as string | undefined;
+  if (cropId) {
+    const standard = getCropQualityStandard(cropId);
+    return res.json(standard);
+  }
+  res.json(CROP_QUALITY_STANDARDS);
+});
 
-    // Validate question input
-    const validation = validateQuestion(question);
-    if (!validation.valid || !validation.cleanQuestion) {
+// In-memory dynamic database extension for CSV uploads
+let importedLocations: AdministrativeUnit[] = [];
+let importedMarkets: typeof INDIA_WIDE_MARKET_DATABASE = [];
+
+// Helper to get combined locations
+function getAllLocations(): AdministrativeUnit[] {
+  return [...MASTER_LOCATIONS, ...importedLocations];
+}
+
+// Helper to get combined markets
+function getAllMarkets(): typeof INDIA_WIDE_MARKET_DATABASE {
+  return [...INDIA_WIDE_MARKET_DATABASE, ...importedMarkets];
+}
+
+// Lazy initialize Gemini client
+let geminiClient: GoogleGenAI | null = null;
+function getGeminiClient(): GoogleGenAI | null {
+  if (!geminiClient && process.env.GEMINI_API_KEY) {
+    try {
+      geminiClient = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          },
+        },
+      });
+    } catch (e) {
+      console.warn('Could not initialize GoogleGenAI client:', e);
+    }
+  }
+  return geminiClient;
+}
+
+// =========================================================================
+// AI CROP VISION ANALYSIS HANDLER
+// =========================================================================
+async function handleCropAnalyze(req: express.Request, res: express.Response) {
+  try {
+    console.log('[CropAI] Request received');
+
+    // Extract crop name / ID from JSON body or multipart form fields
+    let cropName = req.body.crop || req.body.cropName || req.body.selectedCrop;
+    if (typeof cropName === 'object' && cropName !== null) {
+      cropName = cropName.name || cropName.id;
+    }
+    cropName = cropName || 'Produce';
+    const cropId = req.body.cropId || req.body.id || cropName;
+    const category = req.body.category || 'general';
+
+    console.log(`[CropAI] Crop: ${cropName}`);
+
+    // Extract image from multipart file or JSON base64
+    let base64Data = '';
+    let mimeType = 'image/jpeg';
+    let approxSizeBytes = 0;
+
+    if (req.file) {
+      base64Data = req.file.buffer.toString('base64');
+      mimeType = req.file.mimetype || 'image/jpeg';
+      approxSizeBytes = req.file.size;
+    } else if (req.body.image) {
+      const rawImage = req.body.image;
+      if (rawImage.startsWith('data:')) {
+        const parts = rawImage.split(',');
+        const mimeMatch = parts[0].match(/:(.*?);/);
+        if (mimeMatch) {
+          mimeType = mimeMatch[1];
+        }
+        base64Data = parts[1];
+      } else {
+        base64Data = rawImage;
+      }
+      approxSizeBytes = Math.round((base64Data.length * 3) / 4);
+    }
+
+    if (!base64Data || base64Data.length < 50) {
+      console.warn('[CropAI] Gemini request failed - No valid image received');
       return res.status(400).json({
-        success: false,
-        error: validation.error || 'Invalid question provided.',
+        status: 'IMAGE_UNCLEAR',
+        cropMatch: false,
+        selectedCrop: cropName,
+        detectedCrop: 'Unknown',
+        imageQuality: 'insufficient',
+        grade: null,
+        confidence: 'low',
+        observations: ['No image bytes provided or image payload was empty.'],
+        qualityFactors: {
+          freshness: 'poor',
+          maturity: 'deteriorating',
+          visibleRot: false,
+          visibleMold: false,
+          discoloration: 'severe',
+          physicalDamage: 'high',
+          insectDamage: 'unknown',
+          uniformity: 'poor',
+          cleanliness: 'poor',
+        },
+        needsManualReview: true,
+        limitations: ['Image is required for analysis.'],
       });
     }
 
-    const validMode = validateMode(mode);
+    console.log('[CropAI] Image received: true');
+    console.log(`[CropAI] MIME: ${mimeType}`);
+    console.log(`[CropAI] Image size: ${approxSizeBytes}`);
 
-    // Execute orchestrator
-    const analysisDoc = await orchestrator.runCouncilPipeline({
-      question: validation.cleanQuestion,
-      mode: validMode,
-      selectedProviders,
-      files,
-      enableDemoMode,
+    const standard = getCropQualityStandard(cropId || cropName, category);
+    const ai = getGeminiClient();
+
+    if (!ai) {
+      console.warn('[CropAI] Gemini request failed - GEMINI_API_KEY not configured on server');
+      // Per instructions: Initial state quality = null, if AI analysis fails quality = null, NEVER fallback to Grade B!
+      return res.status(503).json({
+        status: 'ERROR',
+        cropMatch: true,
+        selectedCrop: cropName,
+        detectedCrop: cropName,
+        imageQuality: 'good',
+        grade: null,
+        confidence: 'low',
+        observations: [
+          'AI Vision service credentials not found on server.',
+          'Manual assayer review required before assigning grade.',
+        ],
+        qualityFactors: {
+          freshness: 'fair',
+          maturity: 'appropriate',
+          visibleRot: false,
+          visibleMold: false,
+          discoloration: 'none',
+          physicalDamage: 'none',
+          insectDamage: 'none_visible',
+          uniformity: 'good',
+          cleanliness: 'good',
+        },
+        needsManualReview: true,
+        limitations: [
+          'AI visual quality assessment is an estimate based on visible characteristics and does not replace certified physical or laboratory inspection.',
+        ],
+      });
+    }
+
+    const inspectionPrompt = `You are KrishiSetu's senior certified agricultural vision assayer evaluating an Indian farmer's crop harvest photograph.
+Selected / Expected Crop: "${cropName}"
+
+BENCHMARK AGMARK / MANDI CRITERIA FOR "${cropName}":
+- Grade A Criteria: ${standard.gradeA.visualStandards.join('; ')}
+- Grade B Criteria: ${standard.gradeB.visualStandards.join('; ')}
+- Grade C Criteria: ${standard.gradeC.visualStandards.join('; ')}
+- Rejection / Disqualifiers: ${standard.rejectionDisqualifiers.join('; ')}
+
+MANDATORY MULTI-STAGE ANALYSIS INSTRUCTIONS:
+
+STAGE 1 — IMAGE QUALITY:
+- Inspect lighting, focus, resolution, and produce visibility.
+- If the image is pitch black, completely blown out, severely blurred, or does not clearly show produce:
+  Set "status": "IMAGE_UNCLEAR", "imageQuality": "blurry" | "dark" | "insufficient", "grade": null.
+
+STAGE 2 — CROP IDENTIFICATION:
+- Identify what crop is actually visible in the photograph ("detectedCrop").
+- Compare "selectedCrop" ("${cropName}") against "detectedCrop".
+- If the image depicts a completely different crop (e.g. Tomato when Paddy was selected), a person, animal, vehicle, non-crop object:
+  Set "cropMatch": false, "status": "CROP_MISMATCH", "grade": null.
+  Do NOT assign any quality grade to the wrong crop!
+
+STAGE 3 — VISUAL QUALITY & DEFECT INSPECTION:
+- Inspect actual pixels for:
+  1. Freshness: fresh appearance, dull appearance, shriveling, dehydration, deterioration.
+  2. Physical condition: bruising, cuts, cracks, broken portions, compression damage, pest/insect damage.
+  3. Color & Discoloration: healthy color vs abnormal darkening, brown/black lesions, blight.
+  4. Maturity: immature, mature, appropriately ripe, overripe, deteriorating.
+  5. Biological deterioration (HIGHEST PRIORITY): visible rot, fungal mold mycelium, bacterial decay, soft watery breakdown.
+  6. Uniformity: highly uniform, reasonably uniform, mixed, highly inconsistent.
+  7. Cleanliness: free of extraneous dirt, mud, and foreign matter.
+
+STAGE 4 — CRITICAL SPOILED / ROTTEN PRODUCE RULE:
+- If the photo shows visible rot, mold spores, black necrotic lesions, or severe decomposition:
+  You MUST NOT return Grade A or Grade B!
+  Set "grade": "REJECT", "status": "REJECT", "qualityFactors.visibleRot": true, "needsManualReview": true.
+
+STAGE 5 — DO NOT CONFUSE RIPE WITH SPOILED:
+- A healthy ripe crop (e.g. deep red ripe tomato, yellow ripe banana, golden ripe mango) is DESIRABLE and can be Grade A or Grade B.
+- Overripe produce without rot should receive Grade C or moderate downgrade.
+- Rotten or moldy produce MUST be REJECT.
+
+GRADE DERIVATION:
+- "A": Strong visual evidence of high quality, uniform shape/color, free of visible defects.
+- "B": Moderate cosmetic blemishes, sound harvest, standard mandi fair average quality (FAQ).
+- "C": Significant visible defects, irregular sizing, usable produce.
+- "REJECT": Severe deterioration, active rot, mold, or extensive decay.
+- null: If image is unclear, crop mismatch, or evidence insufficient.
+
+CONFIDENCE: Must be "high", "medium", or "low" based on visual clarity.
+
+Respond ONLY with STRICT JSON matching this schema (no markdown, no backticks):
+{
+  "status": "ANALYZED" | "IMAGE_UNCLEAR" | "CROP_MISMATCH" | "REJECT",
+  "cropMatch": true,
+  "selectedCrop": "${cropName}",
+  "detectedCrop": "Identified crop name",
+  "imageQuality": "good" | "blurry" | "dark" | "insufficient",
+  "grade": "A" | "B" | "C" | "REJECT" | null,
+  "confidence": "high" | "medium" | "low",
+  "observations": [
+    "Specific visual observation 1 from the actual photograph",
+    "Specific visual observation 2 regarding freshness and defects",
+    "Specific visual observation 3 comparing against Mandi benchmarks"
+  ],
+  "qualityFactors": {
+    "freshness": "good" | "fair" | "poor",
+    "maturity": "appropriate" | "immature" | "overripe" | "deteriorating",
+    "visibleRot": false,
+    "visibleMold": false,
+    "discoloration": "none" | "low" | "moderate" | "severe",
+    "physicalDamage": "none" | "low" | "moderate" | "high",
+    "insectDamage": "none_visible" | "low" | "moderate" | "severe",
+    "uniformity": "good" | "fair" | "poor",
+    "cleanliness": "good" | "fair" | "poor"
+  },
+  "needsManualReview": false,
+  "limitations": [
+    "Assessment is based only on visible characteristics in the photograph.",
+    "AI visual quality assessment is an estimate based on visible characteristics and does not replace certified physical or laboratory inspection."
+  ]
+}`;
+
+    console.log('[CropAI] Sending actual image to Gemini');
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                mimeType,
+                data: base64Data,
+              },
+            },
+            {
+              text: inspectionPrompt,
+            },
+          ],
+        },
+      ],
     });
 
-    // Save to MongoDB (or in-memory fallback)
-    const saveResult = await saveAnalysis(analysisDoc);
-    analysisDoc.id = saveResult.id;
+    console.log('[CropAI] Gemini response received');
 
-    return res.status(200).json({
-      success: true,
-      analysis: analysisDoc,
-      savedToDb: saveResult.savedToDb,
-      id: saveResult.id,
-    });
-  } catch (err: unknown) {
-    console.error('[API /api/council/analyze] Pipeline execution error:', (err as Error)?.message);
+    const rawText = response.text || '';
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.warn('[CropAI] Gemini request failed - Could not parse JSON from model output');
+      return res.status(502).json({
+        status: 'ERROR',
+        cropMatch: true,
+        selectedCrop: cropName,
+        detectedCrop: cropName,
+        imageQuality: 'good',
+        grade: null,
+        confidence: 'low',
+        observations: ['Could not parse structured analysis from vision response.'],
+        qualityFactors: {
+          freshness: 'fair',
+          maturity: 'appropriate',
+          visibleRot: false,
+          visibleMold: false,
+          discoloration: 'none',
+          physicalDamage: 'none',
+          insectDamage: 'none_visible',
+          uniformity: 'good',
+          cleanliness: 'good',
+        },
+        needsManualReview: true,
+        limitations: [
+          'AI visual quality assessment is an estimate based on visible characteristics and does not replace certified physical or laboratory inspection.',
+        ],
+      });
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    console.log('[CropAI] JSON parsed successfully');
+    console.log(`[CropAI] Crop match: ${parsed.cropMatch}`);
+    console.log(`[CropAI] Grade: ${parsed.grade}`);
+
+    // Strict safety enforcement:
+    // If rot or mold was detected, ensure grade cannot be Grade A or B
+    if (parsed.qualityFactors?.visibleRot === true || parsed.qualityFactors?.visibleMold === true) {
+      parsed.grade = 'REJECT';
+      parsed.status = 'REJECT';
+      parsed.needsManualReview = true;
+    }
+
+    // If crop match is false or image unclear, ensure grade is strictly null
+    if (parsed.cropMatch === false || parsed.status === 'CROP_MISMATCH') {
+      parsed.grade = null;
+      parsed.status = 'CROP_MISMATCH';
+      parsed.needsManualReview = true;
+    } else if (parsed.status === 'IMAGE_UNCLEAR' || parsed.imageQuality === 'insufficient') {
+      parsed.grade = null;
+      parsed.status = 'IMAGE_UNCLEAR';
+      parsed.needsManualReview = true;
+    }
+
+    // Backward compatibility fields for existing UI components
+    const mappedResponse = {
+      ...parsed,
+      cropDetected: parsed.detectedCrop || cropName,
+      suggestedGrade: parsed.grade, // May be 'A', 'B', 'C', 'REJECT', or null
+      rotDetected: Boolean(parsed.qualityFactors?.visibleRot || parsed.grade === 'REJECT'),
+      pestDamageDetected: Boolean(
+        parsed.qualityFactors?.insectDamage === 'moderate' ||
+        parsed.qualityFactors?.insectDamage === 'severe'
+      ),
+      confidenceLevel:
+        parsed.confidence === 'high'
+          ? 'High'
+          : parsed.confidence === 'low'
+          ? 'Low'
+          : 'Medium',
+      confidenceScore:
+        parsed.confidence === 'high' ? 0.92 : parsed.confidence === 'low' ? 0.45 : 0.75,
+      verdict:
+        parsed.grade === 'REJECT'
+          ? 'REJECT'
+          : parsed.cropMatch === false
+          ? 'WARNING'
+          : parsed.status === 'IMAGE_UNCLEAR'
+          ? 'INSUFFICIENT_IMAGE'
+          : 'ACCEPT',
+      rejectionReasons:
+        parsed.grade === 'REJECT'
+          ? parsed.observations.filter(
+              (o: string) =>
+                o.toLowerCase().includes('rot') ||
+                o.toLowerCase().includes('mold') ||
+                o.toLowerCase().includes('decay') ||
+                o.toLowerCase().includes('deteriorat') ||
+                o.toLowerCase().includes('damage')
+            )
+          : [],
+    };
+
+    return res.json(mappedResponse);
+  } catch (err: any) {
+    console.error('[CropAI] Gemini request failed');
+    console.error(`[CropAI] Error: ${err?.message || err}`);
     return res.status(500).json({
-      success: false,
-      error: 'The AI Council encountered an unexpected error processing your inquiry. Please try again.',
+      status: 'ERROR',
+      cropMatch: true,
+      selectedCrop: req.body.crop || 'Produce',
+      detectedCrop: 'Unknown',
+      imageQuality: 'good',
+      grade: null, // NEVER return a default grade on failure!
+      confidence: 'low',
+      observations: [
+        'AI vision analysis encountered a server exception.',
+        'Please capture a clear photo in good daylight or select your grade manually.',
+      ],
+      qualityFactors: {
+        freshness: 'fair',
+        maturity: 'appropriate',
+        visibleRot: false,
+        visibleMold: false,
+        discoloration: 'none',
+        physicalDamage: 'none',
+        insectDamage: 'none_visible',
+        uniformity: 'good',
+        cleanliness: 'good',
+      },
+      needsManualReview: true,
+      limitations: [
+        'AI visual quality assessment is an estimate based on visible characteristics and does not replace certified physical or laboratory inspection.',
+      ],
+      error: err?.message || 'Internal server error',
+    });
+  }
+}
+
+// Register both /api/crop/analyze and /api/analyze-crop
+app.post('/api/crop/analyze', upload.single('image'), handleCropAnalyze);
+app.post('/api/analyze-crop', upload.single('image'), handleCropAnalyze);
+
+// =========================================================================
+// MULTI-TURN GEMINI KISAN ASSISTANT CHATBOT WITH GOOGLE MAPS GROUNDING
+// =========================================================================
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { messages, userLocation, language } = req.body;
+    const ai = getGeminiClient();
+
+    if (!ai) {
+      return res.status(503).json({
+        error: 'GEMINI_API_KEY is not configured on the server.',
+        reply: 'KrishiSetu AI Assistant is currently in preview. To get live answers, please ensure the Gemini API key is configured.',
+        mapLinks: [],
+      });
+    }
+
+    const systemInstruction = `You are KrishiSetu AgriSaathi (कृषि सेतु सहायक), an expert agricultural quality assayer, agronomist, and mandi market advisor in India.
+Your mission is to help Indian farmers:
+1. Understand crop quality grading standards (Agmark Grade A, Grade B / FAQ, Grade C, and Rejection criteria).
+2. Interpret AI crop photograph scans (freshness, discoloration, insect damage, fungal mold, rot).
+3. Discover fair APMC mandi prices and market arrivals across India.
+4. Calculate realistic transportation freight costs and net returns.
+5. Provide actionable guidance on harvesting, curing, storage, and moisture management.
+
+Language preference: ${language || 'en'}.
+Guidelines:
+- Maintain conversation history and answer in a helpful, respectful, and farmer-first manner.
+- Keep responses well-formatted with clear bullet points.
+- If asked about mandi locations, wholesale markets, or transport routes, cite real APMC yards in India.
+- If the user writes in Hindi, Marathi, Telugu, or English, reply in their language naturally.`;
+
+    // Map conversation history
+    const contents = (messages || []).map((m: any) => ({
+      role: m.role === 'model' || m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: String(m.text || '') }],
+    }));
+
+    if (contents.length === 0) {
+      return res.status(400).json({ error: 'No messages provided' });
+    }
+
+    const lastUserMsg = messages[messages.length - 1]?.text || '';
+    const isMandiOrLocationQuery = /mandi|market|bazaar|where|near|location|distance|apmc|route|yard|storage|cold storage/i.test(lastUserMsg);
+
+    const config: any = {
+      systemInstruction,
+    };
+
+    if (isMandiOrLocationQuery) {
+      config.tools = [{ googleMaps: {} }];
+      if (userLocation?.latitude && userLocation?.longitude) {
+        config.toolConfig = {
+          retrievalConfig: {
+            latLng: {
+              latitude: Number(userLocation.latitude),
+              longitude: Number(userLocation.longitude),
+            },
+          },
+        };
+      }
+    }
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents,
+      config,
+    });
+
+    const reply = response.text || '';
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    
+    // Extract map links if available per guidelines
+    const mapLinks: Array<{ title: string; uri: string }> = [];
+    if (groundingChunks && Array.isArray(groundingChunks)) {
+      groundingChunks.forEach((chunk: any) => {
+        if (chunk.maps?.uri) {
+          mapLinks.push({
+            title: chunk.maps.title || 'Mandi Location',
+            uri: chunk.maps.uri,
+          });
+        }
+      });
+    }
+
+    return res.json({
+      reply,
+      mapLinks,
+    });
+  } catch (err: any) {
+    console.error('[ChatAI] Error:', err);
+    return res.status(500).json({
+      error: err?.message || 'Chat error',
+      reply: 'I had trouble processing that question. Please try asking again or rephrase your agricultural query.',
+      mapLinks: [],
     });
   }
 });
 
-// 4. File upload endpoint
-app.post(['/api/upload', '/upload'], async (req: Request, res: Response) => {
-  try {
-    const { filename, mimeType, size, base64Content } = req.body;
+// =========================================================================
+// INDIA-WIDE LOCATION & MARKET APIS
+// =========================================================================
 
-    if (!filename || !mimeType || typeof size !== 'number') {
-      return res.status(400).json({ success: false, error: 'Missing file metadata.' });
+// 1. GET /api/locations/states
+app.get('/api/locations/states', (req, res) => {
+  const locs = getAllLocations();
+  const stateSet = new Set<string>();
+  locs.forEach((l) => stateSet.add(l.state));
+
+  const states = Array.from(stateSet).sort((a, b) => a.localeCompare(b));
+  res.json({ states });
+});
+
+// 2. GET /api/locations/districts?state=
+app.get('/api/locations/districts', (req, res) => {
+  const state = req.query.state as string;
+  if (!state) {
+    return res.status(400).json({ error: 'state query parameter is required' });
+  }
+
+  const locs = getAllLocations().filter(
+    (l) => l.state.toLowerCase() === state.toLowerCase()
+  );
+  const districtSet = new Set<string>();
+  locs.forEach((l) => districtSet.add(l.district));
+
+  const districts = Array.from(districtSet).sort((a, b) => a.localeCompare(b));
+  const subDistrictLabel = getSubDistrictLabel(state);
+
+  res.json({
+    state,
+    districts,
+    subDistrictLabel,
+  });
+});
+
+// 3. GET /api/locations/subdistricts?state=&district=
+app.get('/api/locations/subdistricts', (req, res) => {
+  const state = req.query.state as string;
+  const district = req.query.district as string;
+
+  if (!state || !district) {
+    return res.status(400).json({ error: 'state and district query parameters are required' });
+  }
+
+  const locs = getAllLocations().filter(
+    (l) =>
+      l.state.toLowerCase() === state.toLowerCase() &&
+      l.district.toLowerCase() === district.toLowerCase()
+  );
+
+  const subDistrictSet = new Set<string>();
+  locs.forEach((l) => subDistrictSet.add(l.subDistrict));
+
+  const subDistricts = Array.from(subDistrictSet).sort((a, b) => a.localeCompare(b));
+  const subDistrictLabel = getSubDistrictLabel(state);
+
+  res.json({
+    state,
+    district,
+    subDistrictLabel,
+    subDistricts,
+  });
+});
+
+// 4. GET /api/locations/villages?state=&district=&subdistrict=
+app.get('/api/locations/villages', (req, res) => {
+  const state = req.query.state as string;
+  const district = req.query.district as string;
+  const subdistrict = req.query.subdistrict as string;
+
+  let locs = getAllLocations();
+  if (state) {
+    locs = locs.filter((l) => l.state.toLowerCase() === state.toLowerCase());
+  }
+  if (district) {
+    locs = locs.filter((l) => l.district.toLowerCase() === district.toLowerCase());
+  }
+  if (subdistrict) {
+    locs = locs.filter((l) => l.subDistrict.toLowerCase() === subdistrict.toLowerCase());
+  }
+
+  res.json({
+    count: locs.length,
+    villages: locs,
+  });
+});
+
+// 5. GET /api/locations/search?q=
+app.get('/api/locations/search', (req, res) => {
+  const q = (req.query.q as string || '').trim();
+  if (!q) {
+    return res.json({ results: [] });
+  }
+
+  const results = queryLocations(q, 30);
+  res.json({ results });
+});
+
+// 6. GET /api/locations/:id
+app.get('/api/locations/:id', (req, res) => {
+  const loc = getAllLocations().find((l) => l.id === req.params.id);
+  if (!loc) {
+    return res.status(404).json({ error: 'Location not found' });
+  }
+  res.json(loc);
+});
+
+// 7. GET /api/markets/nearby?lat=&lng=&crop=&quantity=&quality=
+app.get('/api/markets/nearby', (req, res) => {
+  const lat = parseFloat(req.query.lat as string);
+  const lng = parseFloat(req.query.lng as string);
+  const cropId = (req.query.crop as string) || 'general';
+  const quantityKg = parseFloat((req.query.quantity as string) || '1000');
+  const qualityGrade = (req.query.quality as string) || 'B';
+  const state = req.query.state as string;
+
+  if (isNaN(lat) || isNaN(lng)) {
+    return res.status(400).json({ error: 'Valid lat and lng query parameters are required' });
+  }
+
+  const markets = findGeographicMarkets(lat, lng, 2350, state);
+
+  // Calculate Net Take-Home
+  const quantityQuintals = quantityKg / 100;
+  const qualityMultiplier = qualityGrade === 'A' ? 1.05 : qualityGrade === 'C' ? 0.95 : 1.0;
+
+  const results = markets.map((market, idx) => {
+    const adjustedPricePerQtl = Math.round(market.pricePerQuintal * qualityMultiplier);
+    const grossAmount = Math.round(adjustedPricePerQtl * quantityQuintals);
+
+    // Transport calculation: ₹35 base + ₹4.20 per quintal per 10 km
+    const distance = market.roadDistanceKm || market.distanceKm;
+    const transportPerQtl = Math.max(25, Math.round(15 + (distance * 1.8)));
+    const transportCost = Math.round(transportPerQtl * quantityQuintals);
+
+    const marketFeeAmount = Math.round(grossAmount * (market.marketFeePercent / 100));
+    const unloadingFeeAmount = Math.round(market.unloadingChargePerQtl * quantityQuintals);
+
+    const netReturn = grossAmount - transportCost - marketFeeAmount - unloadingFeeAmount;
+    const netPricePerQuintal = Math.round(netReturn / quantityQuintals);
+
+    return {
+      market,
+      grossAmount,
+      transportCost,
+      marketFeeAmount,
+      unloadingFeeAmount,
+      netReturn,
+      netPricePerQuintal,
+      isBestOption: idx === 0,
+      priceDeltaPerQuintal: adjustedPricePerQtl - 2350,
+    };
+  });
+
+  // Sort by net return (highest net take-home first)
+  results.sort((a, b) => b.netReturn - a.netReturn);
+  if (results.length > 0) {
+    results[0].isBestOption = true;
+  }
+
+  res.json({
+    farmerCoordinates: { latitude: lat, longitude: lng },
+    cropId,
+    quantityKg,
+    qualityGrade,
+    count: results.length,
+    markets: results,
+  });
+});
+
+// 8. GET /api/admin/coverage - India-Wide coverage statistics
+app.get('/api/admin/coverage', (req, res) => {
+  const locs = getAllLocations();
+  const mkts = getAllMarkets();
+
+  const villagesByState: Record<string, number> = {};
+  locs.forEach((l) => {
+    villagesByState[l.state] = (villagesByState[l.state] || 0) + 1;
+  });
+
+  const marketsByState: Record<string, number> = {};
+  mkts.forEach((m) => {
+    marketsByState[m.state] = (marketsByState[m.state] || 0) + 1;
+  });
+
+  res.json({
+    totalVillages: locs.length,
+    totalMarkets: mkts.length,
+    villagesByState,
+    marketsByState,
+    lastImportTime: new Date().toISOString(),
+  });
+});
+
+// 9. POST /api/admin/import-csv - Admin CSV Import Pipeline
+app.post('/api/admin/import-csv', upload.single('file'), (req, res) => {
+  try {
+    const importType = (req.body.type as string) || 'villages'; // 'villages' or 'markets'
+
+    let csvContent = '';
+    if (req.file) {
+      csvContent = req.file.buffer.toString('utf-8');
+    } else if (req.body.csvText) {
+      csvContent = req.body.csvText;
     }
 
-    const result = await processUploadedFile({
-      filename,
-      mimeType,
-      size,
-      base64Content,
+    if (!csvContent || csvContent.trim().length === 0) {
+      return res.status(400).json({ error: 'No CSV content uploaded' });
+    }
+
+    const lines = csvContent.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    if (lines.length < 2) {
+      return res.status(400).json({ error: 'CSV file must have a header and at least one data row' });
+    }
+
+    const headers = lines[0].split(',').map((h) => h.trim().toLowerCase().replace(/["']/g, ''));
+    let importedCount = 0;
+    let duplicateCount = 0;
+    const errors: string[] = [];
+
+    if (importType === 'villages') {
+      const stateIdx = headers.findIndex((h) => h.includes('state'));
+      const distIdx = headers.findIndex((h) => h.includes('district'));
+      const subDistIdx = headers.findIndex((h) => h.includes('mandal') || h.includes('taluka') || h.includes('tehsil') || h.includes('subdistrict'));
+      const villageIdx = headers.findIndex((h) => h.includes('village') || h.includes('name') || h.includes('town'));
+      const latIdx = headers.findIndex((h) => h.includes('lat'));
+      const lngIdx = headers.findIndex((h) => h.includes('lng') || h.includes('lon'));
+
+      for (let i = 1; i < lines.length; i++) {
+        const row = lines[i].split(',').map((cell) => cell.trim().replace(/^["']|["']$/g, ''));
+        if (row.length < 2) continue;
+
+        const state = stateIdx >= 0 ? row[stateIdx] : 'Maharashtra';
+        const district = distIdx >= 0 ? row[distIdx] : 'Nashik';
+        const subDistrict = subDistIdx >= 0 ? row[subDistIdx] : 'Niphad';
+        const village = villageIdx >= 0 ? row[villageIdx] : `Village ${i}`;
+        const lat = latIdx >= 0 ? parseFloat(row[latIdx]) : 20.0;
+        const lng = lngIdx >= 0 ? parseFloat(row[lngIdx]) : 74.0;
+
+        if (!village) {
+          errors.push(`Row ${i + 1}: Missing village name`);
+          continue;
+        }
+
+        const id = `csv-vil-${Date.now()}-${i}`;
+        const newUnit: AdministrativeUnit = {
+          id,
+          name: village,
+          normalizedName: village.toLowerCase(),
+          type: 'village',
+          country: 'India',
+          state,
+          district,
+          subDistrict,
+          subDistrictType: getSubDistrictLabel(state),
+          latitude: isNaN(lat) ? 20.1462 : lat,
+          longitude: isNaN(lng) ? 74.2327 : lng,
+          aliases: [village.toLowerCase()],
+          source: 'csv',
+        };
+
+        importedLocations.push(newUnit);
+        importedCount++;
+      }
+    }
+
+    res.json({
+      success: true,
+      importType,
+      importedCount,
+      duplicateCount,
+      errorsCount: errors.length,
+      errors: errors.slice(0, 10),
+      message: `Successfully imported ${importedCount} records into the KrishiSetu database.`,
     });
-
-    if (!result.success) {
-      return res.status(400).json({ success: false, error: result.error });
-    }
-
-    return res.status(200).json({ success: true, file: result.attachment });
-  } catch (err: unknown) {
-    console.error('[API /api/upload] File processing error:', (err as Error)?.message);
-    return res.status(500).json({ success: false, error: 'File processing failed.' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'CSV ingestion failed: ' + err.message });
   }
 });
 
-// 5. History list
-app.get(['/api/history', '/history'], async (_req: Request, res: Response) => {
-  try {
-    const history = await getAnalysesList(100);
-    return res.status(200).json({ success: true, history });
-  } catch (err: unknown) {
-    console.error('[API /api/history] Error fetching history:', (err as Error)?.message);
-    return res.status(500).json({ success: false, error: 'Failed to retrieve analysis history.' });
-  }
-});
-
-// 6. History single item
-app.get(['/api/history/:id', '/history/:id'], async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const analysis = await getAnalysisById(id);
-
-    if (!analysis) {
-      return res.status(404).json({ success: false, error: 'Analysis record not found.' });
-    }
-
-    return res.status(200).json({ success: true, analysis });
-  } catch (err: unknown) {
-    console.error('[API /api/history/:id] Error:', (err as Error)?.message);
-    return res.status(500).json({ success: false, error: 'Failed to fetch analysis record.' });
-  }
-});
-
-// 7. History delete item
-app.delete(['/api/history/:id', '/history/:id'], async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const deleted = await deleteAnalysisById(id);
-
-    if (!deleted) {
-      return res.status(404).json({ success: false, error: 'Record not found or already deleted.' });
-    }
-
-    return res.status(200).json({ success: true, message: 'Analysis deleted successfully.' });
-  } catch (err: unknown) {
-    console.error('[API DELETE /api/history/:id] Error:', (err as Error)?.message);
-    return res.status(500).json({ success: false, error: 'Failed to delete record.' });
-  }
-});
-
-// ===================== SERVER STARTUP & VITE =====================
+// Start Express server and mount Vite
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
@@ -192,23 +828,14 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (_req: Request, res: Response) => {
+    app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
-  // Only bind port when running standalone server (not inside Vercel serverless functions)
-  if (!process.env.VERCEL) {
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`AI Council server active on http://0.0.0.0:${PORT}`);
-    });
-  }
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`KrishiSetu Server running on http://0.0.0.0:${PORT}`);
+  });
 }
 
-// Automatically start server when executed directly
-if (!process.env.VERCEL) {
-  startServer();
-}
-
-export { app, startServer };
-export default app;
+startServer();
