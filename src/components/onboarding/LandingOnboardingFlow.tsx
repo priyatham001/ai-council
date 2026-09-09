@@ -17,57 +17,38 @@ import {
   Navigation,
   AlertCircle,
   X,
+  User,
+  KeyRound,
 } from 'lucide-react';
-import { Language, LocationData } from '../../types/krishi';
+import { LocationData } from '../../types/krishi';
 import { reverseGeocodeLocation } from '../../services/googleMapsService';
 import { IndiaMapZoomExperience } from './IndiaMapZoomExperience';
 import { queryLocations } from '../../data/indiaWideLocations';
-
-interface LanguageOption {
-  code: Language;
-  label: string;
-  native: string;
-  greeting: string;
-}
-
-const LANGUAGES: LanguageOption[] = [
-  { code: 'en', label: 'English', native: 'English', greeting: 'Welcome to Kisan Setu' },
-  { code: 'te', label: 'Telugu', native: 'తెలుగు', greeting: 'కిసాన్ సేతుకి స్వాగతం' },
-  { code: 'hi', label: 'Hindi', native: 'हिन्दी', greeting: 'किसान सेतु में आपका स्वागत है' },
-  { code: 'ta', label: 'Tamil', native: 'தமிழ்', greeting: 'கிசான் சேதுவிற்கு நல்வரவு' },
-  { code: 'kn', label: 'Kannada', native: 'ಕನ್ನಡ', greeting: 'ಕಿಸಾನ್ ಸೇತುಗೆ ಸುಸ್ವಾಗತ' },
-  { code: 'ml', label: 'Malayalam', native: 'മലയാളം', greeting: 'കിസാൻ സേതുവിലേക്ക് സ്വാഗതം' },
-];
+import { useTranslation, Language } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 
 const POPULAR_SEARCH_PRESETS = [
   { name: 'Kadapa', district: 'YSR Kadapa', state: 'Andhra Pradesh', lat: 14.4673, lng: 78.8242 },
   { name: 'Proddatur', district: 'YSR Kadapa', state: 'Andhra Pradesh', lat: 14.7527, lng: 78.5524 },
   { name: 'Guntur', district: 'Guntur', state: 'Andhra Pradesh', lat: 16.3067, lng: 80.4365 },
+  { name: 'Kurnool', district: 'Kurnool', state: 'Andhra Pradesh', lat: 15.8281, lng: 78.0373 },
+  { name: 'Tirupati', district: 'Tirupati', state: 'Andhra Pradesh', lat: 13.6288, lng: 79.4192 },
   { name: 'Warangal', district: 'Warangal', state: 'Telangana', lat: 17.9689, lng: 79.5941 },
   { name: 'Nizamabad', district: 'Nizamabad', state: 'Telangana', lat: 18.6725, lng: 78.0941 },
   { name: 'Nashik', district: 'Nashik', state: 'Maharashtra', lat: 19.9975, lng: 73.7898 },
-  { name: 'Indore', district: 'Indore', state: 'Madhya Pradesh', lat: 22.7196, lng: 75.8577 },
+  { name: 'Pune', district: 'Pune', state: 'Maharashtra', lat: 18.5204, lng: 73.8567 },
   { name: 'Kolar', district: 'Kolar', state: 'Karnataka', lat: 13.1367, lng: 78.1292 },
-  { name: 'Ludhiana', district: 'Ludhiana', state: 'Punjab', lat: 30.9010, lng: 75.8573 },
 ];
 
 export const LandingOnboardingFlow: React.FC = () => {
   const navigate = useNavigate();
+  const { t, language, setLanguage, languages } = useTranslation();
+  const { theme, isDarkMode, setTheme } = useTheme();
+  const { currentUser, openAuthModal } = useAuth();
 
   // Onboarding Step: 1 = Language & Theme, 2 = Location Detection, 3 = Role Selection
   const [step, setStep] = useState<1 | 2 | 3>(1);
-
-  // Language state
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>(() => {
-    return (localStorage.getItem('krishi_language') as Language) || 'en';
-  });
-
-  // Theme state: Default is Light Theme as requested
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('krishi_theme');
-    if (saved === 'dark') return true;
-    return false; // Default setting: Light Theme
-  });
 
   // Location State Machine for Step 2
   // 'explain' -> 'requesting' -> ('map_preview' | 'error' | 'manual_search')
@@ -76,9 +57,9 @@ export const LandingOnboardingFlow: React.FC = () => {
   >('explain');
 
   const [geoErrorCode, setGeoErrorCode] = useState<number | null>(null);
-  const [gpsPhase, setGpsPhase] = useState<1 | 2 | 3 | 4>(1);
+  const [gpsPhase, setGpsPhase] = useState<1 | 2 | 3>(1);
 
-  // Location state: load from localStorage if previously set, else default coordinates
+  // Location state: load from localStorage if previously set, default to Kadapa, Andhra Pradesh
   const [location, setLocation] = useState<LocationData>(() => {
     const saved = localStorage.getItem('krishi_location');
     if (saved) {
@@ -103,50 +84,22 @@ export const LandingOnboardingFlow: React.FC = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
 
-  // Apply Theme to documentElement
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('krishi_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('krishi_theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  // Save language
-  const handleSelectLanguage = (lang: Language) => {
-    setSelectedLanguage(lang);
-    localStorage.setItem('krishi_language', lang);
-  };
-
-  // Step 1 -> Step 2 transition: Show explanation card first, DO NOT auto-trigger GPS without consent
-  const handleLanguageStepSubmit = () => {
-    setStep(2);
-    // Check if user already confirmed location previously
-    const saved = localStorage.getItem('krishi_location');
-    if (saved) {
-      setLocationStepMode('map_preview');
-    } else {
-      setLocationStepMode('explain');
-    }
-  };
-
-  // Trigger Real Browser Geolocation API with Sequential 4-Step Animation
+  // Trigger Browser Geolocation with 3-phase loading animation
   const requestBrowserGeolocation = () => {
     setLocationStepMode('requesting');
     setGeoErrorCode(null);
     setGpsPhase(1);
 
-    // Progression timers for realistic GPS detection HUD
-    const timer2 = setTimeout(() => setGpsPhase(2), 700);
-    const timer3 = setTimeout(() => setGpsPhase(3), 1600);
-    const timer4 = setTimeout(() => setGpsPhase(4), 2500);
+    // Progression timers for 3-step animation requested by user:
+    // 1. 📍 Detecting your location...
+    // 2. 🛰️ Connecting to location services...
+    // 3. 🗺️ Finding nearby agricultural markets...
+    const timer2 = setTimeout(() => setGpsPhase(2), 1000);
+    const timer3 = setTimeout(() => setGpsPhase(3), 2000);
 
     if (!navigator.geolocation) {
       clearTimeout(timer2);
       clearTimeout(timer3);
-      clearTimeout(timer4);
       setGeoErrorCode(0);
       setLocationStepMode('error');
       return;
@@ -157,7 +110,6 @@ export const LandingOnboardingFlow: React.FC = () => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
 
-        // Immediately update coordinates so phase 2 shows the live GPS coordinates
         setLocation((prev) => ({
           ...prev,
           latitude: lat,
@@ -169,7 +121,7 @@ export const LandingOnboardingFlow: React.FC = () => {
           setTimeout(() => {
             setLocation(locData);
             setLocationStepMode('map_preview');
-          }, 2400);
+          }, 2800);
         } catch (err) {
           console.warn('Reverse geocode error, using precise coordinates:', err);
           setTimeout(() => {
@@ -181,13 +133,12 @@ export const LandingOnboardingFlow: React.FC = () => {
               source: 'gps',
             }));
             setLocationStepMode('map_preview');
-          }, 2400);
+          }, 2800);
         }
       },
       (error) => {
         clearTimeout(timer2);
         clearTimeout(timer3);
-        clearTimeout(timer4);
         console.warn(`Geolocation error code: ${error.code} - ${error.message}`);
         setGeoErrorCode(error.code);
         setLocationStepMode('error');
@@ -200,7 +151,6 @@ export const LandingOnboardingFlow: React.FC = () => {
     );
   };
 
-  // Reverse geocode whenever coordinates change via map click or pin drag
   const handleCoordinateSelect = async (lat: number, lng: number) => {
     try {
       const locData = await reverseGeocodeLocation(lat, lng);
@@ -215,33 +165,37 @@ export const LandingOnboardingFlow: React.FC = () => {
     }
   };
 
-  // Step 7: Confirm Location
   const handleLocationConfirmed = () => {
-    // Save chosen location in localStorage
     localStorage.setItem('krishi_location', JSON.stringify(location));
-
-    // Dispatch global event for listeners across the app
     window.dispatchEvent(
       new CustomEvent('krishi_location_changed', {
         detail: location,
       })
     );
-
-    // Proceed to Step 3 (Role Selection)
     setStep(3);
   };
 
   const handleRoleSelect = (role: 'farmer' | 'buyer') => {
     localStorage.setItem('krishi_user_role', role);
     localStorage.setItem('krishi_onboarded', 'true');
-    if (role === 'farmer') {
-      navigate('/farmer');
+
+    // Check if already authenticated with this role
+    if (currentUser && currentUser.role === role) {
+      if (role === 'farmer') {
+        navigate('/farmer');
+      } else {
+        navigate('/buyers');
+      }
     } else {
-      navigate('/buyers');
+      // Require Phone OTP Login before granting access to dashboard
+      openAuthModal(role, role === 'farmer' ? '/farmer' : '/buyers');
     }
   };
 
-  // Location search input query with debounce
+  const handleAdminAccess = () => {
+    openAuthModal('admin', '/admin');
+  };
+
   const handleSearchChange = async (query: string) => {
     setSearchQuery(query);
     if (!query || query.trim().length < 2) {
@@ -251,7 +205,6 @@ export const LandingOnboardingFlow: React.FC = () => {
 
     setIsSearching(true);
     try {
-      // 1. Check server geocode search endpoint
       const res = await fetch(`/api/geocode/search?q=${encodeURIComponent(query)}`);
       if (res.ok) {
         const data = await res.json();
@@ -265,10 +218,9 @@ export const LandingOnboardingFlow: React.FC = () => {
       console.warn('Search endpoint error, falling back to local master list:', err);
     }
 
-    // 2. Fallback to local master locations
     const localMatches = queryLocations(query, 10).map((l) => ({
       name: l.name,
-      formattedAddress: `${l.name}, ${l.subDistrict}, ${l.district} District, ${l.state}, India`,
+      formattedAddress: `${l.name}, ${l.district} District, ${l.state}, India`,
       district: l.district,
       state: l.state,
       country: 'India',
@@ -302,55 +254,66 @@ export const LandingOnboardingFlow: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 flex flex-col font-sans transition-colors duration-200">
-      {/* Top Brand Bar */}
-      <header className="border-b border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-md sticky top-0 z-40">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 flex flex-col font-sans transition-colors duration-300">
+      {/* Top Brand Navigation Bar */}
+      <header className="border-b border-stone-200 dark:border-stone-800 bg-white/90 dark:bg-stone-900/90 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-black text-xl shadow-md">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-xl shadow-md">
               🌾
             </div>
             <div>
-              <span className="text-xl sm:text-2xl font-black font-outfit tracking-tight text-emerald-900 dark:text-white">
-                Krishi<span className="text-emerald-600 dark:text-emerald-400">Setu</span>
+              <span className="text-xl sm:text-2xl font-black tracking-tight text-emerald-900 dark:text-white">
+                {t('app.name', 'KrishiSetu')}
               </span>
               <span className="hidden sm:inline-block text-[11px] font-bold text-amber-800 dark:text-amber-300 ml-2 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 border border-amber-300 dark:border-amber-800">
-                Farmer & Buyer Linkage
+                {t('app.tagline', 'Direct Farmer & Buyer Marketplace')}
               </span>
             </div>
           </div>
 
-          {/* Step Breadcrumbs */}
-          <div className="flex items-center gap-2 text-xs font-bold">
-            <span
-              className={`px-3 py-1 rounded-full transition-colors ${
-                step === 1
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
-              }`}
+          {/* Quick Theme Switcher & Step Breadcrumbs */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
+              className="p-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label="Toggle theme"
             >
-              1. Language & Theme
-            </span>
-            <span className="text-stone-400">→</span>
-            <span
-              className={`px-3 py-1 rounded-full transition-colors ${
-                step === 2
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
-              }`}
-            >
-              2. Location
-            </span>
-            <span className="text-stone-400">→</span>
-            <span
-              className={`px-3 py-1 rounded-full transition-colors ${
-                step === 3
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
-              }`}
-            >
-              3. Role
-            </span>
+              {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
+            </button>
+
+            <div className="hidden md:flex items-center gap-2 text-xs font-bold">
+              <span
+                className={`px-3 py-1 rounded-full transition-colors ${
+                  step === 1
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
+                }`}
+              >
+                1. {t('onboarding.selectLanguage', 'Language & Theme')}
+              </span>
+              <span className="text-stone-400">→</span>
+              <span
+                className={`px-3 py-1 rounded-full transition-colors ${
+                  step === 2
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
+                }`}
+              >
+                2. {t('nav.markets', 'Location')}
+              </span>
+              <span className="text-stone-400">→</span>
+              <span
+                className={`px-3 py-1 rounded-full transition-colors ${
+                  step === 3
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
+                }`}
+              >
+                3. {t('onboarding.howToUse', 'Role')}
+              </span>
+            </div>
           </div>
         </div>
       </header>
@@ -359,7 +322,7 @@ export const LandingOnboardingFlow: React.FC = () => {
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12 flex flex-col justify-center">
         <AnimatePresence mode="wait">
           {/* ========================================================================= */}
-          {/* STEP 1: LANGUAGE & THEME SELECTION */}
+          {/* STEP 1: EXACT 3 LANGUAGES (ENGLISH, TELUGU, MARATHI) & IMMEDIATE THEME */}
           {/* ========================================================================= */}
           {step === 1 && (
             <motion.div
@@ -372,47 +335,45 @@ export const LandingOnboardingFlow: React.FC = () => {
             >
               <div className="text-center space-y-3 max-w-xl mx-auto">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Step 1: Personalize Your Experience
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" /> {t('onboarding.welcome', 'Welcome to KrishiSetu')}
                 </span>
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black font-outfit text-stone-900 dark:text-white tracking-tight">
-                  Choose Language & Theme
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-stone-900 dark:text-white tracking-tight">
+                  {t('onboarding.selectLanguage', 'Select Language')} & {t('onboarding.selectTheme', 'Theme')}
                 </h1>
                 <p className="text-sm sm:text-base text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Select your preferred regional language and visual style. You can change these anytime in the settings.
+                  {t('onboarding.subtitle', 'Fair crop prices, verified institutional buyers, and transparent mandi intelligence.')}
                 </p>
               </div>
 
-              {/* Language Selection Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
-                {LANGUAGES.map((lang) => {
-                  const isSelected = selectedLanguage === lang.code;
+              {/* Exact 3 Languages Specified by Prompt */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+                {languages.map((lang) => {
+                  const isSelected = language === lang.code;
                   return (
                     <button
                       key={lang.code}
                       type="button"
-                      onClick={() => handleSelectLanguage(lang.code)}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer ${
+                      onClick={() => setLanguage(lang.code as Language)}
+                      className={`p-6 rounded-2xl border-2 text-left transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer ${
                         isSelected
-                          ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 shadow-lg ring-2 ring-emerald-500/30'
+                          ? 'border-emerald-600 bg-emerald-50/70 dark:bg-emerald-950/40 shadow-lg ring-2 ring-emerald-500/30'
                           : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 hover:border-emerald-400'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-2xl font-black text-stone-900 dark:text-white font-outfit">
-                          {lang.native}
-                        </span>
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-2xl">{lang.flag}</span>
                         {isSelected && (
-                          <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
                             <Check className="w-3.5 h-3.5" />
                           </div>
                         )}
                       </div>
                       <div>
-                        <div className="text-sm font-bold text-stone-700 dark:text-stone-300">
-                          {lang.label}
+                        <div className="text-2xl font-black text-stone-900 dark:text-white mb-1">
+                          {lang.native}
                         </div>
-                        <div className="text-xs text-stone-500 dark:text-stone-400 mt-1 italic">
-                          {lang.greeting}
+                        <div className="text-xs font-semibold text-stone-500 dark:text-stone-400">
+                          {lang.name}
                         </div>
                       </div>
                     </button>
@@ -424,37 +385,37 @@ export const LandingOnboardingFlow: React.FC = () => {
               <div className="max-w-md mx-auto bg-white dark:bg-stone-900 rounded-2xl p-5 border border-stone-200 dark:border-stone-800 shadow-xs flex items-center justify-between">
                 <div>
                   <span className="text-sm font-bold text-stone-900 dark:text-white block">
-                    Visual Display Theme
+                    {t('onboarding.selectTheme', 'Visual Theme')}
                   </span>
                   <span className="text-xs text-stone-500 dark:text-stone-400">
-                    Default is clean, bright Light Mode
+                    {isDarkMode ? t('onboarding.darkModeDesc', 'Low-strain dark mode') : t('onboarding.lightModeDesc', 'Natural daylight view')}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2 bg-stone-100 dark:bg-stone-800 p-1.5 rounded-xl border border-stone-200 dark:border-stone-700">
                   <button
                     type="button"
-                    onClick={() => setIsDarkMode(false)}
+                    onClick={() => setTheme('light')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                       !isDarkMode
-                        ? 'bg-white text-emerald-800 shadow-sm ring-1 ring-stone-200'
+                        ? 'bg-white text-emerald-800 shadow-xs ring-1 ring-stone-200'
                         : 'text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'
                     }`}
                   >
                     <Sun className="w-4 h-4 text-amber-500" />
-                    <span>Light Mode</span>
+                    <span>{t('onboarding.lightMode', 'Light Mode')}</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsDarkMode(true)}
+                    onClick={() => setTheme('dark')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                       isDarkMode
-                        ? 'bg-stone-900 text-white shadow-sm ring-1 ring-stone-700'
+                        ? 'bg-stone-900 text-white shadow-xs ring-1 ring-stone-700'
                         : 'text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'
                     }`}
                   >
                     <Moon className="w-4 h-4 text-indigo-400" />
-                    <span>Dark Mode</span>
+                    <span>{t('onboarding.darkMode', 'Dark Mode')}</span>
                   </button>
                 </div>
               </div>
@@ -463,10 +424,10 @@ export const LandingOnboardingFlow: React.FC = () => {
               <div className="text-center pt-2">
                 <button
                   type="button"
-                  onClick={handleLanguageStepSubmit}
-                  className="px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-base shadow-xl shadow-emerald-900/20 transition-all hover:scale-105 active:scale-95 inline-flex items-center gap-2 cursor-pointer"
+                  onClick={() => setStep(2)}
+                  className="px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-xl transition-all hover:scale-105 active:scale-95 inline-flex items-center gap-2 cursor-pointer"
                 >
-                  <span>Continue to Location Verification</span>
+                  <span>{t('onboarding.continueToLocation', 'Continue to Location Detection')}</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
@@ -474,7 +435,7 @@ export const LandingOnboardingFlow: React.FC = () => {
           )}
 
           {/* ========================================================================= */}
-          {/* STEP 2: ROBUST LOCATION SYSTEM WITH MULTIPLE FALLBACK METHODS */}
+          {/* STEP 2: LOCATION DETECTION & INDIA MAP WITH STRICT KADAPA INTEGRATION */}
           {/* ========================================================================= */}
           {step === 2 && (
             <motion.div
@@ -487,348 +448,175 @@ export const LandingOnboardingFlow: React.FC = () => {
             >
               <div className="text-center space-y-2 max-w-xl mx-auto">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                  <Compass className="w-3.5 h-3.5 text-amber-500" /> Step 2: Location Verification
+                  <Compass className="w-3.5 h-3.5 text-amber-500" /> Step 2: Location Detection
                 </span>
-                <h2 className="text-3xl sm:text-4xl font-black font-outfit text-stone-900 dark:text-white">
-                  Detecting Your Location
+                <h2 className="text-3xl sm:text-4xl font-black text-stone-900 dark:text-white">
+                  {t('onboarding.findingLocation', 'Finding Your Location')}
                 </h2>
                 <p className="text-sm text-stone-600 dark:text-stone-400">
-                  We use India-wide spatial coordinates to connect you with your closest mandis and nearby verified buyers.
+                  Discover nearby mandis and calculate accurate net price realization for your region.
                 </p>
               </div>
 
-              {/* --------------------------------------------------------------------- */}
-              {/* SUB-STATE 1: BEFORE ASKING FOR PERMISSION (EXPLAIN WHY CLEARLY) */}
-              {/* --------------------------------------------------------------------- */}
+              {/* Mode: Explain & Trigger GPS */}
               {locationStepMode === 'explain' && (
-                <div className="max-w-2xl mx-auto bg-white dark:bg-stone-900 rounded-3xl p-8 sm:p-10 border-2 border-emerald-500/40 shadow-2xl space-y-6 text-center">
-                  <div className="w-20 h-20 rounded-3xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 mx-auto flex items-center justify-center text-4xl shadow-md border border-emerald-300 dark:border-emerald-800">
+                <div className="max-w-xl mx-auto bg-white dark:bg-stone-900 rounded-3xl p-8 border-2 border-emerald-500/30 shadow-2xl space-y-6 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 mx-auto flex items-center justify-center text-3xl shadow-xs">
                     📍
                   </div>
 
                   <div className="space-y-2">
-                    <h3 className="text-2xl sm:text-3xl font-black text-stone-900 dark:text-white font-outfit">
-                      📍 Let's Find Your Location
+                    <h3 className="text-2xl font-bold text-stone-900 dark:text-white">
+                      Detect Nearby Mandis Automatically
                     </h3>
-                    <p className="text-sm sm:text-base text-stone-600 dark:text-stone-300 max-w-lg mx-auto leading-relaxed">
-                      We use your location to find the best nearby markets and farmers.
+                    <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 max-w-md mx-auto leading-relaxed">
+                      Allow location access to instantly zoom to your farm location and see real-time prices for mandis in your district.
                     </p>
                   </div>
 
-                  {/* Benefit highlights */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left max-w-xl mx-auto pt-2">
-                    <div className="p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 text-xs">
-                      <strong className="block text-stone-900 dark:text-white font-bold mb-1">
-                        ⚡ Nearest Mandis
-                      </strong>
-                      <span className="text-stone-500 dark:text-stone-400">
-                        Live prices across closest agricultural markets
-                      </span>
-                    </div>
-
-                    <div className="p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 text-xs">
-                      <strong className="block text-stone-900 dark:text-white font-bold mb-1">
-                        🚚 Diesel Freight
-                      </strong>
-                      <span className="text-stone-500 dark:text-stone-400">
-                        Accurate transport cost calculation per quintal
-                      </span>
-                    </div>
-
-                    <div className="p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 text-xs">
-                      <strong className="block text-stone-900 dark:text-white font-bold mb-1">
-                        🤝 Verified Buyers
-                      </strong>
-                      <span className="text-stone-500 dark:text-stone-400">
-                        Match with buyers in your district and state
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Primary & Fallback Buttons */}
-                  <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
                     <button
                       type="button"
                       onClick={requestBrowserGeolocation}
-                      className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-xl shadow-emerald-900/20 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                      className="px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <MapPin className="w-5 h-5 text-amber-300" />
-                      <span>📍 Detect My Location</span>
+                      <Navigation className="w-4 h-4" />
+                      <span>Use My Current Location</span>
                     </button>
-
                     <button
                       type="button"
                       onClick={() => setLocationStepMode('manual_search')}
-                      className="w-full sm:w-auto px-6 py-4 rounded-2xl border-2 border-stone-300 dark:border-stone-700 hover:border-emerald-500 text-stone-700 dark:text-stone-200 font-bold text-sm transition-all hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center justify-center gap-2 cursor-pointer"
+                      className="px-6 py-3.5 rounded-xl border border-stone-300 dark:border-stone-700 bg-stone-100 dark:bg-stone-800 text-stone-800 dark:text-stone-200 font-bold text-sm hover:bg-stone-200 dark:hover:bg-stone-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <Search className="w-4 h-4 text-stone-500" />
-                      <span>Search Manually</span>
+                      <Search className="w-4 h-4" />
+                      <span>{t('onboarding.enterManually', 'Enter City / District Manually')}</span>
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* --------------------------------------------------------------------- */}
-              {/* SUB-STATE 2: REQUESTING BROWSER GEOLOCATION WITH 4-STEP ANIMATION */}
-              {/* --------------------------------------------------------------------- */}
+              {/* Mode: 3-Phase Geolocation Animation */}
               {locationStepMode === 'requesting' && (
-                <div className="max-w-xl mx-auto bg-white dark:bg-stone-900 rounded-3xl p-8 sm:p-10 border-2 border-emerald-500/50 shadow-2xl text-center space-y-6">
-                  {/* Radar Signal Wave Indicator */}
-                  <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
-                    <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-25 animate-ping" />
-                    <span className="absolute inset-3 rounded-full bg-emerald-400 opacity-20 animate-pulse" />
-                    <div className="relative w-16 h-16 rounded-full bg-emerald-600 text-white flex items-center justify-center text-2xl shadow-xl shadow-emerald-900/30">
-                      <Compass className="w-8 h-8 animate-spin" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <h3 className="text-2xl font-black text-stone-900 dark:text-white font-outfit">
-                      Detecting Your Coordinates
-                    </h3>
-                    <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400">
-                      Please allow browser GPS permission if prompted
-                    </p>
-                  </div>
-
-                  {/* 4-Step Sequential Progress HUD */}
-                  <div className="space-y-2.5 max-w-md mx-auto text-left">
-                    <div
-                      className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${
-                        gpsPhase >= 1
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-800 dark:text-emerald-300'
-                          : 'bg-stone-50 dark:bg-stone-800/40 border-stone-200 dark:border-stone-700 text-stone-400'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-base">📡</span>
-                        <span>Step 1: Connecting to GPS...</span>
-                      </div>
-                      {gpsPhase >= 1 ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-black">
-                          ✓ Signals Locked
-                        </span>
-                      ) : (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      )}
-                    </div>
-
-                    <div
-                      className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${
-                        gpsPhase >= 2
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-800 dark:text-emerald-300'
-                          : 'bg-stone-50 dark:bg-stone-800/40 border-stone-200 dark:border-stone-700 text-stone-400'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-base">📍</span>
-                        <span>Step 2: Finding your location...</span>
-                      </div>
-                      {gpsPhase >= 2 ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-mono text-[11px]">
-                          {location.latitude.toFixed(4)}° N, {location.longitude.toFixed(4)}° E
-                        </span>
-                      ) : (
-                        <span>Pending</span>
-                      )}
-                    </div>
-
-                    <div
-                      className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${
-                        gpsPhase >= 3
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-800 dark:text-emerald-300'
-                          : 'bg-stone-50 dark:bg-stone-800/40 border-stone-200 dark:border-stone-700 text-stone-400'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-base">🗺️</span>
-                        <span>Step 3: Loading your region...</span>
-                      </div>
-                      {gpsPhase >= 3 ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-black">
-                          ✓ India Region Ready
-                        </span>
-                      ) : (
-                        <span>Pending</span>
-                      )}
-                    </div>
-
-                    <div
-                      className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${
-                        gpsPhase >= 4
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-800 dark:text-emerald-300'
-                          : 'bg-stone-50 dark:bg-stone-800/40 border-stone-200 dark:border-stone-700 text-stone-400'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-base">📌</span>
-                        <span>Step 4: Finding nearby agricultural markets...</span>
-                      </div>
-                      {gpsPhase >= 4 ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-black">
-                          ✓ Mandis Found
-                        </span>
-                      ) : (
-                        <span>Pending</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setLocationStepMode('manual_search')}
-                      className="text-xs font-bold text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 underline cursor-pointer"
-                    >
-                      Taking too long? Search location manually instead →
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* --------------------------------------------------------------------- */}
-              {/* SUB-STATE 3: GEOLOCATION ERROR STATES (STRICT REQUIREMENTS) */}
-              {/* --------------------------------------------------------------------- */}
-              {locationStepMode === 'error' && (
-                <div className="max-w-xl mx-auto bg-white dark:bg-stone-900 rounded-3xl p-8 border-2 border-amber-500/40 shadow-xl text-center space-y-6">
-                  <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 mx-auto flex items-center justify-center text-2xl shadow-sm">
-                    <AlertCircle className="w-7 h-7" />
+                <div className="max-w-md mx-auto bg-white dark:bg-stone-900 rounded-3xl p-8 border border-stone-200 dark:border-stone-800 shadow-xl text-center space-y-6">
+                  <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+                    <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-950 border-t-emerald-600 animate-spin" />
+                    <span className="text-3xl">📍</span>
                   </div>
 
                   <div className="space-y-2">
-                    <h3 className="text-xl sm:text-2xl font-black text-stone-900 dark:text-white font-outfit">
-                      {geoErrorCode === 1
-                        ? 'Location Permission Denied'
-                        : geoErrorCode === 2
-                        ? 'Location Unavailable'
-                        : geoErrorCode === 3
-                        ? 'Detection Timed Out'
-                        : 'Location Unsupported'}
+                    <h3 className="text-lg font-bold text-stone-900 dark:text-white">
+                      {gpsPhase === 1 && t('onboarding.detectingGps', '📍 Detecting your location...')}
+                      {gpsPhase === 2 && t('onboarding.connectingServices', '🛰️ Connecting to location services...')}
+                      {gpsPhase === 3 && t('onboarding.findingMarkets', '🗺️ Finding nearby agricultural markets...')}
                     </h3>
-
-                    <p className="text-sm text-stone-600 dark:text-stone-400 max-w-md mx-auto">
-                      {geoErrorCode === 1 && (
-                        <>Location permission was denied. You can search for your location manually.</>
-                      )}
-                      {geoErrorCode === 2 && (
-                        <>We couldn't get your current location. Please try again or search manually.</>
-                      )}
-                      {geoErrorCode === 3 && (
-                        <>Location detection is taking longer than expected.</>
-                      )}
-                      {geoErrorCode === 0 && (
-                        <>Your browser does not support automatic location detection.</>
-                      )}
+                    <p className="text-xs text-stone-500">
+                      Pinpointing coordinates and querying verified APMC yards...
                     </p>
                   </div>
 
-                  {/* Specific Action Buttons per error code */}
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-                    {(geoErrorCode === 2 || geoErrorCode === 3) && (
-                      <button
-                        type="button"
-                        onClick={requestBrowserGeolocation}
-                        className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        <span>Try Again</span>
-                      </button>
-                    )}
+                  <div className="flex justify-center gap-2">
+                    <div className={`w-2.5 h-2.5 rounded-full transition-colors ${gpsPhase >= 1 ? 'bg-emerald-600' : 'bg-stone-300 dark:bg-stone-700'}`} />
+                    <div className={`w-2.5 h-2.5 rounded-full transition-colors ${gpsPhase >= 2 ? 'bg-emerald-600' : 'bg-stone-300 dark:bg-stone-700'}`} />
+                    <div className={`w-2.5 h-2.5 rounded-full transition-colors ${gpsPhase >= 3 ? 'bg-emerald-600' : 'bg-stone-300 dark:bg-stone-700'}`} />
+                  </div>
+                </div>
+              )}
 
+              {/* Mode: Permission Denied / Error */}
+              {locationStepMode === 'error' && (
+                <div className="max-w-xl mx-auto bg-white dark:bg-stone-900 rounded-3xl p-8 border border-red-200 dark:border-red-900 shadow-xl space-y-5 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400 mx-auto flex items-center justify-center text-2xl">
+                    <AlertCircle className="w-8 h-8" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold text-stone-900 dark:text-white">
+                      {t('onboarding.permissionDenied', "We couldn't access your location. Please enter your location manually.")}
+                    </h3>
+                    <p className="text-xs text-stone-600 dark:text-stone-400">
+                      Search any Indian city, town, or APMC hub to continue with full distance calculation.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
                     <button
                       type="button"
                       onClick={() => setLocationStepMode('manual_search')}
-                      className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-stone-900 hover:bg-stone-800 text-white dark:bg-stone-100 dark:text-stone-950 font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                     >
                       <Search className="w-4 h-4" />
-                      <span>
-                        {geoErrorCode === 3 ? 'Enter Location' : 'Search Location Manually'}
-                      </span>
+                      <span>{t('onboarding.searchLocation', 'Search City Manually')}</span>
                     </button>
-
                     <button
                       type="button"
-                      onClick={() => setLocationStepMode('map_preview')}
-                      className="w-full sm:w-auto px-5 py-3.5 rounded-2xl border-2 border-stone-300 dark:border-stone-700 hover:border-emerald-500 text-stone-700 dark:text-stone-300 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      onClick={requestBrowserGeolocation}
+                      className="px-6 py-3 rounded-xl border border-stone-300 dark:border-stone-700 bg-stone-100 dark:bg-stone-800 text-stone-800 dark:text-stone-200 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <Compass className="w-4 h-4 text-emerald-600" />
-                      <span>Select on Map</span>
+                      <RotateCcw className="w-4 h-4" />
+                      <span>{t('onboarding.retryGps', 'Retry GPS Detection')}</span>
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* --------------------------------------------------------------------- */}
-              {/* SUB-STATE 4: MANUAL SEARCH DRAWER / MODAL */}
-              {/* --------------------------------------------------------------------- */}
+              {/* Mode: Manual Search */}
               {locationStepMode === 'manual_search' && (
-                <div className="bg-white dark:bg-stone-900 rounded-3xl p-6 sm:p-8 border-2 border-emerald-500 shadow-2xl space-y-5 max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-200">
+                <div className="max-w-xl mx-auto bg-white dark:bg-stone-900 rounded-3xl p-6 sm:p-8 border border-stone-200 dark:border-stone-800 shadow-xl space-y-5">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-black text-stone-900 dark:text-white text-lg sm:text-xl font-outfit flex items-center gap-2">
-                        <Search className="w-5 h-5 text-emerald-600" />
-                        Search Location Manually
-                      </h4>
-                      <p className="text-xs text-stone-500 dark:text-stone-400">
-                        Search any village, town, city, district, or PIN code in India
-                      </p>
-                    </div>
-
+                    <h3 className="text-lg font-bold text-stone-900 dark:text-white flex items-center gap-2">
+                      <Search className="w-4 h-4 text-emerald-600" />
+                      <span>{t('onboarding.searchLocation', 'Search location or Indian city...')}</span>
+                    </h3>
                     <button
                       type="button"
                       onClick={() => setLocationStepMode('map_preview')}
-                      className="text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer flex items-center gap-1"
+                      className="text-xs text-stone-500 hover:text-stone-800 dark:hover:text-stone-200"
                     >
-                      <X className="w-4 h-4" />
-                      <span>Back to Map</span>
+                      Cancel
                     </button>
                   </div>
 
-                  {/* Autocomplete Input */}
                   <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => handleSearchChange(e.target.value)}
-                      placeholder="Type your village, taluka, city or district (e.g. Bhimavaram, Kadapa, Nashik)..."
-                      className="w-full pl-11 pr-10 py-3.5 rounded-2xl border-2 border-stone-300 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm shadow-inner"
-                      autoFocus
+                      placeholder="e.g. Kadapa, Proddatur, Guntur, Nashik..."
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                     />
-                    <Search className="w-5 h-5 text-stone-400 absolute left-3.5 top-4" />
                     {isSearching && (
-                      <Loader2 className="w-4 h-4 text-emerald-600 animate-spin absolute right-3.5 top-4" />
+                      <Loader2 className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 animate-spin" />
                     )}
                   </div>
 
-                  {/* Autocomplete Results */}
                   {searchResults.length > 0 && (
-                    <div className="space-y-1.5 max-h-60 overflow-y-auto pt-1 rounded-2xl border border-stone-200 dark:border-stone-800 p-2 bg-stone-50 dark:bg-stone-800/60">
+                    <div className="space-y-1 max-h-56 overflow-y-auto p-1 border border-stone-200 dark:border-stone-700 rounded-xl bg-stone-50 dark:bg-stone-800">
                       {searchResults.map((res, i) => (
                         <div
                           key={i}
                           onClick={() => handleSelectSearchResult(res)}
-                          className="p-3 rounded-xl hover:bg-emerald-100/70 dark:hover:bg-emerald-950/60 text-xs font-semibold text-stone-800 dark:text-stone-200 cursor-pointer flex items-center justify-between transition-colors border border-transparent hover:border-emerald-400"
+                          className="p-3 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-950 text-xs text-stone-800 dark:text-stone-200 cursor-pointer flex items-center justify-between"
                         >
                           <div>
                             <span className="font-bold text-stone-900 dark:text-white text-sm">
                               {res.name}
                             </span>
-                            <span className="text-stone-500 dark:text-stone-400 ml-1">
+                            <span className="text-stone-500 ml-1">
                               • {res.district} District, {res.state}
                             </span>
                           </div>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold shrink-0">
-                            Select & Map →
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                            Select →
                           </span>
                         </div>
                       ))}
                     </div>
                   )}
 
-                  {/* Popular Agricultural Centers Preset Buttons */}
-                  <div className="pt-3 border-t border-stone-200 dark:border-stone-800 space-y-2">
+                  <div className="pt-2 border-t border-stone-200 dark:border-stone-800 space-y-2">
                     <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block">
-                      Or Quick Select Major Agricultural Hubs:
+                      {t('onboarding.popularCities', 'Or select popular district:')}
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {POPULAR_SEARCH_PRESETS.map((p) => (
@@ -836,7 +624,7 @@ export const LandingOnboardingFlow: React.FC = () => {
                           key={p.name}
                           type="button"
                           onClick={() => handleSelectSearchResult(p)}
-                          className="px-3 py-2 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-bold text-stone-700 dark:text-stone-300 cursor-pointer transition-colors border border-stone-200 dark:border-stone-700 hover:border-emerald-400"
+                          className="px-3 py-1.5 rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-semibold text-stone-700 dark:text-stone-300 cursor-pointer border border-stone-200 dark:border-stone-700"
                         >
                           📍 {p.name}, {p.state}
                         </button>
@@ -846,9 +634,7 @@ export const LandingOnboardingFlow: React.FC = () => {
                 </div>
               )}
 
-              {/* --------------------------------------------------------------------- */}
-              {/* SUB-STATE 5: INDIA MAP EXPERIENCE WITH CAMERA ZOOM & CONFIRMATION */}
-              {/* --------------------------------------------------------------------- */}
+              {/* Mode: India Map Experience with Camera Zoom & Nearest Markets */}
               {locationStepMode === 'map_preview' && (
                 <div className="space-y-4">
                   <IndiaMapZoomExperience
@@ -868,14 +654,14 @@ export const LandingOnboardingFlow: React.FC = () => {
                   onClick={() => setStep(1)}
                   className="text-xs font-bold text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 cursor-pointer"
                 >
-                  ← Back to Language & Theme Selection
+                  ← {t('common.back', 'Back to Language & Theme Selection')}
                 </button>
               </div>
             </motion.div>
           )}
 
           {/* ========================================================================= */}
-          {/* STEP 3: USER ROLE SELECTION (FARMER VS BUYER) */}
+          {/* STEP 3: ROLE SELECTION & AUTHENTICATION ENFORCEMENT */}
           {/* ========================================================================= */}
           {step === 3 && (
             <motion.div
@@ -888,52 +674,53 @@ export const LandingOnboardingFlow: React.FC = () => {
             >
               <div className="text-center space-y-3 max-w-xl mx-auto">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500" /> Step 3: Select Your Role
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500" /> Step 3: Select Account Role
                 </span>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black font-outfit text-stone-900 dark:text-white">
-                  How Will You Use KrishiSetu?
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-stone-900 dark:text-white">
+                  {t('onboarding.howToUse', 'How would you like to use the platform?')}
                 </h2>
                 <p className="text-sm text-stone-600 dark:text-stone-400">
-                  Select your role to access dedicated dashboards, tailored pricing, and direct market linkage.
+                  {t('onboarding.selectRoleDesc', 'Choose your account type to access tailored features and services.')}
                 </p>
               </div>
 
-              {/* Two Distinct Role Cards */}
+              {/* Two Distinct Role Cards as Required by Prompt */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
                 {/* 1. FARMER CARD */}
                 <div className="bg-white dark:bg-stone-900 rounded-3xl p-8 border-2 border-emerald-500/50 hover:border-emerald-500 shadow-xl transition-all hover:scale-[1.02] flex flex-col justify-between space-y-6 relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-36 h-36 bg-emerald-500/10 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
-
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-3xl shadow-md">
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-3xl shadow-xs">
                         🌾
                       </div>
                       <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
-                        For Crop Producers
+                        {t('nav.farmer', 'Farmer Portal')}
                       </span>
                     </div>
 
-                    <h3 className="text-2xl sm:text-3xl font-black font-outfit text-stone-900 dark:text-white">
-                      I AM A FARMER
+                    <h3 className="text-2xl sm:text-3xl font-black text-stone-900 dark:text-white">
+                      {t('onboarding.iAmFarmer', 'I AM A FARMER')}
                     </h3>
 
                     <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed font-medium">
-                      Sell your crops, check quality with certified AI vision lens, discover highest-paying mandis, and connect directly with verified buyers.
+                      {t(
+                        'onboarding.farmerDesc',
+                        'List your crops, discover nearby markets, and receive competitive offers directly from buyers.'
+                      )}
                     </p>
 
                     <ul className="space-y-2 text-xs text-stone-600 dark:text-stone-300 font-semibold pt-2">
                       <li className="flex items-center gap-2">
                         <Check className="w-4 h-4 text-emerald-600" />
-                        AI Quality Grading (Grade A, B, C)
+                        <span>Instant Crop Listing with photo uploads & KG/Quintal pricing</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Check className="w-4 h-4 text-emerald-600" />
-                        Smart Mandi Profit Calculator with Diesel Freight
+                        <span>Best nearby mandis with distance & transport realization</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Check className="w-4 h-4 text-emerald-600" />
-                        Direct Buyer Inquiries & WhatsApp Bids
+                        <span>Compare buyer bids and unlock direct phone contacts</span>
                       </li>
                     </ul>
                   </div>
@@ -941,47 +728,48 @@ export const LandingOnboardingFlow: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleRoleSelect('farmer')}
-                    className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-lg shadow-emerald-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer group-hover:shadow-emerald-600/50"
+                    className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <span>Continue as Farmer</span>
+                    <span>{t('onboarding.continueFarmer', 'Continue as Farmer')}</span>
                     <ArrowRight className="w-5 h-5" />
                   </button>
                 </div>
 
                 {/* 2. BUYER CARD */}
-                <div className="bg-white dark:bg-stone-900 rounded-3xl p-8 border-2 border-amber-500/50 hover:border-amber-500 shadow-xl transition-all hover:scale-[1.02] flex flex-col justify-between space-y-6 relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-36 h-36 bg-amber-500/10 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
-
+                <div className="bg-white dark:bg-stone-900 rounded-3xl p-8 border-2 border-blue-500/50 hover:border-blue-500 shadow-xl transition-all hover:scale-[1.02] flex flex-col justify-between space-y-6 relative overflow-hidden group">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 flex items-center justify-center text-3xl shadow-md">
+                      <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 flex items-center justify-center text-3xl shadow-xs">
                         🏢
                       </div>
-                      <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 uppercase tracking-wider">
-                        For Institutional Buyers
+                      <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 uppercase tracking-wider">
+                        {t('nav.buyer', 'Buyer Marketplace')}
                       </span>
                     </div>
 
-                    <h3 className="text-2xl sm:text-3xl font-black font-outfit text-stone-900 dark:text-white">
-                      I AM A BUYER
+                    <h3 className="text-2xl sm:text-3xl font-black text-stone-900 dark:text-white">
+                      {t('onboarding.iAmBuyer', 'I AM A BUYER')}
                     </h3>
 
                     <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed font-medium">
-                      Discover available crops from nearby farmers, compare AI-inspected quality and prices, and contact farmers directly for institutional procurement.
+                      {t(
+                        'onboarding.buyerDesc',
+                        'Discover verified farmers, browse available crops, and place competitive bids.'
+                      )}
                     </p>
 
                     <ul className="space-y-2 text-xs text-stone-600 dark:text-stone-300 font-semibold pt-2">
                       <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-amber-600" />
-                        Explore verified farmer crop lots on Map & List
+                        <Check className="w-4 h-4 text-blue-600" />
+                        <span>Filter nearby crop lots by distance, volume, and crop variety</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-amber-600" />
-                        Filter by Grade (A/B/C), Distance, and Volume
+                        <Check className="w-4 h-4 text-blue-600" />
+                        <span>Place direct bids with custom KG/Quintal pricing & terms</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-amber-600" />
-                        One-click "I'm Interested" alerts sent to farmers
+                        <Check className="w-4 h-4 text-blue-600" />
+                        <span>Procure safely from verified regional farmgate producers</span>
                       </li>
                     </ul>
                   </div>
@@ -989,21 +777,31 @@ export const LandingOnboardingFlow: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleRoleSelect('buyer')}
-                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-black text-base shadow-lg shadow-amber-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer group-hover:shadow-amber-500/50"
+                    className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <span>Continue as Buyer</span>
+                    <span>{t('onboarding.continueBuyer', 'Continue as Buyer')}</span>
                     <ArrowRight className="w-5 h-5" />
                   </button>
                 </div>
               </div>
 
-              <div className="text-center pt-2">
+              {/* Admin Access Link */}
+              <div className="text-center pt-4 flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAdminAccess}
+                  className="text-xs font-semibold text-stone-500 hover:text-amber-600 dark:hover:text-amber-400 flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>{t('onboarding.adminAccess', 'Admin Console Login')} (Regulators & APMC Officials)</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="text-xs font-bold text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 cursor-pointer"
+                  className="text-xs font-bold text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 cursor-pointer mt-1"
                 >
-                  ← Back to Location Confirmation
+                  ← {t('common.back', 'Back to Location Confirmation')}
                 </button>
               </div>
             </motion.div>
@@ -1013,7 +811,7 @@ export const LandingOnboardingFlow: React.FC = () => {
 
       {/* Footer */}
       <footer className="border-t border-stone-200 dark:border-stone-800 py-4 px-6 text-center text-xs text-stone-500 dark:text-stone-400">
-        KrishiSetu Platform • Built with Google Maps Platform and Gemini Vision Assayer • Direct Farm-to-Buyer Linkage
+        {t('app.name', 'KrishiSetu')} Platform • {t('app.nationalTagline', "India's Intelligent Agricultural Market-Linkage Platform")}
       </footer>
     </div>
   );
