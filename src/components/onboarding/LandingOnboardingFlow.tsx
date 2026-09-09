@@ -9,22 +9,19 @@ import {
   Search,
   Check,
   ArrowRight,
-  ChevronRight,
   Compass,
   Building2,
-  Package,
   ShieldCheck,
-  TrendingUp,
   RotateCcw,
   Loader2,
-  Layers,
-  Phone,
+  Navigation,
   AlertCircle,
+  X,
 } from 'lucide-react';
 import { Language, LocationData } from '../../types/krishi';
-import { reverseGeocodeLocation, forwardGeocodeAddress } from '../../services/googleMapsService';
+import { reverseGeocodeLocation } from '../../services/googleMapsService';
 import { IndiaMapZoomExperience } from './IndiaMapZoomExperience';
-import { MASTER_LOCATIONS, queryLocations } from '../../data/indiaWideLocations';
+import { queryLocations } from '../../data/indiaWideLocations';
 
 interface LanguageOption {
   code: Language;
@@ -70,24 +67,38 @@ export const LandingOnboardingFlow: React.FC = () => {
     return false; // Default setting: Light Theme
   });
 
-  // Location state (Defaults to Bhimavaram, Andhra Pradesh as primary demonstration)
-  const [location, setLocation] = useState<LocationData>({
-    latitude: 16.5449,
-    longitude: 81.5212,
-    country: 'India',
-    state: 'Andhra Pradesh',
-    district: 'West Godavari',
-    city: 'Bhimavaram',
-    town: 'Bhimavaram',
-    formattedAddress: 'Bhimavaram, West Godavari District, Andhra Pradesh, India',
-    source: 'gps',
+  // Location State Machine for Step 2
+  // 'explain' -> 'requesting' -> ('map_preview' | 'error' | 'manual_search')
+  const [locationStepMode, setLocationStepMode] = useState<
+    'explain' | 'requesting' | 'error' | 'map_preview' | 'manual_search'
+  >('explain');
+
+  const [geoErrorCode, setGeoErrorCode] = useState<number | null>(null);
+
+  // Location state: load from localStorage if previously set, else default coordinates
+  const [location, setLocation] = useState<LocationData>(() => {
+    const saved = localStorage.getItem('krishi_location');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {}
+    }
+    return {
+      latitude: 16.5449,
+      longitude: 81.5212,
+      country: 'India',
+      state: 'Andhra Pradesh',
+      district: 'West Godavari',
+      city: 'Bhimavaram',
+      town: 'Bhimavaram',
+      formattedAddress: 'Bhimavaram, West Godavari District, Andhra Pradesh, India',
+      source: 'search',
+    };
   });
 
-  const [isDetectingLocation, setIsDetectingLocation] = useState<boolean>(false);
-  const [detectionSuccess, setDetectionSuccess] = useState<boolean>(true);
-  const [showManualSearch, setShowManualSearch] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
 
   // Apply Theme to documentElement
   useEffect(() => {
@@ -106,57 +117,97 @@ export const LandingOnboardingFlow: React.FC = () => {
     localStorage.setItem('krishi_language', lang);
   };
 
-  // Attempt real browser geolocation
-  const detectBrowserLocation = () => {
-    setIsDetectingLocation(true);
-    setDetectionSuccess(false);
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          try {
-            const locData = await reverseGeocodeLocation(lat, lng);
-            setLocation(locData);
-            setDetectionSuccess(true);
-          } catch {
-            // Fallback gracefully
-            setLocation((prev) => ({
-              ...prev,
-              latitude: lat,
-              longitude: lng,
-              formattedAddress: `Lat: ${lat.toFixed(3)}, Lng: ${lng.toFixed(3)}, India`,
-            }));
-            setDetectionSuccess(true);
-          } finally {
-            setIsDetectingLocation(false);
-          }
-        },
-        (error) => {
-          console.warn('Geolocation denied or unavailable, using state center:', error);
-          setIsDetectingLocation(false);
-          // Still provide clean default location
-          setDetectionSuccess(true);
-        },
-        { timeout: 7000, enableHighAccuracy: true }
-      );
+  // Step 1 -> Step 2 transition: Show explanation card first, DO NOT auto-trigger GPS without consent
+  const handleLanguageStepSubmit = () => {
+    setStep(2);
+    // Check if user already confirmed location previously
+    const saved = localStorage.getItem('krishi_location');
+    if (saved) {
+      setLocationStepMode('map_preview');
     } else {
-      setIsDetectingLocation(false);
-      setDetectionSuccess(true);
+      setLocationStepMode('explain');
     }
   };
 
-  // Step transitions
-  const handleLanguageStepSubmit = () => {
-    setStep(2);
-    // Automatically attempt detection on entering Step 2
-    detectBrowserLocation();
+  // Trigger Real Browser Geolocation API
+  const requestBrowserGeolocation = () => {
+    setLocationStepMode('requesting');
+    setGeoErrorCode(null);
+
+    if (!navigator.geolocation) {
+      // Browser does not support geolocation
+      setGeoErrorCode(0);
+      setLocationStepMode('error');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        try {
+          // Robust multi-tiered reverse geocoding
+          const locData = await reverseGeocodeLocation(lat, lng);
+          setLocation(locData);
+          setLocationStepMode('map_preview');
+        } catch (err) {
+          console.warn('Reverse geocode error, using precise coordinates:', err);
+          setLocation((prev) => ({
+            ...prev,
+            latitude: lat,
+            longitude: lng,
+            formattedAddress: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}, India`,
+            source: 'gps',
+          }));
+          setLocationStepMode('map_preview');
+        }
+      },
+      (error) => {
+        // Explicitly handle all geolocation error cases:
+        // 1: PERMISSION_DENIED
+        // 2: POSITION_UNAVAILABLE
+        // 3: TIMEOUT
+        console.warn(`Geolocation error code: ${error.code} - ${error.message}`);
+        setGeoErrorCode(error.code);
+        setLocationStepMode('error');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      }
+    );
   };
 
+  // Reverse geocode whenever coordinates change via map click or pin drag
+  const handleCoordinateSelect = async (lat: number, lng: number) => {
+    try {
+      const locData = await reverseGeocodeLocation(lat, lng);
+      setLocation(locData);
+    } catch {
+      setLocation((prev) => ({
+        ...prev,
+        latitude: lat,
+        longitude: lng,
+        formattedAddress: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}, India`,
+      }));
+    }
+  };
+
+  // Step 7: Confirm Location
   const handleLocationConfirmed = () => {
-    // Save chosen location
+    // Save chosen location in localStorage
     localStorage.setItem('krishi_location', JSON.stringify(location));
+
+    // Dispatch global event for listeners across the app
+    window.dispatchEvent(
+      new CustomEvent('krishi_location_changed', {
+        detail: location,
+      })
+    );
+
+    // Proceed to Step 3 (Role Selection)
     setStep(3);
   };
 
@@ -170,33 +221,64 @@ export const LandingOnboardingFlow: React.FC = () => {
     }
   };
 
-  // Location search query
-  const handleSearchChange = (query: string) => {
+  // Location search input query with debounce
+  const handleSearchChange = async (query: string) => {
     setSearchQuery(query);
     if (!query || query.trim().length < 2) {
       setSearchResults([]);
       return;
     }
 
-    const localMatches = queryLocations(query).slice(0, 5);
+    setIsSearching(true);
+    try {
+      // 1. Check server geocode search endpoint
+      const res = await fetch(`/api/geocode/search?q=${encodeURIComponent(query)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.results && data.results.length > 0) {
+          setSearchResults(data.results);
+          setIsSearching(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Search endpoint error, falling back to local master list:', err);
+    }
+
+    // 2. Fallback to local master locations
+    const localMatches = queryLocations(query, 10).map((l) => ({
+      name: l.name,
+      formattedAddress: `${l.name}, ${l.subDistrict}, ${l.district} District, ${l.state}, India`,
+      district: l.district,
+      state: l.state,
+      country: 'India',
+      lat: l.latitude,
+      lng: l.longitude,
+      source: 'local',
+    }));
+
     setSearchResults(localMatches);
+    setIsSearching(false);
   };
 
   const handleSelectSearchResult = (res: any) => {
+    const lat = res.lat || res.latitude;
+    const lng = res.lng || res.longitude;
     const newLoc: LocationData = {
-      latitude: res.lat || res.latitude,
-      longitude: res.lng || res.longitude,
+      latitude: lat,
+      longitude: lng,
       country: 'India',
       state: res.state,
       district: res.district,
       city: res.name || res.city,
       town: res.name || res.city,
-      formattedAddress: `${res.name || res.city}, ${res.district} District, ${res.state}, India`,
+      formattedAddress: res.formattedAddress || `${res.name}, ${res.district}, ${res.state}, India`,
       source: 'search',
     };
     setLocation(newLoc);
-    setShowManualSearch(false);
     setSearchQuery('');
+    setSearchResults([]);
+    setLocationStepMode('map_preview');
   };
 
   return (
@@ -221,9 +303,9 @@ export const LandingOnboardingFlow: React.FC = () => {
           {/* Step Breadcrumbs */}
           <div className="flex items-center gap-2 text-xs font-bold">
             <span
-              className={`px-3 py-1 rounded-full ${
+              className={`px-3 py-1 rounded-full transition-colors ${
                 step === 1
-                  ? 'bg-emerald-600 text-white shadow'
+                  ? 'bg-emerald-600 text-white shadow-sm'
                   : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
               }`}
             >
@@ -231,9 +313,9 @@ export const LandingOnboardingFlow: React.FC = () => {
             </span>
             <span className="text-stone-400">→</span>
             <span
-              className={`px-3 py-1 rounded-full ${
+              className={`px-3 py-1 rounded-full transition-colors ${
                 step === 2
-                  ? 'bg-emerald-600 text-white shadow'
+                  ? 'bg-emerald-600 text-white shadow-sm'
                   : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
               }`}
             >
@@ -241,9 +323,9 @@ export const LandingOnboardingFlow: React.FC = () => {
             </span>
             <span className="text-stone-400">→</span>
             <span
-              className={`px-3 py-1 rounded-full ${
+              className={`px-3 py-1 rounded-full transition-colors ${
                 step === 3
-                  ? 'bg-emerald-600 text-white shadow'
+                  ? 'bg-emerald-600 text-white shadow-sm'
                   : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
               }`}
             >
@@ -253,7 +335,7 @@ export const LandingOnboardingFlow: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Flow Container */}
+      {/* Main Content Body */}
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12 flex flex-col justify-center">
         <AnimatePresence mode="wait">
           {/* ========================================================================= */}
@@ -268,23 +350,20 @@ export const LandingOnboardingFlow: React.FC = () => {
               transition={{ duration: 0.3 }}
               className="space-y-8"
             >
-              <div className="text-center space-y-3 max-w-2xl mx-auto">
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Welcome to KrishiSetu
+              <div className="text-center space-y-3 max-w-xl mx-auto">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Step 1: Personalize Your Experience
                 </span>
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black font-outfit tracking-tight text-stone-900 dark:text-white">
-                  Choose Your Language
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black font-outfit text-stone-900 dark:text-white tracking-tight">
+                  Choose Language & Theme
                 </h1>
-                <p className="text-lg sm:text-xl font-semibold text-emerald-700 dark:text-emerald-400">
-                  మీ భాషను ఎంచుకోండి / अपनी भाषा चुनें
-                </p>
-                <p className="text-sm text-stone-600 dark:text-stone-400">
-                  Select your preferred language and display theme to begin your direct agricultural trade journey.
+                <p className="text-sm sm:text-base text-stone-600 dark:text-stone-400 leading-relaxed">
+                  Select your preferred regional language and visual style. You can change these anytime in the settings.
                 </p>
               </div>
 
               {/* Language Selection Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
                 {LANGUAGES.map((lang) => {
                   const isSelected = selectedLanguage === lang.code;
                   return (
@@ -292,68 +371,70 @@ export const LandingOnboardingFlow: React.FC = () => {
                       key={lang.code}
                       type="button"
                       onClick={() => handleSelectLanguage(lang.code)}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
+                      className={`p-5 rounded-2xl border-2 text-left transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer ${
                         isSelected
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-600 dark:border-emerald-500 shadow-md ring-2 ring-emerald-500/30'
-                          : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:border-emerald-400 hover:bg-stone-50 dark:hover:bg-stone-800/60'
+                          ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 shadow-lg ring-2 ring-emerald-500/30'
+                          : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 hover:border-emerald-400'
                       }`}
                     >
-                      {isSelected && (
-                        <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center">
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-2xl font-black block font-outfit text-stone-900 dark:text-white">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-2xl font-black text-stone-900 dark:text-white font-outfit">
                           {lang.native}
                         </span>
-                        <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">
-                          {lang.label}
-                        </span>
+                        {isSelected && (
+                          <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center">
+                            <Check className="w-3.5 h-3.5" />
+                          </div>
+                        )}
                       </div>
-                      <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium mt-3 block">
-                        {lang.greeting}
-                      </span>
+                      <div>
+                        <div className="text-sm font-bold text-stone-700 dark:text-stone-300">
+                          {lang.label}
+                        </div>
+                        <div className="text-xs text-stone-500 dark:text-stone-400 mt-1 italic">
+                          {lang.greeting}
+                        </div>
+                      </div>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Theme Options Card (Starts in Light by default) */}
-              <div className="max-w-md mx-auto bg-white dark:bg-stone-900 rounded-3xl p-5 border-2 border-stone-200 dark:border-stone-800 shadow-sm space-y-3">
-                <div className="text-center">
-                  <span className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                    Display Appearance / థీమ్
+              {/* Theme Toggle Section */}
+              <div className="max-w-md mx-auto bg-white dark:bg-stone-900 rounded-2xl p-5 border border-stone-200 dark:border-stone-800 shadow-xs flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-bold text-stone-900 dark:text-white block">
+                    Visual Display Theme
+                  </span>
+                  <span className="text-xs text-stone-500 dark:text-stone-400">
+                    Default is clean, bright Light Mode
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 bg-stone-100 dark:bg-stone-800 p-1.5 rounded-xl border border-stone-200 dark:border-stone-700">
                   <button
                     type="button"
                     onClick={() => setIsDarkMode(false)}
-                    className={`p-3.5 rounded-2xl border-2 flex items-center justify-center gap-2 font-bold text-sm transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                       !isDarkMode
-                        ? 'bg-amber-50 border-amber-500 text-stone-900 shadow-sm ring-2 ring-amber-400/30'
-                        : 'border-stone-200 dark:border-stone-800 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800'
+                        ? 'bg-white text-emerald-800 shadow-sm ring-1 ring-stone-200'
+                        : 'text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'
                     }`}
                   >
                     <Sun className="w-4 h-4 text-amber-500" />
-                    <span>☀️ Light Theme</span>
-                    {!isDarkMode && <Check className="w-4 h-4 text-emerald-600" />}
+                    <span>Light Mode</span>
                   </button>
-
                   <button
                     type="button"
                     onClick={() => setIsDarkMode(true)}
-                    className={`p-3.5 rounded-2xl border-2 flex items-center justify-center gap-2 font-bold text-sm transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                       isDarkMode
-                        ? 'bg-stone-800 border-emerald-500 text-white shadow-sm ring-2 ring-emerald-400/30'
-                        : 'border-stone-200 dark:border-stone-800 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800'
+                        ? 'bg-stone-900 text-white shadow-sm ring-1 ring-stone-700'
+                        : 'text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'
                     }`}
                   >
                     <Moon className="w-4 h-4 text-indigo-400" />
-                    <span>🌙 Dark Theme</span>
-                    {isDarkMode && <Check className="w-4 h-4 text-emerald-400" />}
+                    <span>Dark Mode</span>
                   </button>
                 </div>
               </div>
@@ -365,7 +446,7 @@ export const LandingOnboardingFlow: React.FC = () => {
                   onClick={handleLanguageStepSubmit}
                   className="px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-base shadow-xl shadow-emerald-900/20 transition-all hover:scale-105 active:scale-95 inline-flex items-center gap-2 cursor-pointer"
                 >
-                  <span>Continue to Location Detection</span>
+                  <span>Continue to Location Verification</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
@@ -373,7 +454,7 @@ export const LandingOnboardingFlow: React.FC = () => {
           )}
 
           {/* ========================================================================= */}
-          {/* STEP 2: LOCATION DETECTION WITH INDIA MAP ZOOM ANIMATION */}
+          {/* STEP 2: ROBUST LOCATION SYSTEM WITH MULTIPLE FALLBACK METHODS */}
           {/* ========================================================================= */}
           {step === 2 && (
             <motion.div
@@ -396,57 +477,258 @@ export const LandingOnboardingFlow: React.FC = () => {
                 </p>
               </div>
 
-              {/* Manual Search Modal / Drawer */}
-              {showManualSearch && (
-                <div className="bg-white dark:bg-stone-900 rounded-3xl p-6 border-2 border-emerald-500 shadow-xl space-y-4 max-w-2xl mx-auto">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-bold text-stone-900 dark:text-white text-base flex items-center gap-2">
-                      <Search className="w-4 h-4 text-emerald-600" />
-                      Search City, Village, or District in India
-                    </h4>
+              {/* --------------------------------------------------------------------- */}
+              {/* SUB-STATE 1: BEFORE ASKING FOR PERMISSION (EXPLAIN WHY CLEARLY) */}
+              {/* --------------------------------------------------------------------- */}
+              {locationStepMode === 'explain' && (
+                <div className="max-w-2xl mx-auto bg-white dark:bg-stone-900 rounded-3xl p-8 sm:p-10 border-2 border-emerald-500/40 shadow-xl space-y-6 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 mx-auto flex items-center justify-center text-3xl shadow-md">
+                    📍
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-black text-stone-900 dark:text-white font-outfit">
+                      We use your location to find nearby markets and farmers
+                    </h3>
+                    <p className="text-sm text-stone-600 dark:text-stone-400 max-w-lg mx-auto leading-relaxed">
+                      Allowing location access helps calculate real-time road freight, find highest-paying APMC mandis, and connect you with local agricultural trade partners.
+                    </p>
+                  </div>
+
+                  {/* Benefit highlights */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left max-w-xl mx-auto pt-2">
+                    <div className="p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 text-xs">
+                      <strong className="block text-stone-900 dark:text-white font-bold mb-1">
+                        ⚡ Nearest Mandis
+                      </strong>
+                      <span className="text-stone-500 dark:text-stone-400">
+                        Live prices across closest agricultural markets
+                      </span>
+                    </div>
+
+                    <div className="p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 text-xs">
+                      <strong className="block text-stone-900 dark:text-white font-bold mb-1">
+                        🚚 Diesel Freight
+                      </strong>
+                      <span className="text-stone-500 dark:text-stone-400">
+                        Accurate transport cost calculation per quintal
+                      </span>
+                    </div>
+
+                    <div className="p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 text-xs">
+                      <strong className="block text-stone-900 dark:text-white font-bold mb-1">
+                        🤝 Verified Buyers
+                      </strong>
+                      <span className="text-stone-500 dark:text-stone-400">
+                        Match with buyers in your district and state
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Primary & Fallback Buttons */}
+                  <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
                     <button
                       type="button"
-                      onClick={() => setShowManualSearch(false)}
-                      className="text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 text-xs font-bold cursor-pointer"
+                      onClick={requestBrowserGeolocation}
+                      className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-xl shadow-emerald-900/20 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      ✕ Close
+                      <MapPin className="w-5 h-5" />
+                      <span>Allow Location Access</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setLocationStepMode('manual_search')}
+                      className="w-full sm:w-auto px-6 py-4 rounded-2xl border-2 border-stone-300 dark:border-stone-700 hover:border-emerald-500 text-stone-700 dark:text-stone-200 font-bold text-sm transition-all hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Search className="w-4 h-4 text-stone-500" />
+                      <span>Search Manually</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* --------------------------------------------------------------------- */}
+              {/* SUB-STATE 2: REQUESTING BROWSER GEOLOCATION */}
+              {/* --------------------------------------------------------------------- */}
+              {locationStepMode === 'requesting' && (
+                <div className="max-w-xl mx-auto bg-white dark:bg-stone-900 rounded-3xl p-10 border border-stone-200 dark:border-stone-800 shadow-xl text-center space-y-6">
+                  <div className="relative w-20 h-20 mx-auto">
+                    <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-25 animate-ping" />
+                    <div className="relative w-full h-full rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl shadow-inner border border-emerald-300 dark:border-emerald-800">
+                      <Navigation className="w-9 h-9 animate-spin" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-xl sm:text-2xl font-black text-stone-900 dark:text-white font-outfit">
+                      Requesting browser location permission...
+                    </h3>
+                    <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-400 max-w-md mx-auto">
+                      Please look for the browser prompt at the top of your window and tap <strong>"Allow"</strong>.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                    High accuracy GPS query active (up to 15s)
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setLocationStepMode('manual_search')}
+                      className="text-xs font-bold text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 underline cursor-pointer"
+                    >
+                      Taking too long? Search location manually instead →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* --------------------------------------------------------------------- */}
+              {/* SUB-STATE 3: GEOLOCATION ERROR STATES (STRICT REQUIREMENTS) */}
+              {/* --------------------------------------------------------------------- */}
+              {locationStepMode === 'error' && (
+                <div className="max-w-xl mx-auto bg-white dark:bg-stone-900 rounded-3xl p-8 border-2 border-amber-500/40 shadow-xl text-center space-y-6">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 mx-auto flex items-center justify-center text-2xl shadow-sm">
+                    <AlertCircle className="w-7 h-7" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-xl sm:text-2xl font-black text-stone-900 dark:text-white font-outfit">
+                      {geoErrorCode === 1
+                        ? 'Location Permission Denied'
+                        : geoErrorCode === 2
+                        ? 'Location Unavailable'
+                        : geoErrorCode === 3
+                        ? 'Detection Timed Out'
+                        : 'Location Unsupported'}
+                    </h3>
+
+                    <p className="text-sm text-stone-600 dark:text-stone-400 max-w-md mx-auto">
+                      {geoErrorCode === 1 && (
+                        <>Location permission was denied. You can search for your location manually.</>
+                      )}
+                      {geoErrorCode === 2 && (
+                        <>We couldn't get your current location. Please try again or search manually.</>
+                      )}
+                      {geoErrorCode === 3 && (
+                        <>Location detection is taking longer than expected.</>
+                      )}
+                      {geoErrorCode === 0 && (
+                        <>Your browser does not support automatic location detection.</>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Specific Action Buttons per error code */}
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                    {(geoErrorCode === 2 || geoErrorCode === 3) && (
+                      <button
+                        type="button"
+                        onClick={requestBrowserGeolocation}
+                        className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        <span>Try Again</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setLocationStepMode('manual_search')}
+                      className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-stone-900 hover:bg-stone-800 text-white dark:bg-stone-100 dark:text-stone-950 font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Search className="w-4 h-4" />
+                      <span>
+                        {geoErrorCode === 3 ? 'Enter Location' : 'Search Location Manually'}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setLocationStepMode('map_preview')}
+                      className="w-full sm:w-auto px-5 py-3.5 rounded-2xl border-2 border-stone-300 dark:border-stone-700 hover:border-emerald-500 text-stone-700 dark:text-stone-300 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Compass className="w-4 h-4 text-emerald-600" />
+                      <span>Select on Map</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* --------------------------------------------------------------------- */}
+              {/* SUB-STATE 4: MANUAL SEARCH DRAWER / MODAL */}
+              {/* --------------------------------------------------------------------- */}
+              {locationStepMode === 'manual_search' && (
+                <div className="bg-white dark:bg-stone-900 rounded-3xl p-6 sm:p-8 border-2 border-emerald-500 shadow-2xl space-y-5 max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-black text-stone-900 dark:text-white text-lg sm:text-xl font-outfit flex items-center gap-2">
+                        <Search className="w-5 h-5 text-emerald-600" />
+                        Search Location Manually
+                      </h4>
+                      <p className="text-xs text-stone-500 dark:text-stone-400">
+                        Search any village, town, city, district, or PIN code in India
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setLocationStepMode('map_preview')}
+                      className="text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      <X className="w-4 h-4" />
+                      <span>Back to Map</span>
                     </button>
                   </div>
 
+                  {/* Autocomplete Input */}
                   <div className="relative">
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => handleSearchChange(e.target.value)}
-                      placeholder="e.g. Bhimavaram, Kadapa, Nashik, Guntur..."
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-300 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
+                      placeholder="Type your village, taluka, city or district (e.g. Bhimavaram, Kadapa, Nashik)..."
+                      className="w-full pl-11 pr-10 py-3.5 rounded-2xl border-2 border-stone-300 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm shadow-inner"
                       autoFocus
                     />
-                    <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
+                    <Search className="w-5 h-5 text-stone-400 absolute left-3.5 top-4" />
+                    {isSearching && (
+                      <Loader2 className="w-4 h-4 text-emerald-600 animate-spin absolute right-3.5 top-4" />
+                    )}
                   </div>
 
-                  {/* Search Results */}
+                  {/* Autocomplete Results */}
                   {searchResults.length > 0 && (
-                    <div className="space-y-1.5 max-h-48 overflow-y-auto pt-1">
+                    <div className="space-y-1.5 max-h-60 overflow-y-auto pt-1 rounded-2xl border border-stone-200 dark:border-stone-800 p-2 bg-stone-50 dark:bg-stone-800/60">
                       {searchResults.map((res, i) => (
                         <div
                           key={i}
                           onClick={() => handleSelectSearchResult(res)}
-                          className="p-2.5 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-xs font-semibold text-stone-800 dark:text-stone-200 cursor-pointer flex items-center justify-between transition-colors border border-transparent hover:border-emerald-300"
+                          className="p-3 rounded-xl hover:bg-emerald-100/70 dark:hover:bg-emerald-950/60 text-xs font-semibold text-stone-800 dark:text-stone-200 cursor-pointer flex items-center justify-between transition-colors border border-transparent hover:border-emerald-400"
                         >
                           <div>
-                            <span className="font-bold">{res.name}</span>, {res.district} District ({res.state})
+                            <span className="font-bold text-stone-900 dark:text-white text-sm">
+                              {res.name}
+                            </span>
+                            <span className="text-stone-500 dark:text-stone-400 ml-1">
+                              • {res.district} District, {res.state}
+                            </span>
                           </div>
-                          <span className="text-emerald-600 font-mono text-[10px]">Select →</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold shrink-0">
+                            Select & Map →
+                          </span>
                         </div>
                       ))}
                     </div>
                   )}
 
-                  {/* Quick Preset Locations */}
-                  <div className="pt-2 border-t border-stone-200 dark:border-stone-800">
-                    <span className="text-[11px] font-bold text-stone-400 uppercase block mb-2">
-                      Popular Agricultural Centers:
+                  {/* Popular Agricultural Centers Preset Buttons */}
+                  <div className="pt-3 border-t border-stone-200 dark:border-stone-800 space-y-2">
+                    <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block">
+                      Or Quick Select Major Agricultural Hubs:
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {POPULAR_SEARCH_PRESETS.map((p) => (
@@ -454,7 +736,7 @@ export const LandingOnboardingFlow: React.FC = () => {
                           key={p.name}
                           type="button"
                           onClick={() => handleSelectSearchResult(p)}
-                          className="px-3 py-1.5 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-bold text-stone-700 dark:text-stone-300 cursor-pointer transition-colors"
+                          className="px-3 py-2 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-bold text-stone-700 dark:text-stone-300 cursor-pointer transition-colors border border-stone-200 dark:border-stone-700 hover:border-emerald-400"
                         >
                           📍 {p.name}, {p.state}
                         </button>
@@ -464,13 +746,21 @@ export const LandingOnboardingFlow: React.FC = () => {
                 </div>
               )}
 
-              {/* Map Zoom Experience Component */}
-              <IndiaMapZoomExperience
-                location={location}
-                onConfirm={handleLocationConfirmed}
-                onChangeLocationClick={() => setShowManualSearch(true)}
-                isDetecting={isDetectingLocation}
-              />
+              {/* --------------------------------------------------------------------- */}
+              {/* SUB-STATE 5: INDIA MAP EXPERIENCE WITH CAMERA ZOOM & CONFIRMATION */}
+              {/* --------------------------------------------------------------------- */}
+              {locationStepMode === 'map_preview' && (
+                <div className="space-y-4">
+                  <IndiaMapZoomExperience
+                    location={location}
+                    onConfirm={handleLocationConfirmed}
+                    onChangeLocationClick={() => setLocationStepMode('manual_search')}
+                    onSelectCoordinates={handleCoordinateSelect}
+                    isDetecting={false}
+                    onRetryGps={requestBrowserGeolocation}
+                  />
+                </div>
+              )}
 
               <div className="text-center pt-2">
                 <button
@@ -478,7 +768,7 @@ export const LandingOnboardingFlow: React.FC = () => {
                   onClick={() => setStep(1)}
                   className="text-xs font-bold text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 cursor-pointer"
                 >
-                  ← Back to Language Selection
+                  ← Back to Language & Theme Selection
                 </button>
               </div>
             </motion.div>

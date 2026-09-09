@@ -1,5 +1,5 @@
 import { LocationData } from '../types/krishi';
-import { getSubDistrictLabel, findClosestUnit } from '../data/indiaWideLocations';
+import { getSubDistrictLabel, findClosestUnit, queryLocations } from '../data/indiaWideLocations';
 
 /**
  * Parses Google Maps address_components into KrishiSetu's standardized LocationData structure
@@ -92,10 +92,43 @@ export function parseGoogleAddressComponents(
 
 /**
  * Reverse geocodes latitude/longitude coordinates to a full administrative location.
- * Uses Google Geocoding API when available; gracefully falls back to local master locations.
+ * Priority:
+ * 1. Server-side /api/geocode/reverse proxy (Google Geocoding with attribution -> OSM Nominatim -> high-density spatial master)
+ * 2. Client-side Google Geocoder (if SDK initialized)
+ * 3. Client-side OpenStreetMap Nominatim
+ * 4. KrishiSetu high-density India spatial database
  */
 export async function reverseGeocodeLocation(lat: number, lng: number): Promise<LocationData> {
-  // Check if Google Maps JS SDK is available in the window
+  // 1. Try server geocoding endpoint
+  try {
+    const res = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.district) {
+        return {
+          id: `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`,
+          latitude: lat,
+          longitude: lng,
+          country: 'India',
+          state: data.state || 'Andhra Pradesh',
+          district: data.district,
+          subDistrict: data.subDistrict || data.district,
+          taluka: data.subDistrictType === 'Taluka' ? data.subDistrict : undefined,
+          mandal: data.subDistrictType === 'Mandal' ? data.subDistrict : undefined,
+          tehsil: data.subDistrictType === 'Tehsil' ? data.subDistrict : undefined,
+          city: data.city || data.village || data.district,
+          village: data.village,
+          pincode: data.pincode,
+          formattedAddress: data.formattedAddress,
+          source: (data.source as any) || 'gps',
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('[ReverseGeocode] Server endpoint unreachable, trying client fallbacks:', err);
+  }
+
+  // 2. Check if Google Maps JS SDK is available in the window
   if (typeof window !== 'undefined' && (window as any).google?.maps?.Geocoder) {
     try {
       const geocoder = new (window as any).google.maps.Geocoder();
@@ -113,11 +146,51 @@ export async function reverseGeocodeLocation(lat: number, lng: number): Promise<
         );
       }
     } catch (err) {
-      console.warn('[Google Geocoder] Reverse geocoding warning, falling back to local master data:', err);
+      console.warn('[Google Geocoder] Client geocoder warning:', err);
     }
   }
 
-  // Fallback: Use KrishiSetu's high-density India spatial database
+  // 3. Client-side OSM Nominatim fallback
+  try {
+    const osmRes = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1`
+    );
+    if (osmRes.ok) {
+      const osmData = await osmRes.json();
+      if (osmData && osmData.address) {
+        const addr = osmData.address;
+        const country = 'India';
+        const state = addr.state || '';
+        const district = (addr.state_district || addr.county || addr.district || '').replace(/ District$/i, '').trim();
+        const subDistrict = (addr.taluk || addr.tehsil || addr.subdistrict || '').trim();
+        const city = addr.city || addr.town || addr.municipality || addr.village || addr.hamlet || district;
+        const village = addr.village || addr.hamlet || addr.suburb || city;
+        const cleanParts = [village || city, district, state, country].filter(Boolean);
+
+        return {
+          id: `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`,
+          latitude: lat,
+          longitude: lng,
+          country: 'India',
+          state: state || 'Andhra Pradesh',
+          district: district || city,
+          subDistrict: subDistrict || district,
+          taluka: getSubDistrictLabel(state) === 'Taluka' ? subDistrict : undefined,
+          mandal: getSubDistrictLabel(state) === 'Mandal' ? subDistrict : undefined,
+          tehsil: getSubDistrictLabel(state) === 'Tehsil' ? subDistrict : undefined,
+          city: city || district,
+          village: village,
+          pincode: addr.postcode,
+          formattedAddress: cleanParts.join(', '),
+          source: 'gps',
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('[Nominatim Geocoder] Direct client warning:', err);
+  }
+
+  // 4. Fallback: Use KrishiSetu's high-density India spatial database
   const closest = findClosestUnit(lat, lng);
   return {
     id: closest.id,
@@ -142,6 +215,33 @@ export async function reverseGeocodeLocation(lat: number, lng: number): Promise<
  * Returns lat/lng and parsed location data or null if not resolved.
  */
 export async function forwardGeocodeAddress(addressText: string): Promise<LocationData | null> {
+  // 1. Try server search
+  try {
+    const res = await fetch(`/api/geocode/search?q=${encodeURIComponent(addressText)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.results && data.results.length > 0) {
+        const top = data.results[0];
+        const state = top.state || 'Andhra Pradesh';
+        return {
+          id: `search-${top.lat.toFixed(4)}-${top.lng.toFixed(4)}`,
+          latitude: top.lat,
+          longitude: top.lng,
+          country: 'India',
+          state: state,
+          district: top.district || top.name,
+          subDistrict: top.district || top.name,
+          city: top.name,
+          formattedAddress: top.formattedAddress,
+          source: 'search',
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('[ForwardGeocode] Server search warning:', err);
+  }
+
+  // 2. Try window.google.maps.Geocoder
   if (typeof window !== 'undefined' && (window as any).google?.maps?.Geocoder) {
     try {
       const geocoder = new (window as any).google.maps.Geocoder();
@@ -168,5 +268,24 @@ export async function forwardGeocodeAddress(addressText: string): Promise<Locati
       console.warn('[Google Geocoder] Forward geocode warning:', err);
     }
   }
+
+  // 3. Fallback to local queryLocations
+  const local = queryLocations(addressText, 1);
+  if (local.length > 0) {
+    const closest = local[0];
+    return {
+      id: closest.id,
+      latitude: closest.latitude,
+      longitude: closest.longitude,
+      country: 'India',
+      state: closest.state,
+      district: closest.district,
+      subDistrict: closest.subDistrict,
+      city: closest.name,
+      formattedAddress: `${closest.name}, ${closest.district}, ${closest.state}, India`,
+      source: 'search',
+    };
+  }
+
   return null;
 }

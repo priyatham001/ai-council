@@ -13,6 +13,7 @@ import {
   queryLocations,
   AdministrativeUnit,
   getSubDistrictLabel,
+  findClosestUnit,
 } from './src/data/indiaWideLocations';
 import {
   INDIA_WIDE_MARKET_DATABASE,
@@ -834,6 +835,204 @@ app.get('/api/locations/:id', (req, res) => {
     return res.status(404).json({ error: 'Location not found' });
   }
   res.json(loc);
+});
+
+// Real-time Resilient Reverse Geocoding: Google Geocoding (with attribution) -> OSM Nominatim -> High-Density Spatial Fallback
+app.get('/api/geocode/reverse', async (req, res) => {
+  const lat = parseFloat(req.query.lat as string);
+  const lng = parseFloat(req.query.lng as string);
+
+  if (isNaN(lat) || isNaN(lng)) {
+    return res.status(400).json({ error: 'Valid lat and lng query parameters are required' });
+  }
+
+  const mapsApiKey = process.env.VITE_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
+
+  // 1. Google Geocoding API if key is present
+  if (mapsApiKey) {
+    try {
+      const gUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${mapsApiKey}&language=en&region=in`;
+      const gRes = await fetch(gUrl, {
+        headers: {
+          'User-Agent': 'aistudio-build/gmp_mcp_codeassist_v1_aistudio',
+          'X-Goog-Api-Client': 'gmp_mcp_codeassist_v1_aistudio',
+        },
+      });
+      if (gRes.ok) {
+        const gData = await gRes.json();
+        if (gData.status === 'OK' && gData.results && gData.results.length > 0) {
+          const best = gData.results[0];
+          let country = 'India';
+          let state = '';
+          let district = '';
+          let subDistrict = '';
+          let city = '';
+          let village = '';
+          let pincode = '';
+
+          for (const comp of best.address_components || []) {
+            const types = comp.types || [];
+            const name = comp.long_name || '';
+            if (types.includes('country')) country = name;
+            else if (types.includes('administrative_area_level_1')) state = name;
+            else if (types.includes('administrative_area_level_2')) district = name.replace(/ District$/i, '').trim();
+            else if (types.includes('administrative_area_level_3')) subDistrict = name.replace(/ Taluk(a)?$/i, '').replace(/ Tehsil$/i, '').replace(/ Mandal$/i, '').trim();
+            else if (types.includes('locality')) city = name;
+            else if (types.includes('sublocality') || types.includes('sublocality_level_1')) {
+              if (!village) village = name;
+            } else if (types.includes('postal_code')) pincode = name;
+          }
+
+          if (!city) city = village || district;
+          if (!district) district = city;
+          const subDistrictType = getSubDistrictLabel(state);
+
+          return res.json({
+            latitude: lat,
+            longitude: lng,
+            country: country || 'India',
+            state: state || 'Andhra Pradesh',
+            district: district || city,
+            subDistrict: subDistrict || district,
+            subDistrictType,
+            city: city || district,
+            village: village || city,
+            pincode,
+            formattedAddress: best.formatted_address,
+            placeId: best.place_id,
+            source: 'google_geocoding',
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[Server] Google geocode failed, falling back to OSM:', err);
+    }
+  }
+
+  // 2. OpenStreetMap Nominatim reverse geocoding fallback (live real-world address from actual lat/lng)
+  try {
+    const osmUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1`;
+    const osmRes = await fetch(osmUrl, {
+      headers: {
+        'User-Agent': 'KrishiSetu-AgriPlatform/1.0 (India Agricultural Trade & Market Discovery)',
+      },
+    });
+    if (osmRes.ok) {
+      const osmData = await osmRes.json();
+      if (osmData && osmData.address) {
+        const addr = osmData.address;
+        const country = addr.country || 'India';
+        const state = addr.state || '';
+        const district = (addr.state_district || addr.county || addr.district || '').replace(/ District$/i, '').trim();
+        const subDistrict = (addr.taluk || addr.tehsil || addr.subdistrict || '').trim();
+        const city = addr.city || addr.town || addr.municipality || addr.village || addr.hamlet || district;
+        const village = addr.village || addr.hamlet || addr.suburb || city;
+        const pincode = addr.postcode || '';
+        const subDistrictType = getSubDistrictLabel(state);
+
+        const cleanParts = [village || city, district, state, country].filter(Boolean);
+        const cleanFormatted = cleanParts.length > 1 ? cleanParts.join(', ') : osmData.display_name;
+
+        return res.json({
+          latitude: lat,
+          longitude: lng,
+          country,
+          state,
+          district: district || city,
+          subDistrict: subDistrict || district,
+          subDistrictType,
+          city: city || district,
+          village,
+          pincode,
+          formattedAddress: cleanFormatted,
+          source: 'nominatim_geocoding',
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[Server] OSM geocode failed, falling back to spatial unit:', err);
+  }
+
+  // 3. Robust spatial fallback using KrishiSetu's high-density India spatial database
+  const closest = findClosestUnit(lat, lng);
+  return res.json({
+    latitude: lat,
+    longitude: lng,
+    country: 'India',
+    state: closest.state,
+    district: closest.district,
+    subDistrict: closest.subDistrict,
+    subDistrictType: closest.subDistrictType,
+    city: closest.name,
+    village: closest.type === 'village' ? closest.name : undefined,
+    pincode: closest.pincode || '',
+    formattedAddress: `${closest.name}, ${closest.subDistrictType}: ${closest.subDistrict}, ${closest.district}, ${closest.state}, India`,
+    source: 'spatial_fallback',
+  });
+});
+
+// Live Forward Geocode & Places Autocomplete Search
+app.get('/api/geocode/search', async (req, res) => {
+  const q = (req.query.q as string || '').trim();
+  if (!q) return res.json({ results: [] });
+
+  const mapsApiKey = process.env.VITE_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
+
+  if (mapsApiKey) {
+    try {
+      const gUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q + ', India')}&components=country:IN&key=${mapsApiKey}&language=en`;
+      const gRes = await fetch(gUrl, {
+        headers: {
+          'User-Agent': 'aistudio-build/gmp_mcp_codeassist_v1_aistudio',
+          'X-Goog-Api-Client': 'gmp_mcp_codeassist_v1_aistudio',
+        },
+      });
+      if (gRes.ok) {
+        const gData = await gRes.json();
+        if (gData.status === 'OK' && gData.results && gData.results.length > 0) {
+          const results = gData.results.slice(0, 8).map((r: any) => {
+            const loc = r.geometry.location;
+            let state = '';
+            let district = '';
+            let city = '';
+            for (const c of r.address_components || []) {
+              if (c.types.includes('administrative_area_level_1')) state = c.long_name;
+              else if (c.types.includes('administrative_area_level_2')) district = c.long_name.replace(/ District$/i, '');
+              else if (c.types.includes('locality')) city = c.long_name;
+            }
+            return {
+              name: city || r.formatted_address.split(',')[0],
+              formattedAddress: r.formatted_address,
+              district: district || city,
+              state: state,
+              country: 'India',
+              lat: loc.lat,
+              lng: loc.lng,
+              source: 'google',
+            };
+          });
+
+          return res.json({ results });
+        }
+      }
+    } catch (err) {
+      console.warn('[Server] Google forward search error:', err);
+    }
+  }
+
+  // Fallback to local high-density master locations
+  const localResults = queryLocations(q, 15).map((l) => ({
+    name: l.name,
+    formattedAddress: `${l.name}, ${l.subDistrict}, ${l.district} District, ${l.state}, India`,
+    district: l.district,
+    state: l.state,
+    country: 'India',
+    lat: l.latitude,
+    lng: l.longitude,
+    source: 'local',
+  }));
+
+  res.json({ results: localResults });
 });
 
 // 7. GET /api/markets/nearby?lat=&lng=&crop=&quantity=&quality=
