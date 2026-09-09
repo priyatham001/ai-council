@@ -43,10 +43,10 @@ interface KisanAIChatbotProps {
 }
 
 const QUICK_PROMPTS = [
-  'How does Grade A or FAQ Grade B affect my mandi rate?',
-  'Find nearest APMC mandis and wholesale yards',
-  'What are the signs of fungal rot and crop rejection?',
-  'How to prevent transit spoilage for vegetables?',
+  'आज का नाशिक कांदा भाव क्या है?',
+  'How to get Grade A for Soybean?',
+  'Nearest APMC Mandi with highest rate',
+  'APMC mandi fees in Maharashtra',
 ];
 
 export const KisanAIChatbot: React.FC<KisanAIChatbotProps> = ({
@@ -68,7 +68,7 @@ export const KisanAIChatbot: React.FC<KisanAIChatbotProps> = ({
     {
       id: 'welcome',
       role: 'model',
-      text: `Namaste! 🙏 I am **KrishiSetu AgriSaathi (कृषि सेतु सहायक)**, your AI crop quality assayer and APMC mandi advisor.\n\nNow equipped with **multi-model intelligence & Live Voice**:\n- 🌾 **General Advisor** (\`gemini-3.5-flash\`): APMC pricing, market trends & Agmark grading\n- ⚡ **Fast Mode** (\`gemini-3.1-flash-lite\`): Instant mandi lookups & quick translations\n- 🧠 **Deep Agronomy** (\`gemini-3.1-pro-preview\`): Complex pest diagnosis & freight negotiation\n- 🎙️ **Live Voice Assistant** (\`gemini-3.1-flash-live-preview\`): Real-time spoken conversations\n\nTap the microphone below to speak or type your question!`,
+      text: `Namaste Kisan Bhai! 🙏 I am **MahaKrishi Kisan Mitra (महाकृषि किसान मित्र)** by **IDEA FORGE**, your dedicated AI crop quality assayer and APMC mandi advisor.\n\nNow equipped with **multi-model intelligence & Live Voice**:\n- 🌾 **General Advisor** (\`gemini-3.5-flash\`): APMC pricing, market trends & Agmark grading\n- ⚡ **Fast Mode** (\`gemini-3.1-flash-lite\`): Instant mandi lookups & quick translations\n- 🧠 **Deep Agronomy** (\`gemini-3.1-pro-preview\`): Complex pest diagnosis & freight negotiation\n- 🎙️ **Live Voice Assistant** (\`gemini-3.1-flash-live-preview\`): Real-time spoken conversations\n\nTap the microphone below to speak or ask any question!`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -290,19 +290,19 @@ export const KisanAIChatbot: React.FC<KisanAIChatbotProps> = ({
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-emerald-800 to-emerald-700 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-full p-3.5 sm:px-5 sm:py-3.5 shadow-2xl flex items-center gap-2.5 transition-all transform hover:scale-105 active:scale-95 border-2 border-emerald-400/40 cursor-pointer group"
-          aria-label="Open KrishiSetu AI Assistant"
+          className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-emerald-800 to-emerald-700 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-full p-3.5 sm:px-5 sm:py-3.5 shadow-2xl flex items-center gap-3 transition-all transform hover:scale-105 active:scale-95 border-2 border-amber-400/80 cursor-pointer group"
+          aria-label="Open MahaKrishi Kisan Mitra Assistant"
         >
-          <div className="relative">
-            <Bot className="w-5 h-5 text-amber-300" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full" />
+          <div className="relative flex items-center justify-center">
+            <span className="text-2xl animate-bounce">👨‍🌾</span>
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-ping" />
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full" />
           </div>
           <div className="hidden sm:flex flex-col text-left">
-            <span className="text-xs font-black tracking-wide flex items-center gap-1">
-              Ask Kisan AI <Sparkles className="w-3 h-3 text-amber-300" />
+            <span className="text-xs font-black tracking-wide flex items-center gap-1 text-amber-300">
+              Kisan Mitra AI <Sparkles className="w-3.5 h-3.5 text-amber-300" />
             </span>
-            <span className="text-[10px] text-emerald-200">Voice & Mandi Advisor</span>
+            <span className="text-[10px] text-emerald-200">MahaKrishi Voice & Mandi Advisor</span>
           </div>
         </button>
       )}
@@ -310,7 +310,7 @@ export const KisanAIChatbot: React.FC<KisanAIChatbotProps> = ({
       {/* Chat Window */}
       {isOpen && (
         <div
-          className={`fixed z-50 transition-all duration-200 shadow-2xl border border-stone-300 bg-white flex flex-col overflow-hidden ${
+          className={`fixed z-50 transition-all duration-200 shadow-2xl border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 flex flex-col overflow-hidden ${
             isExpanded
               ? 'inset-4 sm:inset-10 rounded-3xl'
               : 'bottom-4 right-4 sm:bottom-6 sm:right-6 w-[calc(100vw-2rem)] sm:w-[440px] h-[610px] max-h-[88vh] rounded-3xl'
@@ -320,8 +320,8 @@ export const KisanAIChatbot: React.FC<KisanAIChatbotProps> = ({
           <div className="bg-gradient-to-r from-stone-900 via-emerald-950 to-stone-900 text-white p-3.5 sm:p-4 flex flex-col gap-2.5 border-b border-emerald-800/40 shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-700/50 border border-emerald-400/30 flex items-center justify-center text-amber-300 relative">
-                  <Bot className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-2xl bg-emerald-800/80 border border-amber-400/50 flex items-center justify-center text-xl relative shadow-inner">
+                  <span>👨‍🌾</span>
                   {isSpeaking && (
                     <span className="absolute -bottom-1 -right-1 flex h-3 w-3">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -332,14 +332,14 @@ export const KisanAIChatbot: React.FC<KisanAIChatbotProps> = ({
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-extrabold text-sm text-white">
-                      KrishiSetu AgriSaathi
+                      MahaKrishi Kisan Mitra
                     </h3>
                     <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-400/20">
                       Live AI
                     </span>
                   </div>
                   <p className="text-[10px] text-emerald-200/80">
-                    Voice & Maps Grounded Mandi Expert
+                    Mandi & Agronomy Advisor • IDEA FORGE
                   </p>
                 </div>
               </div>
@@ -635,6 +635,11 @@ export const KisanAIChatbot: React.FC<KisanAIChatbotProps> = ({
               <span className="hidden sm:inline text-xs font-bold">Send</span>
             </button>
           </form>
+
+          {/* Disclaimer */}
+          <div className="bg-stone-100 dark:bg-stone-950 px-3 py-1.5 text-center text-[10px] text-stone-500 dark:text-stone-400 border-t border-stone-200 dark:border-stone-800 shrink-0">
+            ⚠️ AI guidance based on verified APMC market trends & AGMARK standards.
+          </div>
         </div>
       )}
     </>

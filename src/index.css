@@ -35,6 +35,84 @@
   animation: scanLaser 2.5s ease-in-out infinite;
 }
 
+@keyframes cropSway {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(3.5deg);
+  }
+}
+
+.animate-crop-sway {
+  transform-origin: bottom center;
+  animation: cropSway 4s ease-in-out infinite;
+}
+
+.animate-crop-sway-delayed {
+  transform-origin: bottom center;
+  animation: cropSway 4.8s ease-in-out infinite 0.7s;
+}
+
+@keyframes cloudDrift {
+  0% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(20px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-cloud-drift {
+  animation: cloudDrift 14s ease-in-out infinite;
+}
+
+@keyframes sunPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+.animate-sun-pulse {
+  animation: sunPulse 6s ease-in-out infinite;
+}
+
+@keyframes pulseGpsRing {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+.animate-gps-ring {
+  animation: pulseGpsRing 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

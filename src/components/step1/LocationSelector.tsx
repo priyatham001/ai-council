@@ -43,7 +43,9 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   const t = TRANSLATIONS[language];
   const [searchQuery, setSearchQuery] = useState('');
   const [isDetectingGps, setIsDetectingGps] = useState(false);
+  const [gpsStage, setGpsStage] = useState<number>(0);
   const [gpsError, setGpsError] = useState<string | null>(null);
+  const [justDetected, setJustDetected] = useState<boolean>(false);
 
   // States list (dynamic from API with fallback to MASTER_LOCATIONS)
   const [availableStates, setAvailableStates] = useState<string[]>([]);
@@ -211,15 +213,23 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     return queryLocations(searchQuery, 12);
   }, [searchQuery]);
 
-  // GPS Action with precise spatial lookup and Google Geocoding
+  // GPS Action with progressive stages: Detecting -> Coordinates -> District -> Village -> Mandis
   const handleUseGps = () => {
     setGpsError(null);
+    setJustDetected(false);
     if (!navigator.geolocation) {
       setGpsError('Geolocation is not supported by your browser.');
       return;
     }
 
     setIsDetectingGps(true);
+    setGpsStage(1);
+
+    const timer1 = setTimeout(() => setGpsStage(2), 600);
+    const timer2 = setTimeout(() => setGpsStage(3), 1200);
+    const timer3 = setTimeout(() => setGpsStage(4), 1800);
+    const timer4 = setTimeout(() => setGpsStage(5), 2400);
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
@@ -227,10 +237,22 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         try {
           // Attempt Google Geocoding with fallback to spatial master data
           const detected = await reverseGeocodeLocation(latitude, longitude);
+          clearTimeout(timer1);
+          clearTimeout(timer2);
+          clearTimeout(timer3);
+          clearTimeout(timer4);
           setIsDetectingGps(false);
+          setGpsStage(0);
+          setJustDetected(true);
           onSelectLocation(detected);
         } catch (err: any) {
+          clearTimeout(timer1);
+          clearTimeout(timer2);
+          clearTimeout(timer3);
+          clearTimeout(timer4);
           setIsDetectingGps(false);
+          setGpsStage(0);
+          setJustDetected(true);
           const closest = findClosestUnit(latitude, longitude);
           const newLoc: LocationData = {
             id: closest.id,
@@ -252,7 +274,12 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         }
       },
       (err) => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+        clearTimeout(timer4);
         setIsDetectingGps(false);
+        setGpsStage(0);
         setGpsError(
           `Could not access GPS (${err.message}). Please choose your farm's state, district, and taluka/mandal below.`
         );
@@ -356,7 +383,111 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       </div>
 
       {/* Primary Actions: GPS Button + Search Bar */}
-      <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-5 sm:p-6">
+      <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 p-5 sm:p-6 transition-colors">
+        {/* Animated 5-Stage Progressive GPS Detection Panel */}
+        {isDetectingGps && (
+          <div className="mb-6 p-5 rounded-2xl bg-gradient-to-r from-emerald-950 via-stone-900 to-emerald-950 text-white border-2 border-emerald-500/60 shadow-xl overflow-hidden relative">
+            {/* Background radar sweep */}
+            <div className="absolute right-4 top-4 w-24 h-24 rounded-full border border-emerald-500/30 animate-gps-ring pointer-events-none" />
+
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="text-2xl animate-bounce">🚜</span>
+                <div>
+                  <h4 className="text-sm font-extrabold text-white flex items-center gap-1.5">
+                    <span>Field Geolocation in Progress</span>
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  </h4>
+                  <p className="text-[11px] text-emerald-300">
+                    Connecting to Indian Administrative Survey & GIS Satellites...
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-900 text-amber-300 border border-emerald-700">
+                STAGE {gpsStage || 1}/5
+              </span>
+            </div>
+
+            {/* 5-Step Visual Progress Bar */}
+            <div className="grid grid-cols-5 gap-1.5 text-center text-[10px] font-bold mb-3">
+              {[
+                { stage: 1, label: '📡 Detecting', desc: 'Hardware GPS' },
+                { stage: 2, label: '🛰️ Coordinates', desc: 'Lat / Long' },
+                { stage: 3, label: '📍 District', desc: 'Survey Boundary' },
+                { stage: 4, label: '🏡 Village', desc: 'Revenue Village' },
+                { stage: 5, label: '🏪 Mandis', desc: 'APMC Network' },
+              ].map((s) => {
+                const isCurrent = gpsStage === s.stage;
+                const isDone = gpsStage > s.stage;
+                return (
+                  <div
+                    key={s.stage}
+                    className={`p-2 rounded-xl border transition-all ${
+                      isCurrent
+                        ? 'bg-amber-500 text-stone-950 border-amber-300 shadow-md font-black scale-105'
+                        : isDone
+                        ? 'bg-emerald-900/80 text-emerald-200 border-emerald-700'
+                        : 'bg-stone-800/60 text-stone-500 border-stone-700'
+                    }`}
+                  >
+                    <div>{s.label}</div>
+                    <div className="text-[9px] opacity-80 font-normal hidden sm:block">
+                      {s.desc}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Moving Tractor & Plant Progress */}
+            <div className="w-full bg-stone-800 h-2 rounded-full overflow-hidden relative">
+              <div
+                className="bg-gradient-to-r from-amber-400 to-emerald-400 h-full transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.max(15, gpsStage * 20))}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Location Detection Succeeded Banner with Animate Hierarchy */}
+        {justDetected && (
+          <div className="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-500/80 text-emerald-950 dark:text-emerald-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <span className="text-2xl">🌱</span>
+              <div>
+                <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+                  <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  Your farm location has been detected!
+                </h4>
+                <div className="flex flex-wrap items-center gap-1.5 mt-1 text-xs">
+                  <span className="px-2 py-0.5 rounded-md bg-white dark:bg-stone-900 border border-emerald-300 dark:border-emerald-700 font-bold text-emerald-800 dark:text-emerald-300">
+                    {currentLocation.state}
+                  </span>
+                  <span className="text-emerald-600">→</span>
+                  <span className="px-2 py-0.5 rounded-md bg-white dark:bg-stone-900 border border-emerald-300 dark:border-emerald-700 font-bold text-emerald-800 dark:text-emerald-300">
+                    {currentLocation.district}
+                  </span>
+                  <span className="text-emerald-600">→</span>
+                  <span className="px-2 py-0.5 rounded-md bg-white dark:bg-stone-900 border border-emerald-300 dark:border-emerald-700 font-bold text-emerald-800 dark:text-emerald-300">
+                    {currentLocation.taluka || currentLocation.subDistrict || currentLocation.mandal || 'Taluka'}
+                  </span>
+                  <span className="text-emerald-600">→</span>
+                  <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950 border border-amber-400 dark:border-amber-700 font-black text-amber-900 dark:text-amber-200">
+                    {currentLocation.village || currentLocation.city || 'Village'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setJustDetected(false)}
+              className="text-xs text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
           {/* GPS Button */}
           <div className="md:col-span-5">
@@ -364,21 +495,22 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
               type="button"
               onClick={handleUseGps}
               disabled={isDetectingGps}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 px-4 rounded-xl shadow-sm transition-all text-sm disabled:opacity-75 cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 px-4 rounded-xl shadow-sm transition-all text-sm disabled:opacity-75 cursor-pointer relative overflow-hidden group"
             >
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
               {isDetectingGps ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Detecting GPS field location...
+                  <span>Locating Field Coordinates...</span>
                 </>
               ) : (
                 <>
                   <Navigation className="w-4 h-4 text-amber-300" />
-                  📍 Use Current GPS Location
+                  <span>📍 Use Current GPS Location</span>
                 </>
               )}
             </button>
-            <p className="text-[11px] text-stone-500 text-center mt-1.5 font-medium">
+            <p className="text-[11px] text-stone-500 dark:text-stone-400 text-center mt-1.5 font-medium">
               Accurate to field level coordinates
             </p>
           </div>
@@ -397,7 +529,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                   }}
                   placeholder="Search village, mandi, taluka or city across India..."
                 />
-                <p className="text-[11px] text-stone-500 mt-1.5 flex items-center gap-1">
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1.5 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-emerald-600 shrink-0" />
                   Google Places (New API) + KrishiSetu Mandi Database
                 </p>
@@ -411,10 +543,10 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search village, town, mandal, taluka or district..."
-                    className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
+                    className="w-full pl-10 pr-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs sm:text-sm focus:bg-white dark:focus:bg-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium text-stone-900 dark:text-white"
                   />
                 </div>
-                <p className="text-[11px] text-stone-500 mt-1.5">
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1.5">
                   Instant search across Maharashtra, AP, Telangana & All India
                 </p>
               </div>
@@ -471,24 +603,24 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       </div>
 
       {/* Current Selected Location Banner */}
-      <div className="bg-amber-50 border-2 border-amber-400/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+      <div className="bg-amber-50 dark:bg-stone-900 border-2 border-amber-400 dark:border-amber-500/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm transition-colors">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500 text-stone-950 flex items-center justify-center text-xl shrink-0 font-bold shadow-sm">
             📍
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] uppercase tracking-wider font-extrabold text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded">
+              <span className="text-[11px] uppercase tracking-wider font-extrabold text-amber-900 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-950/80 px-2 py-0.5 rounded">
                 Confirmed Farm Location
               </span>
-              <span className="text-xs text-amber-800 font-medium capitalize">
+              <span className="text-xs text-amber-800 dark:text-amber-400 font-medium capitalize">
                 Via {currentLocation.source}
               </span>
             </div>
-            <h3 className="text-base sm:text-lg font-extrabold text-stone-950 mt-0.5">
+            <h3 className="text-base sm:text-lg font-extrabold text-stone-950 dark:text-white mt-0.5">
               {currentLocation.formattedAddress}
             </h3>
-            <p className="text-xs text-stone-600 mt-0.5 font-mono">
+            <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5 font-mono">
               Coordinates: {currentLocation.latitude.toFixed(4)}° N, {currentLocation.longitude.toFixed(4)}° E •{' '}
               {currentLocation.district}, {currentLocation.state}
             </p>
@@ -498,21 +630,21 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         <button
           type="button"
           onClick={onContinue}
-          className="w-full sm:w-auto shrink-0 bg-stone-900 hover:bg-black text-amber-300 font-extrabold px-6 py-3 rounded-xl shadow transition-colors flex items-center justify-center gap-2 text-sm cursor-pointer"
+          className="w-full sm:w-auto shrink-0 bg-stone-900 dark:bg-amber-500 hover:bg-black dark:hover:bg-amber-400 text-amber-300 dark:text-stone-950 font-extrabold px-6 py-3 rounded-xl shadow transition-all flex items-center justify-center gap-2 text-sm cursor-pointer hover:scale-105"
         >
-          Confirm Location & Next →
+          <span>Confirm Location & Next →</span>
         </button>
       </div>
 
       {/* Manual Hierarchical Selector: State -> District -> Taluka/Mandal -> Village */}
-      <div className="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm">
-        <div className="border-b border-stone-100 pb-3 mb-4 flex items-center justify-between">
+      <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 p-5 sm:p-6 shadow-sm transition-colors">
+        <div className="border-b border-stone-100 dark:border-stone-800 pb-3 mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-stone-900 flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-emerald-700" />
+            <h3 className="text-sm font-bold text-stone-900 dark:text-white flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
               Choose Farm Location Manually Across India
             </h3>
-            <p className="text-xs text-stone-500 mt-0.5">
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
               Select your administrative hierarchy to discover local markets accurately
             </p>
           </div>
@@ -522,16 +654,16 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* 1. State */}
             <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
                 State *
               </label>
               <select
                 value={selectedState}
                 onChange={(e) => setSelectedState(e.target.value)}
-                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-stone-900 focus:bg-white focus:ring-2 focus:ring-emerald-600"
+                className="w-full bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-2.5 text-xs font-semibold text-stone-900 dark:text-white focus:bg-white dark:focus:bg-stone-900 focus:ring-2 focus:ring-emerald-600"
               >
                 {availableStates.map((st) => (
-                  <option key={st} value={st}>
+                  <option key={st} value={st} className="dark:bg-stone-900 dark:text-white">
                     {st}
                   </option>
                 ))}
@@ -540,16 +672,16 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
 
             {/* 2. District */}
             <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
                 District *
               </label>
               <select
                 value={selectedDistrict}
                 onChange={(e) => setSelectedDistrict(e.target.value)}
-                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-stone-900 focus:bg-white focus:ring-2 focus:ring-emerald-600"
+                className="w-full bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-2.5 text-xs font-semibold text-stone-900 dark:text-white focus:bg-white dark:focus:bg-stone-900 focus:ring-2 focus:ring-emerald-600"
               >
                 {availableDistricts.map((dist) => (
-                  <option key={dist} value={dist}>
+                  <option key={dist} value={dist} className="dark:bg-stone-900 dark:text-white">
                     {dist}
                   </option>
                 ))}
@@ -558,16 +690,16 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
 
             {/* 3. Sub-District (Dynamic Label: Taluka / Mandal / Tehsil) */}
             <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
                 {subDistrictLabel} *
               </label>
               <select
                 value={selectedSubDistrict}
                 onChange={(e) => setSelectedSubDistrict(e.target.value)}
-                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-stone-900 focus:bg-white focus:ring-2 focus:ring-emerald-600"
+                className="w-full bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-2.5 text-xs font-semibold text-stone-900 dark:text-white focus:bg-white dark:focus:bg-stone-900 focus:ring-2 focus:ring-emerald-600"
               >
                 {availableSubDistricts.map((sub) => (
-                  <option key={sub} value={sub}>
+                  <option key={sub} value={sub} className="dark:bg-stone-900 dark:text-white">
                     {sub}
                   </option>
                 ))}
@@ -576,7 +708,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
 
             {/* 4. Village / Town */}
             <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
                 Village / Town *
               </label>
               <input
@@ -585,7 +717,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                 onChange={(e) => setVillageInput(e.target.value)}
                 placeholder="e.g. Lasalgaon, Vinchur, Proddatur..."
                 list="village-datalist"
-                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-stone-900 focus:bg-white focus:ring-2 focus:ring-emerald-600"
+                className="w-full bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-2.5 text-xs font-semibold text-stone-900 dark:text-white focus:bg-white dark:focus:bg-stone-900 focus:ring-2 focus:ring-emerald-600"
               />
               <datalist id="village-datalist">
                 {availableVillages.map((v) => (
@@ -596,7 +728,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
           </div>
 
           <div className="flex items-center justify-between pt-2">
-            <span className="text-[11px] text-stone-500">
+            <span className="text-[11px] text-stone-500 dark:text-stone-400">
               💡 {selectedState} administrative structure: State → District → {subDistrictLabel} → Village
             </span>
 

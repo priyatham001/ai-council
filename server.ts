@@ -561,8 +561,8 @@ Respond ONLY with STRICT JSON matching this schema (no markdown, no backticks):
 }
 
 // Register both /api/crop/analyze and /api/analyze-crop
-app.post('/api/crop/analyze', upload.single('image'), handleCropAnalyze);
-app.post('/api/analyze-crop', upload.single('image'), handleCropAnalyze);
+app.post('/api/crop/analyze', upload.single('image') as any, handleCropAnalyze);
+app.post('/api/analyze-crop', upload.single('image') as any, handleCropAnalyze);
 
 // =========================================================================
 // MULTI-TURN GEMINI KISAN ASSISTANT CHATBOT WITH MAPS GROUNDING & MULTI-MODEL
@@ -913,7 +913,7 @@ app.get('/api/admin/coverage', (req, res) => {
 });
 
 // 9. POST /api/admin/import-csv - Admin CSV Import Pipeline
-app.post('/api/admin/import-csv', upload.single('file'), (req, res) => {
+app.post('/api/admin/import-csv', upload.single('file') as any, (req, res) => {
   try {
     const importType = (req.body.type as string) || 'villages'; // 'villages' or 'markets'
 

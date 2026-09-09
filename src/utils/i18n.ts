@@ -129,8 +129,8 @@ export interface Translations {
 
 export const TRANSLATIONS: Record<Language, Translations> = {
   en: {
-    appName: 'KrishiSetu',
-    tagline: 'Empowering Kisan • Smart Crop to Market Intelligence',
+    appName: 'MahaKrishi AI',
+    tagline: 'by IDEA FORGE • Forge a Smarter Future for Every Farmer',
     step1Title: 'Select Location',
     step2Title: 'Crop Details',
     step3Title: 'Market Comparison',
@@ -248,8 +248,8 @@ export const TRANSLATIONS: Record<Language, Translations> = {
   },
 
   hi: {
-    appName: 'कृषिसेतु',
-    tagline: 'किसान सशक्तिकरण • फसल से मंडी तक का भरोसेमंद साथी',
+    appName: 'महाकृषि AI',
+    tagline: 'IDEA FORGE द्वारा • हर किसान के लिए एक बेहतर और समृद्ध भविष्य',
     step1Title: 'स्थान चुनें',
     step2Title: 'फसल का विवरण',
     step3Title: 'मंडी तुलना',
@@ -367,8 +367,8 @@ export const TRANSLATIONS: Record<Language, Translations> = {
   },
 
   mr: {
-    appName: 'कृषीसेतू',
-    tagline: 'शेतकरी सक्षमीकरण • शेतातून थेट फायदेशीर बाजारपेठेकडे',
+    appName: 'महाकृषी AI',
+    tagline: 'IDEA FORGE निर्मित • प्रत्येक शेतकऱ्याच्या समृद्ध भविष्यासाठी',
     step1Title: 'स्थान निवडा',
     step2Title: 'पिकाचा तपशील',
     step3Title: 'बाजारभाव तुलना',
@@ -486,8 +486,8 @@ export const TRANSLATIONS: Record<Language, Translations> = {
   },
 
   te: {
-    appName: 'కృషిసేతు',
-    tagline: 'రైతు సంక్షేమం • పంటకు గరిష్ట గిట్టుబాటు ధర',
+    appName: 'మహాకృషి AI',
+    tagline: 'IDEA FORGE ద్వారా • ప్రతి రైతుకూ సమర్థవంతమైన మార్కెట్ భాగస్వామి',
     step1Title: 'స్థలాన్ని ఎంచుకోండి',
     step2Title: 'పంట వివరాలు',
     step3Title: 'మార్కెట్ పోలిక',

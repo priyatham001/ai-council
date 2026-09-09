@@ -1,6 +1,6 @@
 {
-  "name": "KrishiSetu - Kisan Crop & Market Platform",
-  "description": "Farmer-first crop-to-market discovery platform with AI crop quality camera, deterministic pricing, and India-wide Google Maps market routing.",
+  "name": "MahaKrishi AI - by IDEA FORGE",
+  "description": "Forge a Smarter Future for Every Farmer. AI-powered crop quality intelligence, dynamic location discovery, and smart market connections across India.",
   "requestFramePermissions": [
     "camera",
     "microphone",

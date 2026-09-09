@@ -44,14 +44,14 @@ interface CropDetailsStepProps {
 
 // 8 Lifecycle stages for AI quality assessment
 const LIFECYCLE_STAGES = [
-  { id: 1, label: 'Photo received' },
-  { id: 2, label: 'Image quality checked' },
-  { id: 3, label: 'Identifying crop...' },
-  { id: 4, label: 'Inspecting freshness' },
-  { id: 5, label: 'Checking maturity' },
-  { id: 6, label: 'Detecting visible damage' },
-  { id: 7, label: 'Checking deterioration' },
-  { id: 8, label: 'Preparing quality assessment' },
+  { id: 1, label: '📸 Loading harvest image...' },
+  { id: 2, label: '🔍 Analyzing surface texture...' },
+  { id: 3, label: '🌱 Detecting color uniformity...' },
+  { id: 4, label: '💧 Estimating moisture levels...' },
+  { id: 5, label: '⚠️ Checking for rot or fungal defects...' },
+  { id: 6, label: '📊 Comparing against AGMARK standards...' },
+  { id: 7, label: '🏷️ Calculating quality grade...' },
+  { id: 8, label: '✅ Inspection complete!' },
 ];
 
 export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
@@ -702,15 +702,67 @@ export const CropDetailsStep: React.FC<CropDetailsStepProps> = ({
           </div>
         </div>
 
-        {/* Standardized conversion display */}
+        {/* Standardized conversion & Animated Weighing Scale */}
         {typeof cropState.quantityValue === 'number' && cropState.quantityValue > 0 && (
-          <div className="mt-3 pt-3 border-t border-stone-100 flex items-center justify-between text-xs">
-            <span className="text-stone-500 font-medium">
-              {t.standardizedKg}:
-            </span>
-            <span className="font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-              {cropState.normalizedKilograms.toLocaleString()} kg ({ (cropState.normalizedKilograms / 100).toFixed(1) } Quintals)
-            </span>
+          <div className="mt-4 pt-4 border-t border-stone-200 dark:border-stone-800 space-y-4">
+            {/* Animated Agricultural Weighing Scale Graphic */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 via-stone-50 to-emerald-50 dark:from-stone-900 dark:via-stone-950 dark:to-emerald-950/40 border border-amber-300 dark:border-emerald-800/60 shadow-inner">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                {/* Scale Dial Indicator */}
+                <div className="flex items-center gap-3">
+                  <div className="relative w-16 h-16 rounded-full bg-stone-900 border-2 border-amber-400 flex items-center justify-center shadow-md shrink-0">
+                    <div className="absolute inset-1 rounded-full border border-dashed border-stone-700" />
+                    {/* Animated Needle */}
+                    <div
+                      className="absolute w-0.5 h-6 bg-red-500 origin-bottom transition-transform duration-700 ease-out"
+                      style={{
+                        transform: `rotate(${Math.min(
+                          130,
+                          Math.max(-130, ((cropState.normalizedKilograms % 10000) / 10000) * 260 - 130)
+                        )}deg)`,
+                        bottom: '50%',
+                      }}
+                    />
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-400 z-10 shadow" />
+                    <span className="absolute bottom-1 text-[8px] font-mono text-stone-400">KG</span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-amber-800 dark:text-amber-400 font-bold block">
+                      AGRICULTURAL WEIGHBRIDGE CALIBRATION
+                    </span>
+                    <h4 className="text-base sm:text-lg font-black text-stone-900 dark:text-white font-outfit">
+                      {cropState.quantityValue} {cropState.quantityUnit} = {cropState.normalizedKilograms.toLocaleString()} kg
+                    </h4>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400">
+                      Standardized for APMC freight, cess calculation & truck haulage
+                    </p>
+                  </div>
+                </div>
+
+                {/* Visual Produce Bags Platform */}
+                <div className="flex items-center gap-1.5 bg-white/80 dark:bg-stone-800/80 px-4 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700">
+                  <span className="text-xs text-stone-500 font-bold mr-1">Lot Stack:</span>
+                  <div className="flex items-center text-xl select-none">
+                    {Array.from({ length: Math.min(6, Math.max(1, Math.round(cropState.normalizedKilograms / 1000))) }).map((_, i) => (
+                      <span key={i} className="animate-bounce" style={{ animationDelay: `${i * 0.15}s` }}>
+                        📦
+                      </span>
+                    ))}
+                  </div>
+                  <span className="text-xs font-black text-emerald-700 dark:text-emerald-400 ml-1.5">
+                    {(cropState.normalizedKilograms / 1000).toFixed(2)} MT
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between text-xs text-stone-600 dark:text-stone-400 px-1">
+              <span>{t.standardizedKg}:</span>
+              <span className="font-extrabold text-emerald-800 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-950 px-2.5 py-1 rounded-md border border-emerald-300 dark:border-emerald-800">
+                {cropState.normalizedKilograms.toLocaleString()} kg ({ (cropState.normalizedKilograms / 100).toFixed(1) } Quintals / { (cropState.normalizedKilograms / 1000).toFixed(2) } Tonnes)
+              </span>
+            </div>
           </div>
         )}
       </section>
