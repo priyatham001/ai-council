@@ -1,6 +1,7 @@
 import express from 'express';
 import http from 'http';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import multer from 'multer';
@@ -43,6 +44,16 @@ app.get('/api/health', (req, res) => {
     service: 'KrishiSetu AI Crop Vision & India-Wide Market Discovery Engine',
     timestamp: new Date().toISOString(),
   });
+});
+
+// Download full project zip archive
+app.get(['/api/download-zip', '/download/KrishiSetu-Final.zip', '/KrishiSetu-Final.zip'], (req, res) => {
+  const zipPath = path.join(process.cwd(), 'KrishiSetu-Final.zip');
+  if (fs.existsSync(zipPath)) {
+    res.download(zipPath, 'KrishiSetu-Final.zip');
+  } else {
+    res.status(404).json({ error: 'Zip file not found on server' });
+  }
 });
 
 // System configuration and provider status endpoint

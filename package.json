@@ -1,5 +1,5 @@
 {
-  "name": "react-example",
+  "name": "krishisetu",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -26,7 +26,11 @@
     "react-dom": "^19.0.1",
     "react-markdown": "^10.1.0",
     "vite": "^6.2.3",
-    "ws": "^8.21.3"
+    "ws": "^8.21.3",
+    "react-router-dom": "^7.1.5",
+    "recharts": "^2.15.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

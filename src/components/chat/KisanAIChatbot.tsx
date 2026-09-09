@@ -68,7 +68,7 @@ export const KisanAIChatbot: React.FC<KisanAIChatbotProps> = ({
     {
       id: 'welcome',
       role: 'model',
-      text: `Namaste Kisan Bhai! 🙏 I am **MahaKrishi Kisan Mitra (महाकृषि किसान मित्र)** by **IDEA FORGE**, your dedicated AI crop quality assayer and APMC mandi advisor.\n\nNow equipped with **multi-model intelligence & Live Voice**:\n- 🌾 **General Advisor** (\`gemini-3.5-flash\`): APMC pricing, market trends & Agmark grading\n- ⚡ **Fast Mode** (\`gemini-3.1-flash-lite\`): Instant mandi lookups & quick translations\n- 🧠 **Deep Agronomy** (\`gemini-3.1-pro-preview\`): Complex pest diagnosis & freight negotiation\n- 🎙️ **Live Voice Assistant** (\`gemini-3.1-flash-live-preview\`): Real-time spoken conversations\n\nTap the microphone below to speak or ask any question!`,
+      text: `Namaste Kisan Bhai! 🙏 I am **KrishiSetu Kisan AI (कृषिसेतु किसान AI)** by **An Idea Forge Initiative**, your dedicated AI crop quality assayer and APMC mandi advisor.\n\nEquipped with **multi-model intelligence & Live Voice**:\n- 🌾 **General Advisor** (\`gemini-3.5-flash\`): APMC pricing, market trends & Agmark grading\n- ⚡ **Fast Mode** (\`gemini-3.1-flash-lite\`): Instant mandi lookups & quick translations\n- 🧠 **Deep Agronomy** (\`gemini-3.1-pro-preview\`): Complex pest diagnosis & freight negotiation\n- 🎙️ **Live Voice Assistant** (\`gemini-3.1-flash-live-preview\`): Real-time spoken conversations\n\nTap the microphone below to speak or ask any question!`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -76,6 +76,13 @@ export const KisanAIChatbot: React.FC<KisanAIChatbotProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  // Global listener to trigger opening the Kisan AI chatbot
+  useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener('open_kisan_ai', handleOpen);
+    return () => window.removeEventListener('open_kisan_ai', handleOpen);
+  }, []);
 
   // Initialize Speech Recognition
   useEffect(() => {

@@ -1,20 +1,65 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# 🌾 KrishiSetu (कृषिसेतु)
+### Farmer Intelligence & Agricultural Marketplace Platform
+*An Idea Forge Initiative*
 
-# Run and deploy your AI Studio app
+KrishiSetu is a unified, production-ready agricultural technology platform that bridges deep farm agronomic intelligence with transparent agricultural commerce on a single unified deployment.
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/dc9f672f-ed2c-4ca2-8cab-421ec73e2a0f
+## 🏛️ Architecture & Routing
 
-## Run Locally
+One Domain, One Deployment, One Unified Application:
 
-**Prerequisites:**  Node.js
+* **Main Landing Page**: `/`
+  * Interactive Agricultural Intelligence Orb
+  * Direct access to both core experiences
+  * Real-time mandi prices ticker and feature breakdown
+* **🌾 Farm Intelligence Experience**: `/crop-analysis`
+  * AI Crop Quality Assayer (Agmark Grade standard assessment via Gemini Vision)
+  * APMC Mandi price discovery with freight deduction calculations
+  * Storage longevity and moisture/foreign matter degradation prediction
+  * Net realization analysis (Immediate Mandi vs. Hold & Store vs. Direct Buyer)
+* **🚜 Farmer Marketplace Experience**: `/marketplace`
+  * **Dashboard**: `/marketplace/dashboard` (or `/marketplace`)
+  * **Digital Lots**: `/marketplace/lots` & `/marketplace/lots/new`
+  * **Verified Buyers**: `/marketplace/buyers`
+  * **Bids & Offers**: `/marketplace/offers`
+  * **Logistics & Transport**: `/marketplace/logistics`
+  * **Warehouse & Cold Storage**: `/marketplace/storage`
+  * **Escrow Transactions**: `/marketplace/transactions`
+  * **Grievance Redressal**: `/marketplace/grievances`
+  * **Market Explorer**: `/marketplace/markets`
+  * **AI Sell Advisor**: `/marketplace/advisor`
+* **🤖 Kisan AI**: Native multilingual AI assistant (English, हिन्दी, मराठी, తెలుగు) with Gemini reasoning and live voice mode.
 
+---
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+ or Node.js 20+
+- npm or pnpm
+
+### 1. Install Dependencies
+```bash
+npm install
+```
+
+### 2. Configure Environment
+Set your Gemini API key in `.env.local` or environment variables:
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+### 3. Run Development Server
+```bash
+npm run dev
+```
+Open `http://localhost:3000` in your browser.
+
+### 4. Production Build
+```bash
+npm run build
+npm start
+```
+

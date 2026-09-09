@@ -1,6 +1,6 @@
 {
-  "name": "MahaKrishi AI - by IDEA FORGE",
-  "description": "Forge a Smarter Future for Every Farmer. AI-powered crop quality intelligence, dynamic location discovery, and smart market connections across India.",
+  "name": "KrishiSetu - Farmer Intelligence & Agricultural Marketplace Platform",
+  "description": "From crop intelligence to the best market, KrishiSetu helps farmers make smarter agricultural decisions.",
   "requestFramePermissions": [
     "camera",
     "microphone",

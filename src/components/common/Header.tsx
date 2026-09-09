@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Language, LocationData } from '../../types/krishi';
 import { TRANSLATIONS } from '../../utils/i18n';
 import {
@@ -57,16 +58,15 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5">
         {/* Top bar: Brand + Helpline + View Tabs + Language + Dark Mode */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-emerald-900">
-          {/* Brand treatment: IDEA FORGE + MahaKrishi AI */}
+          {/* Brand treatment: IDEA FORGE + KrishiSetu */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => onSelectView('landing')}
+            <Link
+              to="/"
               className="flex items-center gap-2.5 text-left group"
             >
               {/* Forge + Sprout visual icon */}
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-500 text-stone-950 flex items-center justify-center text-xl shadow-md font-bold group-hover:scale-105 transition-transform">
-                <span>⚒️</span>
+                <span>🌾</span>
               </div>
               <div>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -78,35 +78,37 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 </div>
                 <p className="text-[11px] text-emerald-300 font-medium hidden sm:block">
-                  Forge a Smarter Future for Every Farmer
+                  Farmer Intelligence & Smart Agriculture
                 </p>
               </div>
-            </button>
+            </Link>
 
-            {/* Quick Navigation Tabs (Home / Overview vs Farm Workflow) */}
-            <div className="hidden md:flex items-center gap-1 bg-emerald-900/80 p-1 rounded-xl border border-emerald-800 ml-2">
-              <button
-                type="button"
-                onClick={() => onSelectView('landing')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                  activeView === 'landing'
-                    ? 'bg-amber-500 text-stone-950 shadow-sm'
-                    : 'text-emerald-200 hover:text-white'
-                }`}
+            {/* Quick Navigation Tabs: Home, Farm Intelligence, Marketplace */}
+            <div className="hidden lg:flex items-center gap-1 bg-emerald-900/80 p-1 rounded-xl border border-emerald-800 ml-2">
+              <Link
+                to="/"
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-200 hover:text-white transition-colors"
               >
-                Platform Overview
-              </button>
+                Home
+              </Link>
               <button
                 type="button"
                 onClick={() => onSelectView('workflow')}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
                   activeView === 'workflow'
-                    ? 'bg-amber-500 text-stone-950 shadow-sm'
+                    ? 'bg-emerald-500 text-stone-950 shadow-sm'
                     : 'text-emerald-200 hover:text-white'
                 }`}
               >
-                Farmer Workflow
+                🌱 Farm Intelligence
               </button>
+              <Link
+                to="/marketplace"
+                className="px-3 py-1 rounded-lg text-xs font-bold text-amber-300 hover:bg-amber-950/60 rounded-lg transition-colors flex items-center gap-1"
+              >
+                <span>🚜</span>
+                <span>Marketplace</span>
+              </Link>
             </div>
           </div>
 
