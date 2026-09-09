@@ -3,6 +3,7 @@
   "description": "Farmer-first crop-to-market discovery platform with AI crop quality camera, deterministic pricing, and India-wide Google Maps market routing.",
   "requestFramePermissions": [
     "camera",
+    "microphone",
     "geolocation"
   ],
   "majorCapabilities": [
