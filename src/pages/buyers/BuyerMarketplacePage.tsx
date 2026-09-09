@@ -22,7 +22,9 @@ import {
   Building2,
   Check,
   Compass,
-  FileText
+  FileText,
+  Map as MapIcon,
+  LayoutGrid
 } from 'lucide-react';
 import { lotService } from '../../agrilink/services/lotService';
 import { offerService } from '../../agrilink/services/offerService';
@@ -30,6 +32,8 @@ import { localStorageService } from '../../agrilink/services/storageService';
 import { DigitalLot, BuyerOffer } from '../../agrilink/types';
 import { DEMO_BUYERS } from '../../agrilink/data/mockData';
 import { PAN_INDIA_MARKETS } from '../../agrilink/data/panIndiaData';
+import { BuyerLotsGoogleMapView } from '../../components/buyers/BuyerLotsGoogleMapView';
+import { LotDetailsModal } from '../../components/buyers/LotDetailsModal';
 
 // Buyer Procurement Request Interface
 interface BuyerRequest {
@@ -116,10 +120,17 @@ export const BuyerMarketplacePage: React.FC = () => {
   const [searchCrop, setSearchCrop] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('All');
   const [selectedState, setSelectedState] = useState('All');
+  const [selectedDistance, setSelectedDistance] = useState('All');
+
+  // Lots View Mode: 'list' (cards) vs 'map' (Google Maps Platform)
+  const [lotViewMode, setLotViewMode] = useState<'list' | 'map'>('list');
 
   // Active lots from service
   const [lots, setLots] = useState<DigitalLot[]>([]);
   const [buyerRequests, setBuyerRequests] = useState<BuyerRequest[]>(DEFAULT_BUYER_REQUESTS);
+
+  // Detailed Listing Inspection Modal
+  const [selectedLotForDetails, setSelectedLotForDetails] = useState<DigitalLot | null>(null);
 
   // Offer Modal State
   const [selectedLotForOffer, setSelectedLotForOffer] = useState<DigitalLot | null>(null);
@@ -213,6 +224,26 @@ export const BuyerMarketplacePage: React.FC = () => {
     setTimeout(() => {
       setOfferSuccessToast(null);
     }, 5000);
+  };
+
+  // Handle Formal "I'm Interested" Submission
+  const handleInterestSubmitted = (
+    lotId: string,
+    info: {
+      buyerName: string;
+      buyerPhone: string;
+      quantityQuintals: number;
+      notes?: string;
+    }
+  ) => {
+    const updated = lotService.addInterestedBuyer(lotId, info);
+    if (updated) {
+      setLots(lotService.getAllLots());
+      setOfferSuccessToast(
+        `✓ Purchase interest of ${info.quantityQuintals} quintals sent directly to farmer ${updated.farmerName}!`
+      );
+      setTimeout(() => setOfferSuccessToast(null), 5000);
+    }
   };
 
   // Handle New Procurement Request Submission
@@ -433,104 +464,162 @@ export const BuyerMarketplacePage: React.FC = () => {
                 </select>
               </div>
 
-              <div className="text-xs text-stone-500 font-medium">
-                Showing <strong className="text-stone-900">{filteredLots.length}</strong> available lots
+              {/* View Switcher: List vs Google Map */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center bg-stone-100 p-1 rounded-xl border border-stone-300">
+                  <button
+                    type="button"
+                    onClick={() => setLotViewMode('list')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      lotViewMode === 'list'
+                        ? 'bg-white text-stone-900 shadow-xs'
+                        : 'text-stone-600 hover:text-stone-900'
+                    }`}
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span>Cards List</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLotViewMode('map')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      lotViewMode === 'map'
+                        ? 'bg-emerald-700 text-white shadow-xs'
+                        : 'text-stone-600 hover:text-stone-900'
+                    }`}
+                  >
+                    <MapIcon className="w-3.5 h-3.5" />
+                    <span>Google Map View</span>
+                  </button>
+                </div>
+
+                <div className="text-xs text-stone-500 font-medium hidden sm:block">
+                  <strong className="text-stone-900">{filteredLots.length}</strong> available lots
+                </div>
               </div>
             </div>
 
-            {/* Lots Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredLots.map((lot) => (
-                <div
-                  key={lot.id}
-                  className="bg-white rounded-2xl border border-stone-200/80 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
-                >
-                  <div className="space-y-3">
-                    {/* Header: Lot ID + Grade */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] font-mono uppercase bg-stone-100 text-stone-600 px-2 py-0.5 rounded border border-stone-200 font-bold">
-                          {lot.lotNumber}
-                        </span>
-                        <h3 className="text-lg font-black text-stone-900 mt-1">
-                          {lot.crop}
-                        </h3>
-                        <p className="text-xs text-stone-500">
-                          {lot.variety || 'Standard Hybrid'}
-                        </p>
-                      </div>
-
-                      <span
-                        className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
-                          lot.qualityGrade.includes('A')
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : 'bg-amber-50 text-amber-800 border-amber-200'
-                        }`}
-                      >
-                        {lot.qualityGrade}
-                      </span>
-                    </div>
-
-                    {/* Location & Farmer */}
-                    <div className="bg-stone-50 p-3 rounded-xl border border-stone-100 space-y-1.5 text-xs">
-                      <div className="flex items-center gap-1.5 text-stone-700">
-                        <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                        <span className="font-semibold">{lot.location || `${lot.district}, ${lot.state}`}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-stone-500 text-[11px] pt-1 border-t border-stone-200/60">
-                        <span>Farmer: <strong className="text-stone-800">{lot.farmerName}</strong></span>
-                        <span className="text-emerald-700 font-bold flex items-center gap-1">
-                          <ShieldCheck className="w-3 h-3" /> KYC Verified
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Metrics: Quantity & Asking Price */}
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <div className="bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
-                        <div className="text-[10px] uppercase font-bold text-stone-500">
-                          Available Lot Size
+            {/* Render Google Map View or Card Grid */}
+            {lotViewMode === 'map' ? (
+              <BuyerLotsGoogleMapView
+                lots={filteredLots}
+                selectedLot={selectedLotForDetails}
+                onSelectLot={(l) => setSelectedLotForDetails(l)}
+                onOpenDetails={(l) => setSelectedLotForDetails(l)}
+              />
+            ) : (
+              /* Lots Grid */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredLots.map((lot) => (
+                  <div
+                    key={lot.id}
+                    className="bg-white rounded-2xl border border-stone-200/80 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                  >
+                    <div className="space-y-3">
+                      {/* Header: Lot ID + Grade */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-mono uppercase bg-stone-100 text-stone-600 px-2 py-0.5 rounded border border-stone-200 font-bold">
+                            {lot.lotNumber}
+                          </span>
+                          <h3 className="text-lg font-black text-stone-900 mt-1">
+                            {lot.crop}
+                          </h3>
+                          <p className="text-xs text-stone-500">
+                            {lot.variety || 'Standard Hybrid'}
+                          </p>
                         </div>
-                        <div className="text-base font-black text-stone-900 mt-0.5">
-                          {lot.quantityQuintals} q
-                          <span className="text-[11px] font-normal text-stone-500">
-                            {' '}({(lot.quantityQuintals / 10).toFixed(1)} MT)
+
+                        <span
+                          className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                            lot.qualityGrade.includes('A')
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : 'bg-amber-50 text-amber-800 border-amber-200'
+                          }`}
+                        >
+                          {lot.qualityGrade}
+                        </span>
+                      </div>
+
+                      {/* Location & Farmer */}
+                      <div className="bg-stone-50 p-3 rounded-xl border border-stone-100 space-y-1.5 text-xs">
+                        <div className="flex items-center gap-1.5 text-stone-700">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                          <span className="font-semibold">{lot.location || `${lot.district}, ${lot.state}`}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-stone-500 text-[11px] pt-1 border-t border-stone-200/60">
+                          <span>Farmer: <strong className="text-stone-800">{lot.farmerName}</strong></span>
+                          <span className="text-emerald-700 font-bold flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3" /> KYC Verified
                           </span>
                         </div>
                       </div>
 
-                      <div className="bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
-                        <div className="text-[10px] uppercase font-bold text-stone-500">
-                          Farmer Asking Price
+                      {/* Metrics: Quantity & Asking Price */}
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <div className="bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
+                          <div className="text-[10px] uppercase font-bold text-stone-500">
+                            Available Lot Size
+                          </div>
+                          <div className="text-base font-black text-stone-900 mt-0.5">
+                            {lot.quantityQuintals} q
+                            <span className="text-[11px] font-normal text-stone-500">
+                              {' '}({(lot.quantityQuintals / 10).toFixed(1)} MT)
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-base font-black text-emerald-800 mt-0.5">
-                          ₹{lot.expectedPricePerQ.toLocaleString('en-IN')}
-                          <span className="text-[10px] font-normal text-stone-500">/q</span>
+
+                        <div className="bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
+                          <div className="text-[10px] uppercase font-bold text-stone-500">
+                            Farmer Asking Price
+                          </div>
+                          <div className="text-base font-black text-emerald-800 mt-0.5">
+                            ₹{lot.expectedPricePerQ.toLocaleString('en-IN')}
+                            <span className="text-[10px] font-normal text-stone-500">/q</span>
+                          </div>
                         </div>
+                      </div>
+
+                      {/* AI Verification Badge */}
+                      <div className="flex items-center justify-between text-[11px] text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-lg font-semibold border border-emerald-200">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>AI Assayed: {lot.qualityGrade}</span>
+                        </div>
+                        {lot.interestedBuyers && lot.interestedBuyers.length > 0 && (
+                          <span className="text-[10px] font-mono text-amber-800 font-bold bg-amber-200/80 px-1.5 py-0.5 rounded">
+                            {lot.interestedBuyers.length} buyers interested
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    {/* AI Verification Badge */}
-                    <div className="flex items-center gap-1.5 text-[11px] text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg font-semibold border border-emerald-200">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Kisan AI Verified Produce Passport</span>
+                    {/* Actions: View Details / Inspect + Direct Bid */}
+                    <div className="pt-2 border-t border-stone-100 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedLotForDetails(lot)}
+                        className="flex-1 py-2.5 px-3 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Inspect & Contact</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenOfferModal(lot)}
+                        className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        title="Submit Quick Commercial Offer"
+                      >
+                        <DollarSign className="w-4 h-4" />
+                        <span>Bid</span>
+                      </button>
                     </div>
                   </div>
-
-                  {/* Actions */}
-                  <div className="pt-2 border-t border-stone-100 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenOfferModal(lot)}
-                      className="flex-1 py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <DollarSign className="w-4 h-4" />
-                      <span>Make an Offer / Bid</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -1078,6 +1167,14 @@ export const BuyerMarketplacePage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Lot Details Modal with AI Quality Report & Express Interest */}
+      <LotDetailsModal
+        lot={selectedLotForDetails}
+        isOpen={!!selectedLotForDetails}
+        onClose={() => setSelectedLotForDetails(null)}
+        onInterestSubmitted={handleInterestSubmitted}
+      />
 
       {/* 3. Footer */}
       <footer className="bg-stone-900 text-stone-400 text-xs py-8 border-t border-stone-800 mt-12">

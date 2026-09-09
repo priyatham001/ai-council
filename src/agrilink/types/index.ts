@@ -157,6 +157,23 @@ export interface DigitalLot {
   acceptedOfferId?: string;
   buyerId?: string;
   buyerName?: string;
+  harvestStatus?: 'Ready to Sell' | 'Harvesting Soon' | 'Future Harvest';
+  contactMethod?: 'Phone Call' | 'WhatsApp';
+  aiEstimatedGrade?: 'Grade A' | 'Grade B' | 'Grade C';
+  farmerConfirmedGrade?: 'Grade A' | 'Grade B' | 'Grade C';
+  farmerNotes?: string;
+  aiConfidencePct?: number;
+  aiObservations?: string[];
+  latitude?: number;
+  longitude?: number;
+  interestedBuyers?: Array<{
+    id: string;
+    buyerName: string;
+    buyerPhone: string;
+    quantityQuintals: number;
+    notes?: string;
+    createdAt: string;
+  }>;
 }
 
 export interface BuyerOffer {

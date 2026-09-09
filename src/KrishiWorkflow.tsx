@@ -38,10 +38,14 @@ export const KrishiWorkflow: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Global Language state (English, Hindi, Marathi, Telugu)
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>(() => {
+    return (localStorage.getItem('krishi_language') as Language) || 'en';
+  });
 
   // Dark / Earth Mode state
-  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    return localStorage.getItem('krishi_theme') === 'dark';
+  });
 
   // View state: 'landing' (Platform Overview) vs 'workflow' (Farm Steps 1-4)
   const [activeView, setActiveView] = useState<'landing' | 'workflow'>('workflow');
@@ -57,27 +61,41 @@ export const KrishiWorkflow: React.FC = () => {
       const next = !prev;
       if (next) {
         document.documentElement.classList.add('dark');
+        localStorage.setItem('krishi_theme', 'dark');
       } else {
         document.documentElement.classList.remove('dark');
+        localStorage.setItem('krishi_theme', 'light');
       }
       return next;
     });
   };
 
   // Step Navigation: 1 (Location) -> 2 (Crop Details) -> 3 (Market Comparison) -> 4 (Deal Summary)
-  const [currentStep, setCurrentStep] = useState<number>(1);
+  // If location was already confirmed in onboarding, default to step 2 (Crop Details)
+  const [currentStep, setCurrentStep] = useState<number>(() => {
+    const savedLoc = localStorage.getItem('krishi_location');
+    return savedLoc ? 2 : 1;
+  });
 
-  // Location State (Default: Kadapa, YSR District, Andhra Pradesh — dynamically discovered across India)
-  const [location, setLocation] = useState<LocationData>({
-    latitude: 14.4673,
-    longitude: 78.8242,
-    country: 'India',
-    state: 'Andhra Pradesh',
-    district: 'YSR Kadapa',
-    city: 'Kadapa',
-    town: 'Kadapa',
-    formattedAddress: 'Kadapa (YSR District), Andhra Pradesh, India',
-    source: 'search',
+  // Location State (Default: Bhimavaram / Kadapa, AP, with fallback from localStorage)
+  const [location, setLocation] = useState<LocationData>(() => {
+    const saved = localStorage.getItem('krishi_location');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {}
+    }
+    return {
+      latitude: 16.5449,
+      longitude: 81.5212,
+      country: 'India',
+      state: 'Andhra Pradesh',
+      district: 'West Godavari',
+      city: 'Bhimavaram',
+      town: 'Bhimavaram',
+      formattedAddress: 'Bhimavaram, West Godavari District, Andhra Pradesh, India',
+      source: 'search',
+    };
   });
 
   // Step 2 Crop Selection State

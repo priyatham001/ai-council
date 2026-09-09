@@ -32,6 +32,15 @@ export const lotService = {
     farmerPhone?: string;
     isAggregated?: boolean;
     fpoId?: string;
+    harvestStatus?: 'Ready to Sell' | 'Harvesting Soon' | 'Future Harvest';
+    contactMethod?: 'Phone Call' | 'WhatsApp';
+    aiEstimatedGrade?: 'Grade A' | 'Grade B' | 'Grade C';
+    farmerConfirmedGrade?: 'Grade A' | 'Grade B' | 'Grade C';
+    farmerNotes?: string;
+    aiConfidencePct?: number;
+    aiObservations?: string[];
+    latitude?: number;
+    longitude?: number;
   }): DigitalLot {
     const persona = localStorageService.getPersona();
     const state = data.state || persona.state || 'Maharashtra';
@@ -68,7 +77,17 @@ export const lotService = {
       status: 'Published',
       createdAt: new Date().toISOString(),
       isAggregated: data.isAggregated,
-      fpoId: data.fpoId
+      fpoId: data.fpoId,
+      harvestStatus: data.harvestStatus || 'Ready to Sell',
+      contactMethod: data.contactMethod || 'Phone Call',
+      aiEstimatedGrade: data.aiEstimatedGrade || data.qualityGrade,
+      farmerConfirmedGrade: data.farmerConfirmedGrade || data.qualityGrade,
+      farmerNotes: data.farmerNotes,
+      aiConfidencePct: data.aiConfidencePct || 89,
+      aiObservations: data.aiObservations || ['Visual check conforms to Agmark grading parameters'],
+      latitude: data.latitude,
+      longitude: data.longitude,
+      interestedBuyers: [],
     };
 
     const currentLots = this.getAllLots();
@@ -76,6 +95,44 @@ export const lotService = {
     localStorageService.saveLots(updated);
 
     return newLot;
+  },
+
+  addInterestedBuyer(
+    lotId: string,
+    buyer: {
+      buyerName: string;
+      buyerPhone: string;
+      quantityQuintals: number;
+      notes?: string;
+    }
+  ): DigitalLot | null {
+    const lots = this.getAllLots();
+    let updatedLot: DigitalLot | null = null;
+
+    const newLots = lots.map((lot) => {
+      if (lot.id === lotId) {
+        const existingInquiries = lot.interestedBuyers || [];
+        const newInquiry = {
+          id: `inq-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          buyerName: buyer.buyerName,
+          buyerPhone: buyer.buyerPhone,
+          quantityQuintals: buyer.quantityQuintals,
+          notes: buyer.notes,
+          createdAt: new Date().toISOString(),
+        };
+
+        updatedLot = {
+          ...lot,
+          status: 'Offers Received',
+          interestedBuyers: [newInquiry, ...existingInquiries],
+        };
+        return updatedLot;
+      }
+      return lot;
+    });
+
+    localStorageService.saveLots(newLots);
+    return updatedLot;
   },
 
   updateLotStatus(lotId: string, status: LotStatus, extraProps?: Partial<DigitalLot>) {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { LandingOnboardingFlow } from './components/onboarding/LandingOnboardingFlow';
 import { HomePage } from './pages/Home/HomePage';
 import { KrishiWorkflow } from './KrishiWorkflow';
 import { BuyerMarketplacePage } from './pages/buyers/BuyerMarketplacePage';
@@ -23,8 +24,12 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Main Landing Page */}
-        <Route path="/" element={<HomePage />} />
+        {/* Main Master Landing & Onboarding Flow */}
+        <Route path="/" element={<LandingOnboardingFlow />} />
+        <Route path="/onboarding" element={<LandingOnboardingFlow />} />
+        <Route path="/welcome" element={<LandingOnboardingFlow />} />
+        <Route path="/portal" element={<HomePage />} />
+        <Route path="/overview" element={<HomePage />} />
 
         {/* Unified Farmer Experience: Merged Crop Analysis & Marketplace */}
         <Route path="/farmer" element={<KrishiWorkflow />} />

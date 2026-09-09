@@ -10,7 +10,12 @@ import {
   Clock,
   Truck,
   Filter,
-  Eye
+  Eye,
+  Users,
+  Phone,
+  MessageCircle,
+  X,
+  Sparkles,
 } from 'lucide-react';
 import { lotService } from '../../services/lotService';
 import { DigitalLot, LotStatus } from '../../types';
@@ -20,6 +25,7 @@ export const LotsPage: React.FC = () => {
   const [lots, setLots] = useState<DigitalLot[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedLotForQr, setSelectedLotForQr] = useState<DigitalLot | null>(null);
+  const [selectedLotForBuyers, setSelectedLotForBuyers] = useState<DigitalLot | null>(null);
 
   useEffect(() => {
     const load = () => setLots(lotService.getAllLots());
@@ -161,6 +167,28 @@ export const LotsPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Interested Buyers Banner */}
+              {lot.interestedBuyers && lot.interestedBuyers.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setSelectedLotForBuyers(lot)}
+                  className="w-full py-2 px-3 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-xl text-xs font-bold text-amber-900 flex items-center justify-between transition-colors cursor-pointer shadow-xs"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-amber-600" />
+                    <span>{lot.interestedBuyers.length} Verified Buyer{lot.interestedBuyers.length > 1 ? 's' : ''} Interested</span>
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase bg-amber-200 text-amber-900 px-2 py-0.5 rounded">
+                    View & Call →
+                  </span>
+                </button>
+              ) : (
+                <div className="text-[11px] text-stone-500 flex items-center gap-1.5 px-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Live on Buyer Marketplace • Awaiting incoming inquiries</span>
+                </div>
+              )}
+
               <p className="text-[11px] text-gray-700 line-clamp-2 pt-1 border-t border-gray-100">
                 {lot.description}
               </p>
@@ -170,23 +198,127 @@ export const LotsPage: React.FC = () => {
             <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
               <button
                 onClick={() => setSelectedLotForQr(lot)}
-                className="flex-1 py-2 bg-gray-50 hover:bg-gray-100 text-gray-800 rounded-lg text-xs font-bold border border-gray-200 transition-colors flex items-center justify-center gap-1.5"
+                className="flex-1 py-2 bg-gray-50 hover:bg-gray-100 text-gray-800 rounded-lg text-xs font-bold border border-gray-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Eye className="w-3.5 h-3.5 text-gray-700" />
                 <span>Passport</span>
               </button>
 
-              <Link
-                to="/farmer/offers"
-                className="flex-1 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 shadow-2xs"
+              <button
+                type="button"
+                onClick={() => setSelectedLotForBuyers(lot)}
+                className="flex-1 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
               >
-                <span>Offers</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+                <Users className="w-3.5 h-3.5" />
+                <span>Buyers ({lot.interestedBuyers?.length || 0})</span>
+              </button>
             </div>
           </div>
         ))}
       </div>
+
+      <QRCodeModal
+        lot={selectedLotForQr}
+        isOpen={!!selectedLotForQr}
+        onClose={() => setSelectedLotForQr(null)}
+      />
+
+      {/* Interested Buyers List Modal */}
+      {selectedLotForBuyers && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+              <div>
+                <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded uppercase">
+                  Direct Buyer Demand
+                </span>
+                <h3 className="text-lg font-black text-stone-900 mt-1">
+                  Interested Buyers for {selectedLotForBuyers.crop}
+                </h3>
+                <p className="text-xs text-stone-600">
+                  Lot: {selectedLotForBuyers.lotNumber} • {selectedLotForBuyers.quantityQuintals} Quintals
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedLotForBuyers(null)}
+                className="text-stone-400 hover:text-stone-700 p-1.5 rounded-xl hover:bg-stone-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {selectedLotForBuyers.interestedBuyers && selectedLotForBuyers.interestedBuyers.length > 0 ? (
+              <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+                {selectedLotForBuyers.interestedBuyers.map((b) => (
+                  <div
+                    key={b.id}
+                    className="p-4 rounded-2xl border-2 border-stone-200 bg-stone-50 hover:bg-emerald-50/40 hover:border-emerald-300 transition-all space-y-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-bold text-sm text-stone-900">{b.buyerName}</h4>
+                        <span className="text-[11px] text-stone-500 font-medium">
+                          Requested: <strong className="text-emerald-700">{b.quantityQuintals} Quintals</strong>
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-stone-400 font-mono">
+                        {new Date(b.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    {b.notes && (
+                      <p className="text-xs text-stone-700 italic bg-white p-2 rounded-lg border border-stone-200">
+                        "{b.notes}"
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <a
+                        href={`tel:${b.buyerPhone}`}
+                        className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>Call ({b.buyerPhone})</span>
+                      </a>
+
+                      <a
+                        href={`https://wa.me/${b.buyerPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                          `Namaste ${b.buyerName}, I saw your interest in my ${selectedLotForBuyers.crop} lot (${selectedLotForBuyers.lotNumber}) on KrishiSetu. Let us discuss delivery.`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="py-2 px-3 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>WhatsApp</span>
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center space-y-2 text-stone-500">
+                <Users className="w-10 h-10 mx-auto text-stone-300" />
+                <p className="text-xs font-semibold">No buyer inquiries registered yet for this lot.</p>
+                <p className="text-[11px] text-stone-400">
+                  Your lot is actively promoted to verified institutional buyers and local aggregators.
+                </p>
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-stone-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedLotForBuyers(null)}
+                className="px-4 py-2 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold text-xs cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <QRCodeModal
         lot={selectedLotForQr}
