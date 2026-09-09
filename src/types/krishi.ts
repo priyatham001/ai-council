@@ -1,4 +1,4 @@
-export type Language = 'en' | 'hi' | 'mr' | 'te';
+export type Language = 'en' | 'hi' | 'mr' | 'te' | 'ta' | 'kn' | 'ml';
 
 export type CropCategory = 'all' | 'cereals' | 'pulses' | 'vegetables' | 'fruits' | 'commercial';
 
@@ -20,9 +20,13 @@ export interface CropItem {
     hi: string;
     mr: string;
     te: string;
+    ta?: string;
+    kn?: string;
+    ml?: string;
   };
   category: 'cereals' | 'pulses' | 'vegetables' | 'fruits' | 'commercial' | 'other';
   icon: string;
+  imageUrl?: string;
   defaultUnit: WeightUnit;
   modalPrice: number; // ₹ per quintal (100 kg)
   minPrice: number;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import {
   Package,
   DollarSign,
@@ -22,10 +22,6 @@ import {
 } from './types/krishi';
 import { CROP_DATABASE } from './data/cropsData';
 import { Header } from './components/common/Header';
-import { LocationSelector } from './components/step1/LocationSelector';
-import { CropDetailsStep } from './components/step2/CropDetailsStep';
-import { MarketComparisonStep } from './components/step3/MarketComparisonStep';
-import { DealSummaryStep } from './components/step4/DealSummaryStep';
 import { GoogleMapsProvider } from './components/map/GoogleMapsProvider';
 import { KisanAIChatbot } from './components/chat/KisanAIChatbot';
 import { PlatformOverview } from './components/public/PlatformOverview';
@@ -33,8 +29,10 @@ import { LotsPage } from './agrilink/pages/farmer/LotsPage';
 import { OffersPage } from './agrilink/pages/farmer/OffersPage';
 import { LogisticsPage } from './agrilink/pages/farmer/LogisticsPage';
 import { NationalMarketMap } from './agrilink/components/common/NationalMarketMap';
+import { FarmerGuidedFlow } from './components/farmer/FarmerGuidedFlow';
 
 export const KrishiWorkflow: React.FC = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Global Language state (English, Hindi, Marathi, Telugu)
@@ -77,7 +75,7 @@ export const KrishiWorkflow: React.FC = () => {
     return savedLoc ? 2 : 1;
   });
 
-  // Location State (Default: Bhimavaram / Kadapa, AP, with fallback from localStorage)
+  // Location State (Default: Kadapa, Andhra Pradesh, with fallback from localStorage)
   const [location, setLocation] = useState<LocationData>(() => {
     const saved = localStorage.getItem('krishi_location');
     if (saved) {
@@ -86,14 +84,14 @@ export const KrishiWorkflow: React.FC = () => {
       } catch {}
     }
     return {
-      latitude: 16.5449,
-      longitude: 81.5212,
+      latitude: 14.4673,
+      longitude: 78.8242,
       country: 'India',
       state: 'Andhra Pradesh',
-      district: 'West Godavari',
-      city: 'Bhimavaram',
-      town: 'Bhimavaram',
-      formattedAddress: 'Bhimavaram, West Godavari District, Andhra Pradesh, India',
+      district: 'YSR Kadapa',
+      city: 'Kadapa',
+      town: 'Kadapa',
+      formattedAddress: 'Kadapa, YSR Kadapa District, Andhra Pradesh, India',
       source: 'search',
     };
   });
@@ -330,66 +328,19 @@ export const KrishiWorkflow: React.FC = () => {
               <LogisticsPage />
             </div>
           ) : (
-            /* FARMER STEP-BY-STEP SELL JOURNEY: Village -> Crop -> Mandi Markets -> Deal Slip */
-            <>
-              {currentStep === 1 && (
-                <LocationSelector
-                  language={language}
-                  currentLocation={location}
-                  onSelectLocation={handleSelectLocation}
-                  onContinue={() => setCurrentStep(2)}
-                />
-              )}
-
-              {currentStep === 2 && (
-                <CropDetailsStep
-                  language={language}
-                  cropState={cropState}
-                  onUpdateCropState={handleUpdateCropState}
-                  onContinue={() => {
-                    if (canNavigateToStep3) {
-                      setCurrentStep(3);
-                    }
-                  }}
-                  onBack={() => setCurrentStep(1)}
-                />
-              )}
-
-              {currentStep === 3 && (
-                <MarketComparisonStep
-                  language={language}
-                  location={location}
-                  cropState={cropState}
-                  onSelectMarketForDeal={(mktResult) => {
-                    setSelectedMarketResult(mktResult);
-                    setCurrentStep(4);
-                  }}
-                  onBack={() => setCurrentStep(2)}
-                />
-              )}
-
-              {currentStep === 4 && selectedMarketResult && (
-                <DealSummaryStep
-                  language={language}
-                  location={location}
-                  cropState={cropState}
-                  marketResult={selectedMarketResult}
-                  onRestart={() => {
-                    setCurrentStep(2);
-                  }}
-                  onBack={() => setCurrentStep(3)}
-                  onChangeLocation={() => setCurrentStep(1)}
-                  onRecheckCrop={() => setCurrentStep(2)}
-                  onSelectMarket={(mktResult) => setSelectedMarketResult(mktResult)}
-                  onListCropOnMarketplace={() => {
-                    setFarmerTab('lots');
-                  }}
-                  onViewBuyerOffers={() => {
-                    setFarmerTab('offers');
-                  }}
-                />
-              )}
-            </>
+            /* COMPREHENSIVE 7-STEP FARMER GUIDED EXPERIENCE */
+            <FarmerGuidedFlow
+              location={location}
+              language={language}
+              onChangeLocationClick={() => {
+                const saved = localStorage.getItem('krishi_location');
+                if (saved) {
+                  localStorage.removeItem('krishi_location');
+                }
+                navigate('/onboarding');
+              }}
+              onLanguageChange={setLanguage}
+            />
           )}
         </main>
 

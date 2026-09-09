@@ -31,15 +31,17 @@ interface LanguageOption {
 }
 
 const LANGUAGES: LanguageOption[] = [
-  { code: 'en', label: 'English', native: 'English', greeting: 'Welcome to KrishiSetu' },
-  { code: 'te', label: 'Telugu', native: 'తెలుగు', greeting: 'కృషిసేతుకి స్వాగతం' },
-  { code: 'hi', label: 'Hindi', native: 'हिंदी', greeting: 'कृषिसेतु में आपका स्वागत है' },
-  { code: 'mr', label: 'Marathi', native: 'मराठी', greeting: 'कृषीसेतू मध्ये आपले स्वागत आहे' },
+  { code: 'en', label: 'English', native: 'English', greeting: 'Welcome to Kisan Setu' },
+  { code: 'te', label: 'Telugu', native: 'తెలుగు', greeting: 'కిసాన్ సేతుకి స్వాగతం' },
+  { code: 'hi', label: 'Hindi', native: 'हिन्दी', greeting: 'किसान सेतु में आपका स्वागत है' },
+  { code: 'ta', label: 'Tamil', native: 'தமிழ்', greeting: 'கிசான் சேதுவிற்கு நல்வரவு' },
+  { code: 'kn', label: 'Kannada', native: 'ಕನ್ನಡ', greeting: 'ಕಿಸಾನ್ ಸೇತುಗೆ ಸುಸ್ವಾಗತ' },
+  { code: 'ml', label: 'Malayalam', native: 'മലയാളം', greeting: 'കിസാൻ സേതുവിലേക്ക് സ്വാഗതം' },
 ];
 
 const POPULAR_SEARCH_PRESETS = [
-  { name: 'Bhimavaram', district: 'West Godavari', state: 'Andhra Pradesh', lat: 16.5449, lng: 81.5212 },
   { name: 'Kadapa', district: 'YSR Kadapa', state: 'Andhra Pradesh', lat: 14.4673, lng: 78.8242 },
+  { name: 'Proddatur', district: 'YSR Kadapa', state: 'Andhra Pradesh', lat: 14.7527, lng: 78.5524 },
   { name: 'Guntur', district: 'Guntur', state: 'Andhra Pradesh', lat: 16.3067, lng: 80.4365 },
   { name: 'Warangal', district: 'Warangal', state: 'Telangana', lat: 17.9689, lng: 79.5941 },
   { name: 'Nizamabad', district: 'Nizamabad', state: 'Telangana', lat: 18.6725, lng: 78.0941 },
@@ -85,14 +87,14 @@ export const LandingOnboardingFlow: React.FC = () => {
       } catch {}
     }
     return {
-      latitude: 16.5449,
-      longitude: 81.5212,
+      latitude: 14.4673,
+      longitude: 78.8242,
       country: 'India',
       state: 'Andhra Pradesh',
-      district: 'West Godavari',
-      city: 'Bhimavaram',
-      town: 'Bhimavaram',
-      formattedAddress: 'Bhimavaram, West Godavari District, Andhra Pradesh, India',
+      district: 'YSR Kadapa',
+      city: 'Kadapa',
+      town: 'Kadapa',
+      formattedAddress: 'Kadapa, YSR Kadapa District, Andhra Pradesh, India',
       source: 'search',
     };
   });
@@ -155,13 +157,19 @@ export const LandingOnboardingFlow: React.FC = () => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
 
+        // Immediately update coordinates so phase 2 shows the live GPS coordinates
+        setLocation((prev) => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng,
+        }));
+
         try {
           const locData = await reverseGeocodeLocation(lat, lng);
-          // Wait for phase 4 to be shown briefly before zooming to map
           setTimeout(() => {
             setLocation(locData);
             setLocationStepMode('map_preview');
-          }, 3200);
+          }, 2400);
         } catch (err) {
           console.warn('Reverse geocode error, using precise coordinates:', err);
           setTimeout(() => {
@@ -173,7 +181,7 @@ export const LandingOnboardingFlow: React.FC = () => {
               source: 'gps',
             }));
             setLocationStepMode('map_preview');
-          }, 3200);
+          }, 2400);
         }
       },
       (error) => {
@@ -618,7 +626,7 @@ export const LandingOnboardingFlow: React.FC = () => {
                       </div>
                       {gpsPhase >= 2 ? (
                         <span className="text-emerald-600 dark:text-emerald-400 font-mono text-[11px]">
-                          16.5449° N, 81.5212° E
+                          {location.latitude.toFixed(4)}° N, {location.longitude.toFixed(4)}° E
                         </span>
                       ) : (
                         <span>Pending</span>

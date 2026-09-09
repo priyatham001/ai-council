@@ -747,6 +747,58 @@ export const CROP_DATABASE: CropItem[] = [
   },
 ];
 
+export const CROP_IMAGE_MAP: Record<string, string> = {
+  tomato: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&auto=format&fit=crop&q=80',
+  onion: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=800&auto=format&fit=crop&q=80',
+  potato: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=800&auto=format&fit=crop&q=80',
+  paddy: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&auto=format&fit=crop&q=80',
+  wheat: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&auto=format&fit=crop&q=80',
+  maize: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=800&auto=format&fit=crop&q=80',
+  cotton: 'https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=800&auto=format&fit=crop&q=80',
+  chilli: 'https://images.unsplash.com/photo-1588252303782-cb80119abd6d?w=800&auto=format&fit=crop&q=80',
+  banana: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=800&auto=format&fit=crop&q=80',
+  mango: 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=800&auto=format&fit=crop&q=80',
+  turmeric: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=800&auto=format&fit=crop&q=80',
+  soybean: 'https://images.unsplash.com/photo-1599940824399-b87987ceb72a?w=800&auto=format&fit=crop&q=80',
+  groundnut: 'https://images.unsplash.com/photo-1567894340315-735d7c361db0?w=800&auto=format&fit=crop&q=80',
+  sugarcane: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800&auto=format&fit=crop&q=80',
+  pomegranate: 'https://images.unsplash.com/photo-1541344999736-83eca272f6fc?w=800&auto=format&fit=crop&q=80',
+  grapes: 'https://images.unsplash.com/photo-1537640538966-79f369143f8f?w=800&auto=format&fit=crop&q=80',
+  orange: 'https://images.unsplash.com/photo-1582979512210-99b6a53386f9?w=800&auto=format&fit=crop&q=80',
+  papaya: 'https://images.unsplash.com/photo-1517282009859-f000ec3b26fe?w=800&auto=format&fit=crop&q=80',
+  cauliflower: 'https://images.unsplash.com/photo-1568584711075-3d021a7c3ca3?w=800&auto=format&fit=crop&q=80',
+  cabbage: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=800&auto=format&fit=crop&q=80',
+  carrot: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=800&auto=format&fit=crop&q=80',
+  sorghum: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&auto=format&fit=crop&q=80',
+  pearl_millet: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&auto=format&fit=crop&q=80',
+  finger_millet: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&auto=format&fit=crop&q=80',
+  toor_dal: 'https://images.unsplash.com/photo-1515543237350-b3eea1ec8082?w=800&auto=format&fit=crop&q=80',
+  moong: 'https://images.unsplash.com/photo-1515543237350-b3eea1ec8082?w=800&auto=format&fit=crop&q=80',
+  urad: 'https://images.unsplash.com/photo-1515543237350-b3eea1ec8082?w=800&auto=format&fit=crop&q=80',
+  chana: 'https://images.unsplash.com/photo-1515543237350-b3eea1ec8082?w=800&auto=format&fit=crop&q=80',
+  okra: 'https://images.unsplash.com/photo-1425543103986-22abb7d7e8d2?w=800&auto=format&fit=crop&q=80',
+  garlic: 'https://images.unsplash.com/photo-1540148426945-6cf22a6b2383?w=800&auto=format&fit=crop&q=80',
+  ginger: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=800&auto=format&fit=crop&q=80',
+  cardamom: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80',
+  black_pepper: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80',
+  default: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&auto=format&fit=crop&q=80',
+};
+
+export function getCropImageUrl(cropId: string): string {
+  const cleanId = (cropId || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
+  for (const [key, url] of Object.entries(CROP_IMAGE_MAP)) {
+    if (key !== 'default' && cleanId.includes(key)) return url;
+  }
+  return CROP_IMAGE_MAP.default;
+}
+
+// Automatically enrich CROP_DATABASE items with reliable agricultural photo URLs
+CROP_DATABASE.forEach((c) => {
+  if (!c.imageUrl) {
+    c.imageUrl = getCropImageUrl(c.id);
+  }
+});
+
 // Reusable single filtering function adhering strictly to PART 1 rules
 export function filterCrops(
   crops: CropItem[],
@@ -764,17 +816,20 @@ export function filterCrops(
       return false;
     }
 
-    // 2. Search Query Filter (name, english name, hindi, marathi, telugu)
+    // 2. Search Query Filter (name, english name, hindi, marathi, telugu, etc.)
     if (!normalizedQuery) {
       return true;
     }
 
     const nameMatch = crop.name.toLowerCase().includes(normalizedQuery);
-    const enMatch = crop.localNames.en.toLowerCase().includes(normalizedQuery);
-    const hiMatch = crop.localNames.hi.toLowerCase().includes(normalizedQuery);
-    const mrMatch = crop.localNames.mr.toLowerCase().includes(normalizedQuery);
-    const teMatch = crop.localNames.te.toLowerCase().includes(normalizedQuery);
+    const enMatch = (crop.localNames.en || '').toLowerCase().includes(normalizedQuery);
+    const hiMatch = (crop.localNames.hi || '').toLowerCase().includes(normalizedQuery);
+    const mrMatch = (crop.localNames.mr || '').toLowerCase().includes(normalizedQuery);
+    const teMatch = (crop.localNames.te || '').toLowerCase().includes(normalizedQuery);
+    const taMatch = (crop.localNames.ta || '').toLowerCase().includes(normalizedQuery);
+    const knMatch = (crop.localNames.kn || '').toLowerCase().includes(normalizedQuery);
+    const mlMatch = (crop.localNames.ml || '').toLowerCase().includes(normalizedQuery);
 
-    return nameMatch || enMatch || hiMatch || mrMatch || teMatch;
+    return nameMatch || enMatch || hiMatch || mrMatch || teMatch || taMatch || knMatch || mlMatch;
   });
 }

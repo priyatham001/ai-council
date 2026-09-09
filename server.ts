@@ -1208,7 +1208,380 @@ app.post('/api/admin/import-csv', upload.single('file') as any, (req, res) => {
   }
 });
 
-// Setup Live API WebSocket handler for gemini-3.1-flash-live-preview
+// =========================================================================
+// FARMER & BUYER MARKETPLACE LISTINGS SYSTEM
+// =========================================================================
+function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+interface CropListing {
+  id: string;
+  farmerName: string;
+  farmerPhone: string;
+  preferredContact: 'call' | 'whatsapp' | 'both';
+  cropId: string;
+  cropName: string;
+  variety?: string;
+  category: string;
+  quantity: number;
+  unit: 'kg' | 'quintal' | 'tonne';
+  quantityKg: number;
+  expectedPricePerUnit: number;
+  totalPriceEstimate: number;
+  qualityGrade: 'Grade A' | 'Grade B' | 'Grade C' | 'Custom';
+  qualityTag: string;
+  declaredBy: string;
+  harvestDate: string;
+  photos: string[];
+  location: {
+    village?: string;
+    city: string;
+    district: string;
+    state: string;
+    latitude: number;
+    longitude: number;
+    formattedAddress: string;
+  };
+  createdAt: string;
+  inquiriesCount: number;
+}
+
+const GLOBAL_LISTINGS: CropListing[] = [
+  {
+    id: 'list-ap-kadapa-chilli',
+    farmerName: 'Ramesh Reddy',
+    farmerPhone: '9848012345',
+    preferredContact: 'both',
+    cropId: 'chilli',
+    cropName: 'Red Chilli (Guntur Sannam / Teja)',
+    variety: 'Teja Bold Red',
+    category: 'vegetables',
+    quantity: 60,
+    unit: 'quintal',
+    quantityKg: 6000,
+    expectedPricePerUnit: 18500,
+    totalPriceEstimate: 1110000,
+    qualityGrade: 'Grade A',
+    qualityTag: 'Grade A (Premium quality)',
+    declaredBy: 'Farmer-declared',
+    harvestDate: '2025-02-28',
+    photos: [
+      'https://images.unsplash.com/photo-1588252303782-cb80119abd6d?w=800&auto=format&fit=crop&q=80',
+    ],
+    location: {
+      village: 'Chennur',
+      city: 'Kadapa',
+      district: 'YSR Kadapa',
+      state: 'Andhra Pradesh',
+      latitude: 14.4673,
+      longitude: 78.8242,
+      formattedAddress: 'Chennur, Kadapa Mandal, YSR Kadapa District, Andhra Pradesh',
+    },
+    createdAt: new Date(Date.now() - 3600000 * 8).toISOString(),
+    inquiriesCount: 3,
+  },
+  {
+    id: 'list-ap-kadapa-banana',
+    farmerName: 'Venkata Subbaiah',
+    farmerPhone: '9440567890',
+    preferredContact: 'call',
+    cropId: 'banana',
+    cropName: 'Banana (Grand Naine G9)',
+    variety: 'G9 Tissue Culture',
+    category: 'fruits',
+    quantity: 12,
+    unit: 'tonne',
+    quantityKg: 12000,
+    expectedPricePerUnit: 2200,
+    totalPriceEstimate: 264000,
+    qualityGrade: 'Grade A',
+    qualityTag: 'Grade A (Premium quality)',
+    declaredBy: 'Farmer-declared',
+    harvestDate: '2025-03-01',
+    photos: [
+      'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=800&auto=format&fit=crop&q=80',
+    ],
+    location: {
+      village: 'Vempalli',
+      city: 'Pulivendula',
+      district: 'YSR Kadapa',
+      state: 'Andhra Pradesh',
+      latitude: 14.4167,
+      longitude: 78.2333,
+      formattedAddress: 'Vempalli, Pulivendula Mandal, YSR Kadapa District, Andhra Pradesh',
+    },
+    createdAt: new Date(Date.now() - 3600000 * 14).toISOString(),
+    inquiriesCount: 5,
+  },
+  {
+    id: 'list-ap-kurnool-cotton',
+    farmerName: 'Suresh Naidu',
+    farmerPhone: '9989012345',
+    preferredContact: 'whatsapp',
+    cropId: 'cotton',
+    cropName: 'Raw Cotton (Kapas)',
+    variety: 'Bollgard II Hybrid',
+    category: 'commercial',
+    quantity: 80,
+    unit: 'quintal',
+    quantityKg: 8000,
+    expectedPricePerUnit: 7450,
+    totalPriceEstimate: 596000,
+    qualityGrade: 'Grade B',
+    qualityTag: 'Grade B (Standard quality)',
+    declaredBy: 'Farmer-declared',
+    harvestDate: '2025-02-25',
+    photos: [
+      'https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=800&auto=format&fit=crop&q=80',
+    ],
+    location: {
+      village: 'Orvakal',
+      city: 'Kurnool',
+      district: 'Kurnool',
+      state: 'Andhra Pradesh',
+      latitude: 15.8281,
+      longitude: 78.0373,
+      formattedAddress: 'Orvakal, Kurnool District, Andhra Pradesh',
+    },
+    createdAt: new Date(Date.now() - 3600000 * 20).toISOString(),
+    inquiriesCount: 2,
+  },
+  {
+    id: 'list-ap-paddy-bpt',
+    farmerName: 'Krishna Murthy',
+    farmerPhone: '9849123456',
+    preferredContact: 'both',
+    cropId: 'paddy',
+    cropName: 'Paddy (BPT 5204 Sona Masoori)',
+    variety: 'BPT 5204 Fine Grain',
+    category: 'cereals',
+    quantity: 150,
+    unit: 'quintal',
+    quantityKg: 15000,
+    expectedPricePerUnit: 2550,
+    totalPriceEstimate: 382500,
+    qualityGrade: 'Grade A',
+    qualityTag: 'Grade A (Premium quality)',
+    declaredBy: 'Farmer-declared',
+    harvestDate: '2025-03-02',
+    photos: [
+      'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&auto=format&fit=crop&q=80',
+    ],
+    location: {
+      village: 'Proddatur Rural',
+      city: 'Proddatur',
+      district: 'YSR Kadapa',
+      state: 'Andhra Pradesh',
+      latitude: 14.7527,
+      longitude: 78.5524,
+      formattedAddress: 'Proddatur Rural, YSR Kadapa District, Andhra Pradesh',
+    },
+    createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+    inquiriesCount: 6,
+  },
+  {
+    id: 'list-mh-nashik-tomato',
+    farmerName: 'Santosh Jadhav',
+    farmerPhone: '9822345678',
+    preferredContact: 'call',
+    cropId: 'tomato',
+    cropName: 'Tomato (Abhinav / Hybrid)',
+    variety: 'Abhinav Red Table',
+    category: 'vegetables',
+    quantity: 400,
+    unit: 'kg',
+    quantityKg: 400,
+    expectedPricePerUnit: 24,
+    totalPriceEstimate: 9600,
+    qualityGrade: 'Grade A',
+    qualityTag: 'Grade A (Premium quality)',
+    declaredBy: 'Farmer-declared',
+    harvestDate: '2025-03-03',
+    photos: [
+      'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&auto=format&fit=crop&q=80',
+    ],
+    location: {
+      village: 'Pimpalgaon',
+      city: 'Nashik',
+      district: 'Nashik',
+      state: 'Maharashtra',
+      latitude: 20.1714,
+      longitude: 73.9856,
+      formattedAddress: 'Pimpalgaon Baswant, Niphad, Nashik, Maharashtra',
+    },
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+    inquiriesCount: 4,
+  },
+];
+
+// GET /api/listings: Return listings with dynamic distance calculation
+app.get('/api/listings', (req, res) => {
+  const buyerLat = parseFloat(req.query.lat as string);
+  const buyerLng = parseFloat(req.query.lng as string);
+  const cropFilter = (req.query.crop as string || '').toLowerCase().trim();
+  const gradeFilter = (req.query.grade as string || '').trim();
+  const maxDistance = parseFloat(req.query.maxDistance as string);
+
+  let results = GLOBAL_LISTINGS.map((listing) => {
+    let distanceKm: number | null = null;
+    if (!isNaN(buyerLat) && !isNaN(buyerLng)) {
+      distanceKm = calculateDistanceKm(
+        buyerLat,
+        buyerLng,
+        listing.location.latitude,
+        listing.location.longitude
+      );
+    }
+    return {
+      ...listing,
+      distanceKm: distanceKm !== null ? Math.round(distanceKm * 10) / 10 : null,
+    };
+  });
+
+  if (cropFilter && cropFilter !== 'all') {
+    results = results.filter((l) =>
+      l.cropId.toLowerCase().includes(cropFilter) ||
+      l.cropName.toLowerCase().includes(cropFilter)
+    );
+  }
+
+  if (gradeFilter && gradeFilter !== 'all') {
+    results = results.filter((l) => l.qualityGrade.toLowerCase() === gradeFilter.toLowerCase());
+  }
+
+  if (!isNaN(maxDistance) && maxDistance > 0) {
+    results = results.filter((l) => l.distanceKm === null || l.distanceKm <= maxDistance);
+  }
+
+  // Sort by distance if buyer coordinates provided, else by creation time
+  if (!isNaN(buyerLat) && !isNaN(buyerLng)) {
+    results.sort((a, b) => (a.distanceKm ?? 99999) - (b.distanceKm ?? 99999));
+  } else {
+    results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  res.json({
+    total: results.length,
+    listings: results,
+  });
+});
+
+// POST /api/listings: Publish a new farmer listing
+app.post('/api/listings', (req, res) => {
+  try {
+    const {
+      farmerName,
+      farmerPhone,
+      preferredContact,
+      cropId,
+      cropName,
+      variety,
+      category,
+      quantity,
+      unit,
+      expectedPricePerUnit,
+      qualityGrade,
+      photos,
+      location,
+      harvestDate,
+    } = req.body;
+
+    if (!farmerName || !farmerPhone || !cropName || !quantity) {
+      return res.status(400).json({
+        error: 'Missing required listing fields (farmerName, farmerPhone, cropName, quantity)',
+      });
+    }
+
+    const qty = parseFloat(quantity) || 1;
+    let qtyKg = qty;
+    if (unit === 'quintal') qtyKg = qty * 100;
+    else if (unit === 'tonne') qtyKg = qty * 1000;
+
+    const price = parseFloat(expectedPricePerUnit) || 0;
+    const totalPrice = unit === 'kg' ? price * qtyKg : price * qty;
+
+    const newListing: CropListing = {
+      id: `list-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      farmerName: String(farmerName).trim(),
+      farmerPhone: String(farmerPhone).replace(/\D/g, '').slice(-10),
+      preferredContact: preferredContact || 'both',
+      cropId: cropId || 'general',
+      cropName: String(cropName).trim(),
+      variety: variety ? String(variety).trim() : 'Standard Hybrid',
+      category: category || 'vegetables',
+      quantity: qty,
+      unit: unit || 'quintal',
+      quantityKg: Math.round(qtyKg),
+      expectedPricePerUnit: price,
+      totalPriceEstimate: Math.round(totalPrice),
+      qualityGrade: qualityGrade || 'Grade A',
+      qualityTag: `${qualityGrade || 'Grade A'} (Farmer-declared)`,
+      declaredBy: 'Farmer-declared',
+      harvestDate: harvestDate || new Date().toISOString().split('T')[0],
+      photos: Array.isArray(photos) && photos.length > 0
+        ? photos
+        : ['https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&auto=format&fit=crop&q=80'],
+      location: {
+        village: location?.village || location?.city || 'Local Farm',
+        city: location?.city || location?.town || 'Local Town',
+        district: location?.district || '',
+        state: location?.state || 'Andhra Pradesh',
+        latitude: parseFloat(location?.latitude) || 14.4673,
+        longitude: parseFloat(location?.longitude) || 78.8242,
+        formattedAddress: location?.formattedAddress || `${location?.city || 'Local'}, ${location?.district || ''}, ${location?.state || 'India'}`,
+      },
+      createdAt: new Date().toISOString(),
+      inquiriesCount: 0,
+    };
+
+    GLOBAL_LISTINGS.unshift(newListing);
+    console.log(`[Server] Published listing ${newListing.id} by ${newListing.farmerName} for ${newListing.cropName}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Listing successfully published on Kisan Setu Marketplace!',
+      listing: newListing,
+    });
+  } catch (err: any) {
+    console.error('[Server] Error creating listing:', err);
+    res.status(500).json({ error: 'Failed to create listing: ' + err.message });
+  }
+});
+
+// POST /api/listings/:id/interest: Buyer contacts or makes an offer
+app.post('/api/listings/:id/interest', (req, res) => {
+  const { id } = req.params;
+  const { buyerName, buyerPhone, offerPrice, message } = req.body;
+
+  const listing = GLOBAL_LISTINGS.find((l) => l.id === id);
+  if (!listing) {
+    return res.status(404).json({ error: 'Listing not found' });
+  }
+
+  listing.inquiriesCount = (listing.inquiriesCount || 0) + 1;
+
+  res.json({
+    success: true,
+    message: `Interest sent to ${listing.farmerName}. Farmer phone: +91 ${listing.farmerPhone}`,
+    farmerContact: {
+      name: listing.farmerName,
+      phone: listing.farmerPhone,
+      preferred: listing.preferredContact,
+    },
+    inquiriesCount: listing.inquiriesCount,
+  });
+});
 const wss = new WebSocketServer({ server, path: '/ws/live' });
 
 wss.on('connection', async (clientWs: WebSocket) => {
