@@ -58,32 +58,33 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5">
         {/* Top bar: Brand + Helpline + View Tabs + Language + Dark Mode */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-emerald-900">
-          {/* Brand treatment: IDEA FORGE + KrishiSetu */}
+          {/* Brand treatment: KRISHI SETU + Kisan AI */}
           <div className="flex items-center gap-3">
             <Link
               to="/"
               className="flex items-center gap-2.5 text-left group"
             >
-              {/* Forge + Sprout visual icon */}
+              {/* Sprout visual icon */}
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-500 text-stone-950 flex items-center justify-center text-xl shadow-md font-bold group-hover:scale-105 transition-transform">
                 <span>🌾</span>
               </div>
               <div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] font-mono tracking-wider font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                    IDEA FORGE
-                  </span>
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-lg sm:text-xl font-black tracking-tight font-outfit text-white">
-                    {t.appName}
+                    KRISHI<span className="text-emerald-400">SETU</span>
+                  </span>
+                  <span className="text-[10px] font-mono tracking-wider font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 flex items-center gap-1">
+                    <span>🤖</span>
+                    <span>Kisan AI</span>
                   </span>
                 </div>
                 <p className="text-[11px] text-emerald-300 font-medium hidden sm:block">
-                  Farmer Intelligence & Smart Agriculture
+                  From Your Farm to the Right Market
                 </p>
               </div>
             </Link>
 
-            {/* Quick Navigation Tabs: Home, Farm Intelligence, Marketplace */}
+            {/* Quick Navigation Tabs: Home, Farmer, Buyers, Markets */}
             <div className="hidden lg:flex items-center gap-1 bg-emerald-900/80 p-1 rounded-xl border border-emerald-800 ml-2">
               <Link
                 to="/"
@@ -91,23 +92,25 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 Home
               </Link>
-              <button
-                type="button"
-                onClick={() => onSelectView('workflow')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                  activeView === 'workflow'
-                    ? 'bg-emerald-500 text-stone-950 shadow-sm'
-                    : 'text-emerald-200 hover:text-white'
-                }`}
-              >
-                🌱 Farm Intelligence
-              </button>
               <Link
-                to="/marketplace"
-                className="px-3 py-1 rounded-lg text-xs font-bold text-amber-300 hover:bg-amber-950/60 rounded-lg transition-colors flex items-center gap-1"
+                to="/farmer"
+                className="px-3 py-1 rounded-lg text-xs font-bold text-emerald-200 hover:text-white hover:bg-emerald-800/60 transition-colors flex items-center gap-1.5"
               >
-                <span>🚜</span>
-                <span>Marketplace</span>
+                <span>👨‍🌾</span>
+                <span>Farmer</span>
+              </Link>
+              <Link
+                to="/buyers"
+                className="px-3 py-1 rounded-lg text-xs font-bold text-amber-300 hover:bg-amber-950/60 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <span>🏪</span>
+                <span>Buyers</span>
+              </Link>
+              <Link
+                to="/markets"
+                className="px-2.5 py-1 rounded-lg text-xs font-medium text-stone-300 hover:text-white transition-colors"
+              >
+                Markets
               </Link>
             </div>
           </div>

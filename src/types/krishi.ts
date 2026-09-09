@@ -53,6 +53,52 @@ export type FarmerLocation = {
 // LocationData is an alias for FarmerLocation to ensure single source of truth across all components
 export type LocationData = FarmerLocation;
 
+export interface VisualQualityMarker {
+  id: string;
+  type: 'good' | 'minor' | 'serious'; // 🟢 green, 🟡 yellow, 🔴 red
+  x: number; // percentage 0-100
+  y: number; // percentage 0-100
+  label: string; // e.g. "✓ Uniform size", "⚠ Slight discoloration", "✕ Damaged grain detected"
+  observation: string; // e.g. "Dark discoloration and possible surface damage detected."
+  impact: string; // e.g. "Contributes to reducing the quality from Grade A to Grade B."
+  factor: 'color' | 'uniformity' | 'surface' | 'damage';
+}
+
+export interface ExplainableAIReport {
+  overallGrade: QualityGrade | 'REJECT';
+  farmerGradeClaimed: QualityGrade | null;
+  confidenceScore: number;
+  whyExplanation: string;
+  isAgreed: boolean;
+  color: {
+    rating: 'Good' | 'Moderate' | 'Poor';
+    description: string;
+    type: 'good' | 'minor' | 'serious';
+  };
+  uniformity: {
+    rating: 'High' | 'Moderate' | 'Low';
+    description: string;
+    type: 'good' | 'minor' | 'serious';
+  };
+  surfaceQuality: {
+    rating: 'Clean' | 'Minor Issues' | 'Severe Defects';
+    description: string;
+    type: 'good' | 'minor' | 'serious';
+  };
+  damage: {
+    rating: 'None' | 'Minor Detected' | 'Significant Detected';
+    description: string;
+    type: 'good' | 'minor' | 'serious';
+  };
+  factorsTable: {
+    factor: string;
+    farmerSelected: string;
+    aiAnalysis: string;
+    status: 'match' | 'minor_diff' | 'major_diff';
+  }[];
+  markers: VisualQualityMarker[];
+}
+
 export interface AIQualityFactors {
   appearance?: 'good' | 'medium' | 'poor';
   uniformity: 'high' | 'medium' | 'low' | 'good' | 'fair' | 'poor';
@@ -102,6 +148,8 @@ export interface AIQualityAssessment {
   isDemo?: boolean;
   analyzedAt: string;
   error?: string;
+  visualMarkers?: VisualQualityMarker[];
+  explainableReport?: ExplainableAIReport;
 }
 
 export interface CropSelectionState {
@@ -115,6 +163,8 @@ export interface CropSelectionState {
   qualitySource: 'manual' | 'ai' | null;
   qualityConfirmed: boolean;
   aiAssessment: AIQualityAssessment | null;
+  authorityVerificationRequested?: boolean;
+  disputeNotes?: string;
 }
 
 export interface MarketBuyer {

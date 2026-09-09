@@ -1,4 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import {
+  Package,
+  DollarSign,
+  MapPin,
+  Truck,
+  Compass,
+  ArrowRight,
+  Sparkles,
+  Layers,
+  ChevronRight,
+  CheckCircle2,
+  Phone,
+  RotateCcw,
+} from 'lucide-react';
 import {
   CropSelectionState,
   Language,
@@ -14,8 +29,14 @@ import { DealSummaryStep } from './components/step4/DealSummaryStep';
 import { GoogleMapsProvider } from './components/map/GoogleMapsProvider';
 import { KisanAIChatbot } from './components/chat/KisanAIChatbot';
 import { PlatformOverview } from './components/public/PlatformOverview';
+import { LotsPage } from './agrilink/pages/farmer/LotsPage';
+import { OffersPage } from './agrilink/pages/farmer/OffersPage';
+import { LogisticsPage } from './agrilink/pages/farmer/LogisticsPage';
+import { NationalMarketMap } from './agrilink/components/common/NationalMarketMap';
 
 export const KrishiWorkflow: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   // Global Language state (English, Hindi, Marathi, Telugu)
   const [language, setLanguage] = useState<Language>('en');
 
@@ -24,6 +45,12 @@ export const KrishiWorkflow: React.FC = () => {
 
   // View state: 'landing' (Platform Overview) vs 'workflow' (Farm Steps 1-4)
   const [activeView, setActiveView] = useState<'landing' | 'workflow'>('workflow');
+
+  // Farmer Portal Tabs: 'journey' (Guided Village->Crop->Markets) | 'lots' | 'offers' | 'map' | 'logistics'
+  const initialTab = (searchParams.get('tab') as any) || 'journey';
+  const [farmerTab, setFarmerTab] = useState<'journey' | 'lots' | 'offers' | 'map' | 'logistics'>(
+    ['journey', 'lots', 'offers', 'map', 'logistics'].includes(initialTab) ? initialTab : 'journey'
+  );
 
   const handleToggleDarkMode = () => {
     setDarkMode((prev) => {
@@ -71,6 +98,22 @@ export const KrishiWorkflow: React.FC = () => {
   // Step 3 Selected Market Result for Step 4 Deal Slip
   const [selectedMarketResult, setSelectedMarketResult] = useState<MarketAnalysisResult | null>(null);
 
+  // Check URL crop parameter if present
+  useEffect(() => {
+    const urlCrop = searchParams.get('crop');
+    if (urlCrop) {
+      const match = CROP_DATABASE.find(
+        (c) => c.name.toLowerCase().includes(urlCrop.toLowerCase()) || urlCrop.toLowerCase().includes(c.id)
+      );
+      if (match) {
+        setCropState((prev) => ({
+          ...prev,
+          selectedCrop: match,
+        }));
+      }
+    }
+  }, [searchParams]);
+
   // Hard Gate validation check (Crop + Quantity + Mandatory Photo + Confirmed Quality)
   const isCropValid =
     Boolean(cropState.selectedCrop && cropState.selectedCrop.id !== 'other_custom') ||
@@ -100,6 +143,7 @@ export const KrishiWorkflow: React.FC = () => {
   };
 
   const handleStepClick = (targetStep: number) => {
+    setFarmerTab('journey');
     if (targetStep === 3 && !canNavigateToStep3) {
       // Hard gate prevents reaching Step 3 if incomplete
       setCurrentStep(2);
@@ -112,10 +156,20 @@ export const KrishiWorkflow: React.FC = () => {
     setCurrentStep(targetStep);
   };
 
+  const handleTabChange = (newTab: 'journey' | 'lots' | 'offers' | 'map' | 'logistics') => {
+    setFarmerTab(newTab);
+    setActiveView('workflow');
+    setSearchParams({ tab: newTab });
+  };
+
   return (
     <GoogleMapsProvider>
-      <div className={`min-h-screen ${darkMode ? 'dark bg-stone-950 text-stone-100' : 'bg-stone-50 text-stone-900'} flex flex-col selection:bg-emerald-200 selection:text-emerald-950 font-sans transition-colors duration-200`}>
-        {/* Persistent Header with Language & Location controls */}
+      <div
+        className={`min-h-screen ${
+          darkMode ? 'dark bg-stone-950 text-stone-100' : 'bg-stone-50 text-stone-900'
+        } flex flex-col selection:bg-emerald-200 selection:text-emerald-950 font-sans transition-colors duration-200`}
+      >
+        {/* 1. Persistent Header with Brand, Language & Location controls */}
         <Header
           language={language}
           onLanguageChange={setLanguage}
@@ -124,6 +178,7 @@ export const KrishiWorkflow: React.FC = () => {
           location={location}
           onChangeLocationClick={() => {
             setActiveView('workflow');
+            setFarmerTab('journey');
             setCurrentStep(1);
           }}
           canNavigateToStep3={canNavigateToStep3}
@@ -133,17 +188,131 @@ export const KrishiWorkflow: React.FC = () => {
           onSelectView={setActiveView}
         />
 
-        {/* Main Flow Pages */}
+        {/* 2. Farmer Portal Navigation Tabs (Unified Marketplace + Crop Analysis) */}
+        {activeView === 'workflow' && (
+          <div className="bg-emerald-900/90 border-b border-emerald-800 px-4 sm:px-6 shadow-md sticky top-[68px] z-30">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 overflow-x-auto py-2.5 no-scrollbar text-xs font-bold">
+              <div className="flex items-center gap-2">
+                {/* TAB 1: GUIDED SELL JOURNEY */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('journey')}
+                  className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                    farmerTab === 'journey'
+                      ? 'bg-emerald-500 text-stone-950 shadow-sm font-black'
+                      : 'text-emerald-200 hover:bg-emerald-800/60 hover:text-white'
+                  }`}
+                >
+                  <span>🌾</span>
+                  <span>Guided Sell Journey</span>
+                  <span className="text-[10px] bg-stone-950/30 px-2 py-0.5 rounded-full font-mono">
+                    Step {currentStep}/4
+                  </span>
+                </button>
+
+                {/* TAB 2: MY DIGITAL LOTS */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('lots')}
+                  className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                    farmerTab === 'lots'
+                      ? 'bg-emerald-500 text-stone-950 shadow-sm font-black'
+                      : 'text-emerald-200 hover:bg-emerald-800/60 hover:text-white'
+                  }`}
+                >
+                  <Package className="w-4 h-4" />
+                  <span>My Crop Lots</span>
+                </button>
+
+                {/* TAB 3: BUYER OFFERS & BIDS */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('offers')}
+                  className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                    farmerTab === 'offers'
+                      ? 'bg-emerald-500 text-stone-950 shadow-sm font-black'
+                      : 'text-emerald-200 hover:bg-emerald-800/60 hover:text-white'
+                  }`}
+                >
+                  <DollarSign className="w-4 h-4" />
+                  <span>Buyer Offers & Bids</span>
+                </button>
+
+                {/* TAB 4: NATIONAL MARKET MAP */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('map')}
+                  className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                    farmerTab === 'map'
+                      ? 'bg-emerald-500 text-stone-950 shadow-sm font-black'
+                      : 'text-emerald-200 hover:bg-emerald-800/60 hover:text-white'
+                  }`}
+                >
+                  <Compass className="w-4 h-4" />
+                  <span>Pan-India Mandi Map</span>
+                </button>
+
+                {/* TAB 5: LOGISTICS & STORAGE */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('logistics')}
+                  className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                    farmerTab === 'logistics'
+                      ? 'bg-emerald-500 text-stone-950 shadow-sm font-black'
+                      : 'text-emerald-200 hover:bg-emerald-800/60 hover:text-white'
+                  }`}
+                >
+                  <Truck className="w-4 h-4" />
+                  <span>Logistics & Freight</span>
+                </button>
+              </div>
+
+              {/* Quick switch to Buyer portal */}
+              <div className="hidden md:flex items-center gap-2">
+                <Link
+                  to="/buyers"
+                  className="text-[11px] font-bold text-amber-300 hover:text-white px-2.5 py-1 rounded-lg bg-amber-950/60 border border-amber-500/40 flex items-center gap-1.5 transition-colors"
+                >
+                  <span>🏪</span>
+                  <span>Buyer Procurement Portal →</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 3. Main Content Views */}
         <main className="flex-1">
           {activeView === 'landing' ? (
             <PlatformOverview
               language={language}
               onStartWorkflow={(step = 2) => {
                 setActiveView('workflow');
+                setFarmerTab('journey');
                 setCurrentStep(step);
               }}
             />
+          ) : farmerTab === 'lots' ? (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <LotsPage />
+            </div>
+          ) : farmerTab === 'offers' ? (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <OffersPage />
+            </div>
+          ) : farmerTab === 'map' ? (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <NationalMarketMap
+                farmerState={location.state}
+                farmerDistrict={location.district}
+              />
+            </div>
+          ) : farmerTab === 'logistics' ? (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <LogisticsPage />
+            </div>
           ) : (
+            /* FARMER STEP-BY-STEP SELL JOURNEY: Village -> Crop -> Mandi Markets -> Deal Slip */
             <>
               {currentStep === 1 && (
                 <LocationSelector
@@ -194,13 +363,19 @@ export const KrishiWorkflow: React.FC = () => {
                   onChangeLocation={() => setCurrentStep(1)}
                   onRecheckCrop={() => setCurrentStep(2)}
                   onSelectMarket={(mktResult) => setSelectedMarketResult(mktResult)}
+                  onListCropOnMarketplace={() => {
+                    setFarmerTab('lots');
+                  }}
+                  onViewBuyerOffers={() => {
+                    setFarmerTab('offers');
+                  }}
                 />
               )}
             </>
           )}
         </main>
 
-        {/* Farmer-First Footer: KrishiSetu by IDEA FORGE */}
+        {/* 4. Farmer-First Footer: KrishiSetu & Kisan AI */}
         <footer className="bg-stone-900 text-stone-400 text-xs py-8 border-t border-stone-800">
           <div className="max-w-7xl mx-auto px-4 text-center space-y-3">
             <div className="flex items-center justify-center gap-2">
@@ -208,22 +383,23 @@ export const KrishiWorkflow: React.FC = () => {
               <span className="font-extrabold text-stone-200 text-sm font-outfit">
                 KrishiSetu
               </span>
-              <span className="text-[10px] font-mono uppercase bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded border border-amber-400/30">
-                FARMER INTELLIGENCE
+              <span className="text-[10px] font-mono uppercase bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/30 font-bold">
+                Kisan AI
               </span>
             </div>
-            <p className="text-amber-400 font-medium text-xs">
-              From Your Farm to the Best Market.
+            <p className="text-emerald-400 font-medium text-xs">
+              From Your Farm to the Right Market.
             </p>
             <p className="text-[11px] text-stone-500 max-w-2xl mx-auto leading-relaxed">
-              Providing transparent mandi price discovery, deterministic AGMARK quality grade adjustments, road freight estimation, and digital gate passes across Indian agricultural markets.
+              Transparent mandi price discovery, AGMARK quality grading, net realization calculation, and digital marketplace listings across Indian agricultural markets.
             </p>
             <p className="text-[10px] text-stone-600">
-              © {new Date().getFullYear()} KrishiSetu • IDEA FORGE. All Rights Reserved.
+              © {new Date().getFullYear()} KrishiSetu • Powered by Kisan AI • Built with ❤️ by IDEA FORGE
             </p>
           </div>
         </footer>
-        {/* Floating Kisan AI Chatbot */}
+
+        {/* 5. Floating Kisan AI Voice & Chat Assistant */}
         <KisanAIChatbot
           language={language}
           cropName={cropState.selectedCrop?.name}

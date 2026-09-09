@@ -41,8 +41,10 @@ import {
   Award,
   ChevronDown,
   X,
+  PlusCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { lotService } from '../../agrilink/services/lotService';
 
 interface DealSummaryStepProps {
   language: Language;
@@ -55,6 +57,8 @@ interface DealSummaryStepProps {
   onChangeLocation?: () => void;
   onRecheckCrop?: () => void;
   onSelectMarket?: (marketResult: MarketAnalysisResult) => void;
+  onListCropOnMarketplace?: () => void;
+  onViewBuyerOffers?: () => void;
 }
 
 export const DealSummaryStep: React.FC<DealSummaryStepProps> = ({
@@ -68,16 +72,21 @@ export const DealSummaryStep: React.FC<DealSummaryStepProps> = ({
   onChangeLocation,
   onRecheckCrop,
   onSelectMarket,
+  onListCropOnMarketplace,
+  onViewBuyerOffers,
 }) => {
   const t = TRANSLATIONS[language];
   const [showTransportModal, setShowTransportModal] = useState(false);
   const [showCropImageModal, setShowCropImageModal] = useState(false);
+  const [isListedOnMarketplace, setIsListedOnMarketplace] = useState(false);
+  const [listedLotNumber, setListedLotNumber] = useState<string | null>(null);
 
   // Allow switching between markets right on the report page
   const [selectedMarketId, setSelectedMarketId] = useState<string>(initialMarketResult.market.id);
 
   // Generate a persistent Report/Assessment ID for this session
   const [passId] = useState<string>(() => `MP-${Math.floor(100000 + Math.random() * 900000)}`);
+
   const [assessmentDate] = useState<string>(() =>
     new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   );
@@ -207,6 +216,46 @@ export const DealSummaryStep: React.FC<DealSummaryStepProps> = ({
 
   const cropImageUri = cropState.cropPhoto || ai?.imageUrl;
 
+  const handleListOnMarketplace = () => {
+    const qualityGradeMap = {
+      A: 'Grade A' as const,
+      B: 'Grade B' as const,
+      C: 'Grade C' as const,
+    };
+
+    const newLot = lotService.createLot({
+      crop: cropName,
+      variety: 'Standard Hybrid',
+      quantityQuintals: Math.round(cropState.normalizedKilograms / 100) || 10,
+      harvestDate: new Date().toISOString().split('T')[0],
+      location: location.formattedAddress || `${location.district || location.city}, ${location.state}`,
+      district: location.district || location.city || 'Local District',
+      state: location.state || 'Telangana',
+      expectedPricePerQ: activeMarketResult.netPricePerQuintal || activeMarketResult.market?.pricePerQuintal || 2450,
+      qualityGrade: qualityGradeMap[grade as 'A' | 'B' | 'C'] || 'Grade B',
+      qualityMetrics: {
+        size: grade === 'A' ? 95 : grade === 'B' ? 82 : 68,
+        color: grade === 'A' ? 92 : grade === 'B' ? 80 : 65,
+        freshness: grade === 'A' ? 94 : grade === 'B' ? 82 : 70,
+        damage: grade === 'A' ? 96 : grade === 'B' ? 85 : 72,
+        moisture: 13,
+        overallScore: grade === 'A' ? 92 : grade === 'B' ? 84 : 70,
+        grade: qualityGradeMap[grade as 'A' | 'B' | 'C'] || 'Grade B',
+      },
+      imageUrl: cropImageUri || undefined,
+      description: `AI Assessed: Grade ${grade} (${confidenceText}) - Ready for farmgate or mandi delivery.`
+    });
+
+    setIsListedOnMarketplace(true);
+    setListedLotNumber(newLot.lotNumber);
+
+    if (onListCropOnMarketplace) {
+      setTimeout(() => {
+        onListCropOnMarketplace();
+      }, 1200);
+    }
+  };
+
   const handleShareWhatsApp = () => {
     const text = encodeURIComponent(
       `🌾 *MahaKrishi AI • Crop Journey Report*\n` +
@@ -252,6 +301,11 @@ export const DealSummaryStep: React.FC<DealSummaryStepProps> = ({
               <span className="inline-flex items-center gap-1.5 bg-emerald-500 text-stone-950 font-black text-xs px-3 py-1 rounded-full uppercase tracking-wider shadow">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Assessment Completed
               </span>
+              {cropState.authorityVerificationRequested && (
+                <span className="inline-flex items-center gap-1.5 bg-amber-400 text-stone-950 font-bold text-xs px-3 py-1 rounded-full uppercase tracking-wider shadow">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-950" /> Authority Review Pending
+                </span>
+              )}
               <span className="text-xs font-mono text-amber-300 bg-amber-950/80 px-3 py-1 rounded-full border border-amber-500/40">
                 REPORT ID: {passId}
               </span>
@@ -1216,6 +1270,69 @@ export const DealSummaryStep: React.FC<DealSummaryStepProps> = ({
                 ? 'Your crop achieved Grade C, accounting for standard discount in market realization.'
                 : 'Your crop achieved Grade B, realizing 100% fair average quality market price.'}
             </p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ========================================================================= */}
+      {/* 11B. KRISHI SETU MARKETPLACE LISTING CARD */}
+      {/* ========================================================================= */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45, duration: 0.4 }}
+        className="bg-gradient-to-r from-emerald-950 via-stone-900 to-amber-950 text-white rounded-3xl p-6 sm:p-8 border-2 border-amber-400/40 shadow-xl relative overflow-hidden space-y-4"
+      >
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase font-black bg-amber-400 text-stone-950">
+                KrishiSetu Marketplace
+              </span>
+              <span className="text-xs text-amber-300 font-bold flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" /> 24+ Verified Buyers Active
+              </span>
+            </div>
+
+            <h3 className="text-2xl sm:text-3xl font-black font-outfit text-white">
+              📢 List Your Crop & Receive Direct Buyer Bids
+            </h3>
+
+            <p className="text-xs sm:text-sm text-stone-300 max-w-2xl leading-relaxed">
+              Publish your verified produce lot on KrishiSetu Marketplace. Verified institutional buyers, food processors, and terminal aggregators will be notified to place direct bids at or above your asking price.
+            </p>
+          </div>
+
+          <div className="shrink-0 flex flex-col sm:flex-row gap-3">
+            {isListedOnMarketplace ? (
+              <div className="bg-emerald-500/20 border border-emerald-400/60 p-4 rounded-2xl text-center space-y-1">
+                <div className="text-xs font-bold text-emerald-300 flex items-center justify-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>Listed on Marketplace!</span>
+                </div>
+                <div className="text-[11px] font-mono text-white">
+                  Lot: {listedLotNumber}
+                </div>
+                {onViewBuyerOffers && (
+                  <button
+                    type="button"
+                    onClick={onViewBuyerOffers}
+                    className="mt-2 text-xs font-bold text-amber-300 underline hover:text-white cursor-pointer"
+                  >
+                    View Incoming Buyer Offers →
+                  </button>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleListOnMarketplace}
+                className="py-4 px-6 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-stone-950 font-black rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 cursor-pointer text-sm"
+              >
+                <PlusCircle className="w-5 h-5" />
+                <span>Publish Crop on Marketplace</span>
+              </button>
+            )}
           </div>
         </div>
       </motion.div>

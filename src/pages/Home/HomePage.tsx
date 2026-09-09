@@ -177,24 +177,24 @@ export const HomePage: React.FC = () => {
                 Home
               </Link>
               <Link
-                to="/crop-analysis"
+                to="/farmer"
                 className="px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-200 hover:text-white hover:bg-emerald-900/30 transition-colors flex items-center gap-1.5"
               >
-                <span>🌱</span>
-                <span>Farm Intelligence</span>
+                <span>👨‍🌾</span>
+                <span>Farmer Portal</span>
               </Link>
               <Link
-                to="/marketplace"
-                className="px-3 py-1.5 rounded-xl text-xs font-bold text-amber-200 hover:text-white hover:bg-amber-900/30 transition-colors flex items-center gap-1.5"
+                to="/buyers"
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-amber-300 hover:text-white hover:bg-amber-900/30 transition-colors flex items-center gap-1.5"
               >
-                <span>🚜</span>
-                <span>Marketplace</span>
+                <span>🏪</span>
+                <span>Buyer Marketplace</span>
               </Link>
               <Link
-                to="/marketplace/dashboard"
+                to="/markets"
                 className="px-3 py-1.5 rounded-xl text-xs font-medium text-stone-300 hover:text-white hover:bg-stone-800/40 transition-colors"
               >
-                Dashboard
+                Mandi Benchmark
               </Link>
               <button
                 type="button"
@@ -302,29 +302,29 @@ export const HomePage: React.FC = () => {
                 <div className="space-y-4 relative z-10">
                   <div className="flex items-center justify-between">
                     <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-3xl shadow-inner">
-                      <span>🌱</span>
+                      <span>🌾</span>
                     </div>
                     <span className="text-[11px] font-mono uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-emerald-400/15 text-emerald-300 border border-emerald-400/30">
-                      Guided Workflow
+                      Farmer Flow
                     </span>
                   </div>
 
                   <div>
                     <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-outfit">
-                      Farm Intelligence
+                      Farmer: Sell Crop & Compare Mandis
                     </h3>
                     <p className="text-xs sm:text-sm text-emerald-300/80 font-medium mt-1">
-                      Analyze → Grade → Compare → Decide
+                      Village → Crop → Kisan AI Quality Check → Mandi Comparison → Marketplace Listing
                     </p>
                   </div>
 
                   <p className="text-stone-300 text-sm sm:text-base leading-relaxed">
-                    Analyze crops, check quality, discover markets, calculate transportation costs and find the best selling opportunity.
+                    Simplified 3-step crop declaration, transparent visual AI quality check (Grade A/B/C), real-time APMC mandi net realization calculation, and direct marketplace lot publishing.
                   </p>
 
                   {/* Flow Pills */}
                   <div className="flex flex-wrap gap-2 pt-2">
-                    {['Field GPS', 'Crop Photo', 'AI Vision Grade A/B/C', 'APMC Mandis', 'Net Profit Lock'].map((tag, i) => (
+                    {['Village GPS', 'Kisan AI Quality', 'APMC Mandi Net Profit', 'Deal Slip', 'Publish Digital Lot'].map((tag, i) => (
                       <span
                         key={i}
                         className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-950/80 text-emerald-200 border border-emerald-800/80"
@@ -338,45 +338,45 @@ export const HomePage: React.FC = () => {
                 <div className="pt-6 relative z-10">
                   <button
                     type="button"
-                    onClick={() => navigate('/crop-analysis')}
+                    onClick={() => navigate('/farmer')}
                     className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 text-stone-950 font-black text-base shadow-lg shadow-emerald-500/30 transition-all flex items-center justify-center gap-2 group-hover:translate-x-0.5 active:scale-98 cursor-pointer"
                   >
-                    <span>Start Crop Analysis</span>
+                    <span>Start Farmer Sell Flow</span>
                     <ArrowRight className="w-5 h-5" />
                   </button>
                 </div>
               </div>
 
-              {/* CARD 2: FARMER MARKETPLACE */}
+              {/* CARD 2: BUYER MARKETPLACE */}
               <div className="group relative rounded-3xl bg-gradient-to-b from-amber-950/60 to-[#19150b] border border-amber-500/40 p-6 sm:p-8 shadow-2xl hover:shadow-amber-900/40 hover:border-amber-400/80 transition-all duration-300 flex flex-col justify-between overflow-hidden">
                 <div className="absolute -right-8 -top-8 w-40 h-40 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-colors" />
 
                 <div className="space-y-4 relative z-10">
                   <div className="flex items-center justify-between">
                     <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-3xl shadow-inner">
-                      <span>🚜</span>
+                      <span>🏪</span>
                     </div>
                     <span className="text-[11px] font-mono uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30">
-                      Commerce & Services
+                      Institutional Buyers
                     </span>
                   </div>
 
                   <div>
                     <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-outfit">
-                      Farmer Marketplace
+                      Buyers: Sourcing & Bidding Portal
                     </h3>
                     <p className="text-xs sm:text-sm text-amber-300/80 font-medium mt-1">
-                      Connect → Sell → Manage → Grow
+                      Explore Lots → Place Bids → Request Demand → Direct Farmgate Contracts
                     </p>
                   </div>
 
                   <p className="text-stone-300 text-sm sm:text-base leading-relaxed">
-                    Manage lots, connect with buyers, receive offers, manage logistics and access agricultural marketplace services.
+                    Browse AI-verified farmer crop lots across India, submit competitive bids with escrow security, or publish institutional procurement demand directly to farmer clusters.
                   </p>
 
                   {/* Flow Pills */}
                   <div className="flex flex-wrap gap-2 pt-2">
-                    {['Manage Lots', 'Verified Buyers', 'Counter Offers', 'Logistics Booking', 'Secure Escrow'].map((tag, i) => (
+                    {['Verified Lots', 'Direct Bidding', 'Demand Broadcasts', 'Transport Logistics', 'Smart Settlement'].map((tag, i) => (
                       <span
                         key={i}
                         className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-amber-950/80 text-amber-200 border border-amber-800/80"
@@ -390,10 +390,10 @@ export const HomePage: React.FC = () => {
                 <div className="pt-6 relative z-10">
                   <button
                     type="button"
-                    onClick={() => navigate('/marketplace')}
+                    onClick={() => navigate('/buyers')}
                     className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-stone-950 font-black text-base shadow-lg shadow-amber-500/30 transition-all flex items-center justify-center gap-2 group-hover:translate-x-0.5 active:scale-98 cursor-pointer"
                   >
-                    <span>Open Marketplace</span>
+                    <span>Explore Buyer Marketplace</span>
                     <ArrowRight className="w-5 h-5" />
                   </button>
                 </div>
