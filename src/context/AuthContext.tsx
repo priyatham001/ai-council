@@ -15,9 +15,11 @@ export interface AuthContextType {
   currentUser: AuthUser | null;
   role: UserRole | null;
   isAuthenticated: boolean;
+  isGuest: boolean;
   loginWithPhone: (role: 'farmer' | 'buyer', phone: string, name?: string) => Promise<{ success: boolean; otp?: string }>;
   verifyOtp: (role: 'farmer' | 'buyer', phone: string, otp: string, name?: string) => Promise<boolean>;
   loginAdmin: (adminId: string, pass: string) => Promise<boolean>;
+  continueAsGuest: (role?: 'farmer' | 'buyer') => void;
   logout: () => void;
   // Modal control for inline login
   isAuthModalOpen: boolean;
@@ -90,8 +92,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return false;
   };
 
+  const [isGuest, setIsGuest] = useState<boolean>(() => {
+    return localStorage.getItem('krishi_guest_mode') === 'true';
+  });
+
   const loginAdmin = async (adminId: string, pass: string): Promise<boolean> => {
-    if ((adminId.toLowerCase() === 'admin' || adminId.toLowerCase() === 'root') && (pass === 'krishi2026' || pass === 'admin' || pass === 'admin123')) {
+    const cleanAdmin = adminId.trim().toLowerCase();
+    const cleanPass = pass.trim();
+    if ((cleanAdmin === 'admin' || cleanAdmin === 'root') && (cleanPass === 'admin@123' || cleanPass === 'krishi2026' || cleanPass === 'admin' || cleanPass === 'admin123')) {
       const adminUser: AuthUser = {
         id: 'admin-root-01',
         role: 'admin',
@@ -101,14 +109,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isVerified: true,
       };
       setCurrentUser(adminUser);
+      setIsGuest(false);
+      localStorage.removeItem('krishi_guest_mode');
       setIsAuthModalOpen(false);
       return true;
     }
     return false;
   };
 
+  const continueAsGuest = (guestRole?: 'farmer' | 'buyer') => {
+    setIsGuest(true);
+    localStorage.setItem('krishi_guest_mode', 'true');
+    if (guestRole) {
+      localStorage.setItem('krishi_user_role', guestRole);
+    }
+    setIsAuthModalOpen(false);
+  };
+
   const logout = () => {
     setCurrentUser(null);
+    setIsGuest(false);
+    localStorage.removeItem('krishi_guest_mode');
   };
 
   const openAuthModal = (role: 'farmer' | 'buyer' | 'admin', redirectPath?: string) => {
@@ -128,9 +149,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         currentUser,
         role: currentUser ? currentUser.role : null,
         isAuthenticated: !!currentUser,
+        isGuest,
         loginWithPhone,
         verifyOtp,
         loginAdmin,
+        continueAsGuest,
         logout,
         isAuthModalOpen,
         authModalRole,

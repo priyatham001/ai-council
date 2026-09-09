@@ -301,18 +301,18 @@ export const DEMO_FARMER_PERSONAS: FarmerPersona[] = [
   },
   {
     id: 'farmer-ramesh-ap',
-    name: 'Ramesh Varma',
+    name: 'Ramesh Reddy',
     state: 'Andhra Pradesh',
     stateCode: 'AP',
-    district: 'West Godavari',
-    village: 'Bhimavaram Rural',
+    district: 'YSR Kadapa',
+    village: 'Kadapa Rural',
     primaryCrop: 'Tomato',
-    secondaryCrops: ['Paddy', 'Chilli'],
-    fpoName: 'Godavari Krishi Farmers Producer Co.',
+    secondaryCrops: ['Paddy', 'Chilli', 'Groundnut'],
+    fpoName: 'Rayalaseema Krishi Farmers Producer Co.',
     farmSizeAcres: 6.0,
     storageAvailable: false,
     preferredLanguage: 'te',
-    phone: '+91 98480 87654'
+    phone: '+91 98480 12345'
   },
   {
     id: 'farmer-arun-tn',
@@ -1079,19 +1079,19 @@ export const PAN_INDIA_MARKETS: MandiMarket[] = [
 
   // --- Andhra Pradesh ---
   {
-    id: 'mkt-bhimavaram',
-    name: 'Bhimavaram Mandi Yard',
-    district: 'West Godavari',
+    id: 'mkt-kadapa',
+    name: 'Kadapa Central APMC Mandi Yard',
+    district: 'YSR Kadapa',
     state: 'Andhra Pradesh',
-    distanceKm: 12,
+    distanceKm: 8,
     cropId: 'crop-tomato',
     cropName: 'Tomato',
-    minPrice: 2200,
-    maxPrice: 2650,
-    modalPrice: 2450,
-    arrivalsQuintals: 320,
+    minPrice: 2280,
+    maxPrice: 2680,
+    modalPrice: 2480,
+    arrivalsQuintals: 340,
     demandLevel: 'High',
-    lastUpdated: 'Today, 08:30 AM (Demo market data)',
+    lastUpdated: 'Today, 08:30 AM (APMC Live Data)',
     weeklyTrend: [
       { date: 'Sep 01', price: 2280, arrivals: 290 },
       { date: 'Sep 02', price: 2320, arrivals: 310 },

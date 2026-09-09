@@ -13,6 +13,18 @@ export const AppLayout: React.FC = () => {
   const role = localStorageService.getRole();
   const location = useLocation();
 
+  // Dynamic user location for role banner
+  const activeLocation = React.useMemo(() => {
+    try {
+      const saved = localStorage.getItem('krishi_location');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return `${parsed.city || parsed.district || 'Kadapa'}, ${parsed.state || 'AP'}`;
+      }
+    } catch {}
+    return 'Kadapa, AP';
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#fbfdfa] flex flex-col text-gray-900 selection:bg-brand-100 selection:text-brand-900">
       {/* Live Market Ticker */}
@@ -27,7 +39,7 @@ export const AppLayout: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-semibold text-white tracking-wide">
-              {role === 'farmer' && '🌾 Logged in as Ramesh Varma • Somaram, Bhimavaram, AP'}
+              {role === 'farmer' && `🌾 Logged in as Ramesh Reddy • ${activeLocation}`}
               {role === 'fpo' && '🏢 Godavari FPO Portal • 128 Farmers Collective • Undi Hub'}
               {role === 'buyer' && '🏭 Procurement Hub • Sri Lakshmi Agro Foods Pvt Ltd'}
               {role === 'admin' && '🛡️ KrishiSetu APMC & Platform Oversight Console'}

@@ -743,13 +743,13 @@ export const BuyerMarketplacePage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {[
                 {
-                  name: 'Ramesh Varma',
-                  village: 'Somaram, Bhimavaram',
-                  district: 'West Godavari',
+                  name: 'Ramesh Reddy',
+                  village: 'Kadapa Rural',
+                  district: 'YSR Kadapa',
                   state: 'Andhra Pradesh',
-                  crops: ['Paddy (BPT-5204)', 'Tomato'],
+                  crops: ['Tomato', 'Paddy (BPT-5204)'],
                   acres: 8.5,
-                  fpo: 'Godavari Delta Krishi Producer Co.',
+                  fpo: 'Rayalaseema Krishi Producer Co.',
                   verified: true
                 },
                 {

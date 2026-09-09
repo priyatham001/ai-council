@@ -18,8 +18,21 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
 export type TranslationsRecord = Record<string, string>;
 
 export const EN_TRANSLATIONS: TranslationsRecord = {
+  // Direct shortcuts
+  'selectCrop': 'Select Crop',
+  'nearbyMarkets': 'Nearby Mandis & Markets',
+  'bestPrice': 'Best Price',
+  'yourLocation': 'Your Location',
+  'couldNotDetect': "We couldn't detect your location.",
+  'enterCityManually': 'Enter city manually',
+  'changeLocation': 'Change Location',
+  'iAmFarmer': 'I AM A FARMER',
+  'iAmBuyer': 'I AM A BUYER',
+  'farmerDesc': 'Sell your crops and find the best prices.',
+  'buyerDesc': 'Discover crops directly from farmers.',
+
   // Brand & Header
-  'app.name': 'KrishiSetu',
+  'app.name': 'Kisan Setu',
   'app.tagline': 'Connecting Farmers to Better Markets and Better Buyers',
   'app.nationalTagline': "India's Intelligent Agricultural Market-Linkage Platform",
   'nav.home': 'Home',
@@ -267,8 +280,21 @@ export const EN_TRANSLATIONS: TranslationsRecord = {
 };
 
 export const TE_TRANSLATIONS: TranslationsRecord = {
+  // Direct shortcuts
+  'selectCrop': 'పంటను ఎంచుకోండి',
+  'nearbyMarkets': 'సమీప మార్కెట్లు & మండిలు',
+  'bestPrice': 'ఉత్తమ ధర',
+  'yourLocation': 'మీ ప్రదేశం',
+  'couldNotDetect': 'మేము మీ లొకేషన్‌ను గుర్తించలేకపోయాము.',
+  'enterCityManually': 'నగరాన్ని మాన్యువల్‌గా నమోదు చేయండి',
+  'changeLocation': 'ప్రదేశం మార్చండి',
+  'iAmFarmer': 'నేను ఒక రైతును',
+  'iAmBuyer': 'నేను ఒక కొనుగోలుదారుడిని',
+  'farmerDesc': 'మీ పంటలను విక్రయించి అత్యుత్తమ ధరలను పొందండి.',
+  'buyerDesc': 'రైతుల నుండి నేరుగా తాజా పంటలను కనుగొనండి.',
+
   // Brand & Header
-  'app.name': 'కృషిసేతు',
+  'app.name': 'కిసాన్ సేతు',
   'app.tagline': 'రైతులకు మెరుగైన మార్కెట్లు మరియు సరైన కొనుగోలుదారులను అనుసంధానిస్తుంది',
   'app.nationalTagline': 'భారతదేశ డిజిటల్ వ్యవసాయ మార్కెట్ అనుసంధాన వేదిక',
   'nav.home': 'హోమ్',
@@ -516,8 +542,21 @@ export const TE_TRANSLATIONS: TranslationsRecord = {
 };
 
 export const MR_TRANSLATIONS: TranslationsRecord = {
+  // Direct shortcuts
+  'selectCrop': 'पीक निवडा',
+  'nearbyMarkets': 'जवळचे बाजार व मंड्या',
+  'bestPrice': 'सर्वोत्तम किंमत',
+  'yourLocation': 'आपले स्थान',
+  'couldNotDetect': 'आम्ही आपले स्थान शोधू शकलो नाही.',
+  'enterCityManually': 'शहराचे नाव व्यक्तिशः प्रविष्ट करा',
+  'changeLocation': 'स्थान बदला',
+  'iAmFarmer': 'मी एक शेतकरी आहे',
+  'iAmBuyer': 'मी एक खरेदीदार आहे',
+  'farmerDesc': 'आपली पिके विका आणि सर्वोत्तम दर मिळवा.',
+  'buyerDesc': 'शेतकऱ्यांकडून थेट ताजी पिके मिळवा.',
+
   // Brand & Header
-  'app.name': 'कृषीसेतू',
+  'app.name': 'किसान सेतू',
   'app.tagline': 'शेतकऱ्यांना उत्तम बाजारपेठ आणि विश्वासू खरेदीदारांशी जोडणारे व्यासपीठ',
   'app.nationalTagline': 'भारताचे डिजिटल कृषी बाजारपेठ व्यासपीठ',
   'nav.home': 'मुख्यपृष्ठ',

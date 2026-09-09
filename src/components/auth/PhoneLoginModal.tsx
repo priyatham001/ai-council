@@ -25,6 +25,7 @@ export const PhoneLoginModal: React.FC = () => {
     closeAuthModal,
     verifyOtp,
     loginAdmin,
+    continueAsGuest,
     redirectAfterAuth,
   } = useAuth();
   const { t } = useTranslation();
@@ -211,7 +212,7 @@ export const PhoneLoginModal: React.FC = () => {
             </div>
 
             <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-[11px] text-amber-800 dark:text-amber-300">
-              💡 {t('auth.adminDemoHint', 'Demo: admin / krishi2026')}
+              💡 {t('auth.adminDemoHint', 'Demo: admin / admin@123')}
             </div>
 
             <button
@@ -286,6 +287,25 @@ export const PhoneLoginModal: React.FC = () => {
                 </>
               )}
             </button>
+
+            <div className="pt-2 border-t border-stone-200 dark:border-stone-800 text-center space-y-1">
+              <button
+                type="button"
+                onClick={() => {
+                  const roleForGuest = authModalRole === 'buyer' ? 'buyer' : 'farmer';
+                  continueAsGuest(roleForGuest);
+                  if (redirectAfterAuth) {
+                    window.location.href = redirectAfterAuth;
+                  }
+                }}
+                className="text-xs text-stone-600 dark:text-stone-300 hover:text-emerald-600 dark:hover:text-emerald-400 font-bold py-1.5 transition-colors cursor-pointer"
+              >
+                👀 {t('auth.continueAsGuest', 'Continue as Guest (Explore UI & Markets)')}
+              </button>
+              <p className="text-[10px] text-stone-400 leading-tight">
+                {t('auth.guestNotice', 'Explore UI and sample listings. OTP required to post crops or place bids.')}
+              </p>
+            </div>
           </form>
         ) : (
           /* OTP Verification Form */
@@ -346,6 +366,22 @@ export const PhoneLoginModal: React.FC = () => {
                 </>
               )}
             </button>
+
+            <div className="pt-2 border-t border-stone-200 dark:border-stone-800 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  const roleForGuest = authModalRole === 'buyer' ? 'buyer' : 'farmer';
+                  continueAsGuest(roleForGuest);
+                  if (redirectAfterAuth) {
+                    window.location.href = redirectAfterAuth;
+                  }
+                }}
+                className="text-xs text-stone-600 dark:text-stone-300 hover:text-emerald-600 dark:hover:text-emerald-400 font-bold py-1 transition-colors cursor-pointer"
+              >
+                👀 {t('auth.continueAsGuest', 'Continue as Guest')}
+              </button>
+            </div>
           </form>
         )}
       </motion.div>
