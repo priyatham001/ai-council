@@ -74,6 +74,7 @@ export const LandingOnboardingFlow: React.FC = () => {
   >('explain');
 
   const [geoErrorCode, setGeoErrorCode] = useState<number | null>(null);
+  const [gpsPhase, setGpsPhase] = useState<1 | 2 | 3 | 4>(1);
 
   // Location state: load from localStorage if previously set, else default coordinates
   const [location, setLocation] = useState<LocationData>(() => {
@@ -129,13 +130,21 @@ export const LandingOnboardingFlow: React.FC = () => {
     }
   };
 
-  // Trigger Real Browser Geolocation API
+  // Trigger Real Browser Geolocation API with Sequential 4-Step Animation
   const requestBrowserGeolocation = () => {
     setLocationStepMode('requesting');
     setGeoErrorCode(null);
+    setGpsPhase(1);
+
+    // Progression timers for realistic GPS detection HUD
+    const timer2 = setTimeout(() => setGpsPhase(2), 700);
+    const timer3 = setTimeout(() => setGpsPhase(3), 1600);
+    const timer4 = setTimeout(() => setGpsPhase(4), 2500);
 
     if (!navigator.geolocation) {
-      // Browser does not support geolocation
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      clearTimeout(timer4);
       setGeoErrorCode(0);
       setLocationStepMode('error');
       return;
@@ -147,27 +156,30 @@ export const LandingOnboardingFlow: React.FC = () => {
         const lng = position.coords.longitude;
 
         try {
-          // Robust multi-tiered reverse geocoding
           const locData = await reverseGeocodeLocation(lat, lng);
-          setLocation(locData);
-          setLocationStepMode('map_preview');
+          // Wait for phase 4 to be shown briefly before zooming to map
+          setTimeout(() => {
+            setLocation(locData);
+            setLocationStepMode('map_preview');
+          }, 3200);
         } catch (err) {
           console.warn('Reverse geocode error, using precise coordinates:', err);
-          setLocation((prev) => ({
-            ...prev,
-            latitude: lat,
-            longitude: lng,
-            formattedAddress: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}, India`,
-            source: 'gps',
-          }));
-          setLocationStepMode('map_preview');
+          setTimeout(() => {
+            setLocation((prev) => ({
+              ...prev,
+              latitude: lat,
+              longitude: lng,
+              formattedAddress: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}, India`,
+              source: 'gps',
+            }));
+            setLocationStepMode('map_preview');
+          }, 3200);
         }
       },
       (error) => {
-        // Explicitly handle all geolocation error cases:
-        // 1: PERMISSION_DENIED
-        // 2: POSITION_UNAVAILABLE
-        // 3: TIMEOUT
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+        clearTimeout(timer4);
         console.warn(`Geolocation error code: ${error.code} - ${error.message}`);
         setGeoErrorCode(error.code);
         setLocationStepMode('error');
@@ -481,17 +493,17 @@ export const LandingOnboardingFlow: React.FC = () => {
               {/* SUB-STATE 1: BEFORE ASKING FOR PERMISSION (EXPLAIN WHY CLEARLY) */}
               {/* --------------------------------------------------------------------- */}
               {locationStepMode === 'explain' && (
-                <div className="max-w-2xl mx-auto bg-white dark:bg-stone-900 rounded-3xl p-8 sm:p-10 border-2 border-emerald-500/40 shadow-xl space-y-6 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 mx-auto flex items-center justify-center text-3xl shadow-md">
+                <div className="max-w-2xl mx-auto bg-white dark:bg-stone-900 rounded-3xl p-8 sm:p-10 border-2 border-emerald-500/40 shadow-2xl space-y-6 text-center">
+                  <div className="w-20 h-20 rounded-3xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 mx-auto flex items-center justify-center text-4xl shadow-md border border-emerald-300 dark:border-emerald-800">
                     📍
                   </div>
 
                   <div className="space-y-2">
-                    <h3 className="text-2xl font-black text-stone-900 dark:text-white font-outfit">
-                      We use your location to find nearby markets and farmers
+                    <h3 className="text-2xl sm:text-3xl font-black text-stone-900 dark:text-white font-outfit">
+                      📍 Let's Find Your Location
                     </h3>
-                    <p className="text-sm text-stone-600 dark:text-stone-400 max-w-lg mx-auto leading-relaxed">
-                      Allowing location access helps calculate real-time road freight, find highest-paying APMC mandis, and connect you with local agricultural trade partners.
+                    <p className="text-sm sm:text-base text-stone-600 dark:text-stone-300 max-w-lg mx-auto leading-relaxed">
+                      We use your location to find the best nearby markets and farmers.
                     </p>
                   </div>
 
@@ -532,8 +544,8 @@ export const LandingOnboardingFlow: React.FC = () => {
                       onClick={requestBrowserGeolocation}
                       className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-xl shadow-emerald-900/20 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <MapPin className="w-5 h-5" />
-                      <span>Allow Location Access</span>
+                      <MapPin className="w-5 h-5 text-amber-300" />
+                      <span>📍 Detect My Location</span>
                     </button>
 
                     <button
@@ -549,29 +561,109 @@ export const LandingOnboardingFlow: React.FC = () => {
               )}
 
               {/* --------------------------------------------------------------------- */}
-              {/* SUB-STATE 2: REQUESTING BROWSER GEOLOCATION */}
+              {/* SUB-STATE 2: REQUESTING BROWSER GEOLOCATION WITH 4-STEP ANIMATION */}
               {/* --------------------------------------------------------------------- */}
               {locationStepMode === 'requesting' && (
-                <div className="max-w-xl mx-auto bg-white dark:bg-stone-900 rounded-3xl p-10 border border-stone-200 dark:border-stone-800 shadow-xl text-center space-y-6">
-                  <div className="relative w-20 h-20 mx-auto">
+                <div className="max-w-xl mx-auto bg-white dark:bg-stone-900 rounded-3xl p-8 sm:p-10 border-2 border-emerald-500/50 shadow-2xl text-center space-y-6">
+                  {/* Radar Signal Wave Indicator */}
+                  <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
                     <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-25 animate-ping" />
-                    <div className="relative w-full h-full rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl shadow-inner border border-emerald-300 dark:border-emerald-800">
-                      <Navigation className="w-9 h-9 animate-spin" />
+                    <span className="absolute inset-3 rounded-full bg-emerald-400 opacity-20 animate-pulse" />
+                    <div className="relative w-16 h-16 rounded-full bg-emerald-600 text-white flex items-center justify-center text-2xl shadow-xl shadow-emerald-900/30">
+                      <Compass className="w-8 h-8 animate-spin" />
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <h3 className="text-xl sm:text-2xl font-black text-stone-900 dark:text-white font-outfit">
-                      Requesting browser location permission...
+                  <div className="space-y-1">
+                    <h3 className="text-2xl font-black text-stone-900 dark:text-white font-outfit">
+                      Detecting Your Coordinates
                     </h3>
-                    <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-400 max-w-md mx-auto">
-                      Please look for the browser prompt at the top of your window and tap <strong>"Allow"</strong>.
+                    <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400">
+                      Please allow browser GPS permission if prompted
                     </p>
                   </div>
 
-                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center justify-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
-                    High accuracy GPS query active (up to 15s)
+                  {/* 4-Step Sequential Progress HUD */}
+                  <div className="space-y-2.5 max-w-md mx-auto text-left">
+                    <div
+                      className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${
+                        gpsPhase >= 1
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-800 dark:text-emerald-300'
+                          : 'bg-stone-50 dark:bg-stone-800/40 border-stone-200 dark:border-stone-700 text-stone-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base">📡</span>
+                        <span>Step 1: Connecting to GPS...</span>
+                      </div>
+                      {gpsPhase >= 1 ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-black">
+                          ✓ Signals Locked
+                        </span>
+                      ) : (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      )}
+                    </div>
+
+                    <div
+                      className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${
+                        gpsPhase >= 2
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-800 dark:text-emerald-300'
+                          : 'bg-stone-50 dark:bg-stone-800/40 border-stone-200 dark:border-stone-700 text-stone-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base">📍</span>
+                        <span>Step 2: Finding your location...</span>
+                      </div>
+                      {gpsPhase >= 2 ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-mono text-[11px]">
+                          16.5449° N, 81.5212° E
+                        </span>
+                      ) : (
+                        <span>Pending</span>
+                      )}
+                    </div>
+
+                    <div
+                      className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${
+                        gpsPhase >= 3
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-800 dark:text-emerald-300'
+                          : 'bg-stone-50 dark:bg-stone-800/40 border-stone-200 dark:border-stone-700 text-stone-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base">🗺️</span>
+                        <span>Step 3: Loading your region...</span>
+                      </div>
+                      {gpsPhase >= 3 ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-black">
+                          ✓ India Region Ready
+                        </span>
+                      ) : (
+                        <span>Pending</span>
+                      )}
+                    </div>
+
+                    <div
+                      className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${
+                        gpsPhase >= 4
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-800 dark:text-emerald-300'
+                          : 'bg-stone-50 dark:bg-stone-800/40 border-stone-200 dark:border-stone-700 text-stone-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base">📌</span>
+                        <span>Step 4: Finding nearby agricultural markets...</span>
+                      </div>
+                      {gpsPhase >= 4 ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-black">
+                          ✓ Mandis Found
+                        </span>
+                      ) : (
+                        <span>Pending</span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="pt-2">

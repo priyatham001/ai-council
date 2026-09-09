@@ -79,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 </div>
                 <p className="text-[11px] text-emerald-300 font-medium hidden sm:block">
-                  From Your Farm to the Right Market
+                  From Your Farm to the Right Market • By Idea Forge
                 </p>
               </div>
             </Link>
