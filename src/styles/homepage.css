@@ -1,0 +1,85 @@
+/* =========================================================================
+   KRISHISETU HOMEPAGE STYLES
+   Orbital systems, glowing pulse rings, and responsive animations
+   ========================================================================= */
+
+@keyframes orb-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 40px rgba(16, 185, 129, 0.45), 0 0 80px rgba(245, 158, 11, 0.25);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 60px rgba(16, 185, 129, 0.65), 0 0 110px rgba(245, 158, 11, 0.4);
+  }
+}
+
+@keyframes ring-spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ring-spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes float-subtle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes shimmer-sweep {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-orb-pulse {
+  animation: orb-pulse 4.5s ease-in-out infinite;
+}
+
+.animate-ring-spin-slow {
+  animation: ring-spin-slow 40s linear infinite;
+}
+
+.animate-ring-spin-reverse {
+  animation: ring-spin-reverse 32s linear infinite;
+}
+
+.animate-float-subtle {
+  animation: float-subtle 4s ease-in-out infinite;
+}
+
+.animate-shimmer-sweep {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  background-size: 200% 100%;
+  animation: shimmer-sweep 3s infinite linear;
+}
+
+/* Accessibility: respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-orb-pulse,
+  .animate-ring-spin-slow,
+  .animate-ring-spin-reverse,
+  .animate-float-subtle,
+  .animate-shimmer-sweep {
+    animation: none !important;
+    transform: none !important;
+  }
+}
