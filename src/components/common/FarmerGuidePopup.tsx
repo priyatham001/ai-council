@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useFarmerGuide, GuideStepId } from '../../context/FarmerGuideContext';
+import flyingBeeImg from '../../assets/images/flying_bee_guide_1789055828697.jpg';
 
 interface LocalizedGuide {
   main: string;
@@ -497,7 +498,7 @@ export const FarmerGuidePopup: React.FC = () => {
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
-          className="pointer-events-none fixed z-30 transition-all duration-300 rounded-2xl ring-2 ring-emerald-400 ring-offset-2 ring-offset-stone-900/60 shadow-[0_0_28px_rgba(52,211,153,0.45)]"
+          className="pointer-events-none fixed z-30 transition-opacity duration-200 rounded-2xl ring-2 ring-emerald-400 ring-offset-2 ring-offset-stone-900/60 shadow-[0_0_28px_rgba(52,211,153,0.45)]"
           style={{
             top: highlightCoords.top - window.scrollY - 5,
             left: highlightCoords.left - window.scrollX - 5,
@@ -513,14 +514,14 @@ export const FarmerGuidePopup: React.FC = () => {
         </motion.div>
       )}
 
-      {/* 2. PEEKING FARMER EXPERIENCE (Corner Leaning & Animated Speech Balloon) */}
+      {/* 2. FLYING BEE GUIDE EXPERIENCE (Hovering Buzzing Mascot & Animated Speech Balloon) */}
       <div
         id="kisan-peeking-guide-container"
         className="fixed bottom-0 right-0 sm:right-4 z-50 pointer-events-none select-none flex flex-col items-end justify-end max-w-[calc(100vw-1rem)] sm:max-w-md pb-2 pr-2 sm:pr-0"
       >
         <AnimatePresence mode="wait">
           {isDucked ? (
-            /* DUCKED STATE: Discrete, Charming Peeking Tab at the Screen Corner */
+            /* DUCKED STATE: Discrete, Charming Flying Bee Tab at the Screen Corner */
             <motion.button
               key="ducked-tab"
               initial={{ y: 60, opacity: 0, scale: 0.85 }}
@@ -533,41 +534,41 @@ export const FarmerGuidePopup: React.FC = () => {
                 setIsDucked(false);
                 setIsInactive(false);
               }}
-              className="pointer-events-auto cursor-pointer bg-stone-900/95 text-white border-2 border-emerald-500/70 rounded-full py-2 px-3.5 shadow-2xl flex items-center gap-2.5 backdrop-blur-md group hover:border-emerald-400 transition-all ring-2 ring-emerald-500/20"
-              title="Click to summon Kisan Guide"
+              className="pointer-events-auto cursor-pointer bg-stone-950/95 text-white border-2 border-amber-400/80 rounded-full py-2 px-3.5 shadow-2xl flex items-center gap-2.5 backdrop-blur-md group hover:border-amber-300 transition-all ring-2 ring-amber-500/25"
+              title="Click to summon Madhu Bee Guide"
             >
               <div className="relative">
                 <img
-                  src="/farmer-guide.jpg"
-                  alt="Kisan Mitra Avatar"
+                  src={flyingBeeImg || '/flying-bee-guide.jpg'}
+                  alt="Madhu Bee Guide Avatar"
                   referrerPolicy="no-referrer"
-                  className="w-8 h-8 rounded-full object-cover border border-emerald-400 shadow-xs"
+                  className="w-8 h-8 rounded-full object-cover border border-amber-400 shadow-xs"
                 />
                 <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
                 </span>
               </div>
               <div className="text-left pr-1">
                 <div className="flex items-center gap-1">
-                  <span className="text-xs font-black text-emerald-300 font-outfit tracking-tight">
-                    Kisan Mitra
+                  <span className="text-xs font-black text-amber-300 font-outfit tracking-tight">
+                    Madhu Bee 🐝
                   </span>
-                  <span className="text-[11px] animate-bounce">👋</span>
+                  <span className="text-[11px] animate-bounce">✨</span>
                 </div>
                 <span className="block text-[10px] text-stone-300 font-medium">
                   {language === 'hi'
-                    ? 'मदद चाहिए? टैप करें'
+                    ? 'मधुमक्खी गाइड बुलाएं 🐝'
                     : language === 'mr'
-                    ? 'मदत हवी आहे? टॅप करा'
+                    ? 'मधमाशी गाइड बोलवा 🐝'
                     : language === 'te'
-                    ? 'సహాయం కావాలా? తాకండి'
-                    : 'Need guidance? Peek in'}
+                    ? 'తేనెటీగ గైడ్‌ను పిలవండి 🐝'
+                    : 'Need guidance? Buzz in 🐝'}
                 </span>
               </div>
             </motion.button>
           ) : (
-            /* ACTIVE STATE: Corner Peeking Character + Natural Speech Balloon */
+            /* ACTIVE STATE: Corner Flying Bee Mascot + Natural Speech Balloon */
             <div key="peeking-active" className="flex flex-col items-end gap-2 pointer-events-auto">
               {/* Natural Speech Balloon (NOT a chatbot box) */}
               <motion.div
@@ -575,20 +576,21 @@ export const FarmerGuidePopup: React.FC = () => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.85, y: 20 }}
                 transition={{ type: 'spring', damping: 20, stiffness: 220 }}
-                className="relative bg-stone-900/95 dark:bg-stone-900/95 text-stone-100 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 shadow-[0_12px_40px_rgba(0,0,0,0.55)] border border-emerald-500/50 backdrop-blur-md max-w-[320px] sm:max-w-[350px] mr-4 sm:mr-10 mb-1 ring-1 ring-emerald-500/20"
+                className="relative bg-stone-950/95 dark:bg-stone-950/95 text-stone-100 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 shadow-[0_16px_45px_rgba(245,158,11,0.3)] border border-amber-400/60 backdrop-blur-md max-w-[320px] sm:max-w-[350px] mr-4 sm:mr-10 mb-1 ring-1 ring-amber-400/20"
               >
-                {/* Speech Balloon Triangle Tail pointing down-right toward Farmer's mouth */}
-                <div className="absolute -bottom-2.5 right-10 sm:right-14 w-0 h-0 border-x-8 border-x-transparent border-t-10 border-t-stone-900/95 filter drop-shadow-[0_2px_2px_rgba(16,185,129,0.3)]" />
+                {/* Speech Balloon Triangle Tail pointing down-right toward Flying Bee */}
+                <div className="absolute -bottom-2.5 right-10 sm:right-14 w-0 h-0 border-x-8 border-x-transparent border-t-10 border-t-stone-950/95 filter drop-shadow-[0_2px_4px_rgba(245,158,11,0.4)]" />
 
                 {/* Speech Balloon Top Bar */}
                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-stone-800">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs font-black text-emerald-300 font-outfit uppercase tracking-wider">
-                      Kisan Mitra
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    <span className="text-xs font-black text-amber-300 font-outfit uppercase tracking-wider flex items-center gap-1">
+                      <span>Madhu Bee</span>
+                      <span className="text-sm">🐝</span>
                     </span>
-                    <span className="text-[10px] text-amber-300/90 font-mono bg-amber-950/60 px-1.5 py-0.2 rounded border border-amber-500/30">
-                      Live Guide
+                    <span className="text-[10px] text-amber-200 font-mono bg-amber-950/70 px-1.5 py-0.2 rounded border border-amber-500/40">
+                      Flying Guide
                     </span>
                   </div>
 
@@ -599,8 +601,8 @@ export const FarmerGuidePopup: React.FC = () => {
                       onClick={handleToggleVoice}
                       className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         isSpeaking
-                          ? 'bg-emerald-500 text-stone-950 animate-pulse'
-                          : 'bg-stone-800 hover:bg-stone-700 text-emerald-300 hover:text-white'
+                          ? 'bg-amber-400 text-stone-950 animate-pulse'
+                          : 'bg-stone-800 hover:bg-stone-700 text-amber-300 hover:text-white'
                       }`}
                       title={isSpeaking ? 'Stop speaking' : 'Read aloud in your language'}
                     >
@@ -660,7 +662,7 @@ export const FarmerGuidePopup: React.FC = () => {
 
                   {/* Context Hint */}
                   {currentGuide.hint && !isInactive && !showThumbsUp && (
-                    <div className="text-[11px] text-amber-300/90 font-semibold pl-6 flex items-center gap-1">
+                    <div className="text-[11px] text-amber-300 font-semibold pl-6 flex items-center gap-1">
                       <span>💡</span>
                       <span>{currentGuide.hint}</span>
                     </div>
@@ -668,16 +670,16 @@ export const FarmerGuidePopup: React.FC = () => {
 
                   {/* Inactivity Reassurance Note */}
                   {isInactive && (
-                    <div className="text-[11px] text-emerald-300/90 pl-6 flex items-center gap-1">
-                      <span>🌱</span>
+                    <div className="text-[11px] text-amber-300/90 pl-6 flex items-center gap-1">
+                      <span>🐝</span>
                       <span>
                         {language === 'hi'
-                          ? 'जब भी आप तैयार हों, स्क्रीन पर आगे बढ़ें।'
+                          ? 'जब भी आप तैयार हों, स्क्रीन पर आगे बढ़ें। मैं यहीं उड़ रहा हूँ!'
                           : language === 'mr'
-                          ? 'आपण तयार असाल तेव्हा पुढील कृती करा.'
+                          ? 'आपण तयार असाल तेव्हा पुढील कृती करा. मी इथेच उडतोय!'
                           : language === 'te'
-                          ? 'మీరు సిద్ధమైనప్పుడు స్క్రీన్‌పై కొనసాగండి.'
-                          : "Whenever you're ready, proceed right on the screen."}
+                          ? 'మీరు సిద్ధమైనప్పుడు స్క్రీన్‌పై కొనసాగండి. నేను ఇక్కడే ఎగురుతున్నాను!'
+                          : "Whenever you're ready, proceed right on the screen. I'm buzzing right here!"}
                       </span>
                     </div>
                   )}
@@ -685,21 +687,24 @@ export const FarmerGuidePopup: React.FC = () => {
 
                 {/* Balloon Action Footer */}
                 <div className="mt-3 pt-2 border-t border-stone-800/80 flex items-center justify-between gap-2 text-xs">
-                  <span className="text-[10px] text-stone-400">
-                    {language === 'hi'
-                      ? 'मैं यहीं इंतज़ार कर रहा हूँ...'
-                      : language === 'mr'
-                      ? 'मी इथेच वाट पाहतोय...'
-                      : language === 'te'
-                      ? 'నేను ఇక్కడే వేచి ఉంటాను...'
-                      : 'Waiting for your action...'}
+                  <span className="text-[10px] text-amber-200/70 flex items-center gap-1">
+                    <span className="animate-spin text-xs">🐝</span>
+                    <span>
+                      {language === 'hi'
+                        ? 'मधुमक्खी आपके साथ उड़ रही है...'
+                        : language === 'mr'
+                        ? 'मधमाशी आपल्यासोबत उडत आहे...'
+                        : language === 'te'
+                        ? 'తేనెటీగ మీతో ఎగురుతోంది...'
+                        : 'Hovering & buzzing beside you...'}
+                    </span>
                   </span>
 
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={handleAcknowledge}
-                      className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                      className="px-3 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-black text-xs shadow-md transition-all flex items-center gap-1 cursor-pointer"
                     >
                       <ThumbsUp className="w-3 h-3" />
                       <span>{language === 'hi' ? 'समझ गया' : language === 'mr' ? 'समजले' : language === 'te' ? 'అర్థమైంది' : 'Got it'}</span>
@@ -708,60 +713,107 @@ export const FarmerGuidePopup: React.FC = () => {
                 </div>
               </motion.div>
 
-              {/* REALISTIC PEEKING FARMER (Body leaning from the screen edge) */}
+              {/* CHARMING FLYING BEE MASCOT (Hovering, Wing-Fluttering & Guiding) */}
               <motion.div
                 initial={{ x: 120, y: 70, rotate: 14, opacity: 0 }}
                 animate={{
                   x: 0,
-                  y: [0, -5, 0],
-                  rotate: [-5, -3, -5],
+                  y: [0, -14, -4, -18, 0],
+                  rotate: [-4, 6, -3, 5, -4],
                   opacity: 1,
                 }}
                 exit={{ x: 120, y: 80, rotate: 14, opacity: 0 }}
                 transition={{
                   x: { type: 'spring', damping: 18, stiffness: 140 },
                   opacity: { duration: 0.25 },
-                  y: { repeat: Infinity, duration: 3.5, ease: 'easeInOut' },
-                  rotate: { repeat: Infinity, duration: 3.5, ease: 'easeInOut' },
+                  y: { repeat: Infinity, duration: 3.4, ease: 'easeInOut' },
+                  rotate: { repeat: Infinity, duration: 3.4, ease: 'easeInOut' },
                 }}
                 className="relative cursor-pointer group select-none pr-1 sm:pr-3"
                 onClick={() => setIsDucked(true)}
-                title="Click to duck"
+                title="Click to duck Bee Guide"
               >
-                {/* Visual Peeking Character Bust */}
-                <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 border-emerald-400/90 shadow-[-8px_8px_30px_rgba(0,0,0,0.6)] ring-4 ring-emerald-500/30 bg-stone-900">
+                {/* Fluttering Wings Behind Bee */}
+                <motion.div
+                  animate={{
+                    rotate: [-24, 24, -24],
+                    scaleY: [0.85, 1.25, 0.85],
+                    scaleX: [1, 0.8, 1],
+                  }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 0.14,
+                    ease: 'easeInOut',
+                  }}
+                  className="absolute -top-5 left-3 sm:left-6 w-9 sm:w-11 h-14 sm:h-16 bg-gradient-to-t from-amber-200/40 via-sky-100/60 to-white/90 rounded-full border border-white/70 shadow-[0_0_12px_rgba(255,255,255,0.7)] blur-[0.5px] pointer-events-none origin-bottom-right z-10"
+                />
+                <motion.div
+                  animate={{
+                    rotate: [24, -24, 24],
+                    scaleY: [0.85, 1.25, 0.85],
+                    scaleX: [1, 0.8, 1],
+                  }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 0.14,
+                    ease: 'easeInOut',
+                  }}
+                  className="absolute -top-5 right-3 sm:right-6 w-9 sm:w-11 h-14 sm:h-16 bg-gradient-to-t from-amber-200/40 via-sky-100/60 to-white/90 rounded-full border border-white/70 shadow-[0_0_12px_rgba(255,255,255,0.7)] blur-[0.5px] pointer-events-none origin-bottom-left z-10"
+                />
+
+                {/* Golden Pollen Dust Trail */}
+                <div className="absolute -bottom-2 -left-1 flex items-center gap-1.5 pointer-events-none z-10">
+                  <motion.span
+                    animate={{ y: [0, 12, 22], opacity: [0.9, 0.5, 0], scale: [1, 0.6, 0.2] }}
+                    transition={{ repeat: Infinity, duration: 1.2, delay: 0 }}
+                    className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_10px_#f59e0b]"
+                  />
+                  <motion.span
+                    animate={{ y: [0, 14, 26], opacity: [0.9, 0.4, 0], scale: [1, 0.5, 0.2] }}
+                    transition={{ repeat: Infinity, duration: 1.4, delay: 0.4 }}
+                    className="w-2 h-2 rounded-full bg-yellow-300 shadow-[0_0_8px_#facc15]"
+                  />
+                  <motion.span
+                    animate={{ y: [0, 10, 18], opacity: [0.8, 0.3, 0], scale: [1, 0.4, 0.1] }}
+                    transition={{ repeat: Infinity, duration: 1.1, delay: 0.8 }}
+                    className="w-1.5 h-1.5 rounded-full bg-amber-200 shadow-[0_0_6px_#fde68a]"
+                  />
+                </div>
+
+                {/* Visual Flying Bee Mascot Container */}
+                <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 border-amber-400 shadow-[-8px_12px_36px_rgba(245,158,11,0.55)] ring-4 ring-amber-400/30 bg-stone-950 group-hover:scale-105 transition-transform duration-300">
                   <img
-                    src="/farmer-guide.jpg"
-                    alt="Indian Farmer Peeking In"
+                    src={flyingBeeImg || '/flying-bee-guide.jpg'}
+                    alt="Madhu Flying Bee Guide Mascot"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                   />
 
-                  {/* Corner Edge Vignette (looks like he is standing outside behind the screen frame) */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-stone-950/70 via-transparent to-transparent" />
+                  {/* Golden Honey Glow Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-amber-950/60 via-transparent to-amber-500/10 pointer-events-none" />
                 </div>
 
-                {/* Animated Pointing Arm / Hand Gesture leaning towards screen center */}
+                {/* Animated Golden Pointer Wand towards the screen center */}
                 <motion.div
                   animate={{
-                    x: [0, -8, 0],
-                    y: [0, -6, 0],
-                    rotate: [-10, -18, -10],
+                    x: [0, -10, 0],
+                    y: [0, -8, 0],
+                    rotate: [-12, -22, -12],
                   }}
                   transition={{
                     repeat: Infinity,
-                    duration: 1.8,
+                    duration: 1.6,
                     ease: 'easeInOut',
                   }}
-                  className="absolute -top-3 -left-3 sm:-top-4 sm:-left-4 bg-emerald-600 text-white rounded-full w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center shadow-xl border-2 border-white ring-2 ring-emerald-400 font-black text-base sm:text-lg"
+                  className="absolute -top-3 -left-3 sm:-top-4 sm:-left-4 bg-gradient-to-br from-amber-400 to-amber-600 text-stone-950 rounded-full w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center shadow-xl border-2 border-white ring-2 ring-amber-300 font-black text-base sm:text-lg z-20 cursor-pointer"
                 >
                   👉
                 </motion.div>
 
-                {/* Name & Status Pill Badge */}
-                <div className="absolute -bottom-1 right-2 sm:right-4 bg-stone-950/90 border border-emerald-400/80 text-white px-2.5 py-0.5 rounded-full text-[10px] font-bold font-outfit shadow-md flex items-center gap-1.5 backdrop-blur-xs">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  <span>Kisan Mitra</span>
+                {/* Mascot Name & Status Pill Badge */}
+                <div className="absolute -bottom-1.5 right-2 sm:right-4 bg-stone-950/95 border border-amber-400 text-amber-300 px-2.5 py-0.5 rounded-full text-[10px] font-black font-outfit shadow-md flex items-center gap-1.5 backdrop-blur-xs z-20">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span>Madhu Bee 🐝</span>
                 </div>
               </motion.div>
             </div>

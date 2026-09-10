@@ -18,6 +18,13 @@ import {
   DollarSign,
   Maximize2,
 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
+import {
+  localizeCropName,
+  localizeGrade,
+  localizeState,
+  localizeUnit,
+} from '../../utils/cropLocalization';
 
 interface BuyerLotsGoogleMapViewProps {
   lots: DigitalLot[];
@@ -46,6 +53,7 @@ export const BuyerLotsGoogleMapView: React.FC<BuyerLotsGoogleMapViewProps> = ({
   onSelectLot,
   onOpenDetails,
 }) => {
+  const { language, t } = useLanguage();
   const apiKey =
     import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
     (typeof window !== 'undefined' ? (window as any).__GOOGLE_MAPS_API_KEY__ : '') ||
@@ -93,11 +101,11 @@ export const BuyerLotsGoogleMapView: React.FC<BuyerLotsGoogleMapViewProps> = ({
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <h3 className="text-sm font-black text-white">
-              Pan-India Agricultural Map Visualizer
+              {t('buyer.panIndiaMapVisualizer') || 'Pan-India Agricultural Map Visualizer'}
             </h3>
           </div>
           <span className="text-[11px] font-mono text-emerald-300 bg-emerald-900/80 px-2.5 py-1 rounded-full border border-emerald-700">
-            {lots.length} Geocoded Lots
+            {lots.length} {t('buyer.geocodedLots') || 'Geocoded Lots'}
           </span>
         </div>
 
@@ -117,7 +125,7 @@ export const BuyerLotsGoogleMapView: React.FC<BuyerLotsGoogleMapViewProps> = ({
                   <span className="text-2xl">{getCropEmoji(lot.crop)}</span>
                   <div>
                     <h4 className="font-bold text-sm text-white group-hover:text-amber-300 transition-colors">
-                      {lot.crop}
+                      {localizeCropName(lot.crop, language)}
                     </h4>
                     <span className="text-[10px] text-stone-400 font-mono">
                       {lot.lotNumber}
@@ -125,25 +133,25 @@ export const BuyerLotsGoogleMapView: React.FC<BuyerLotsGoogleMapViewProps> = ({
                   </div>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getGradeBg(lot.qualityGrade)}`}>
-                  {lot.qualityGrade}
+                  {localizeGrade(lot.qualityGrade, language)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between text-xs pt-1 border-t border-stone-800">
-                <span className="text-stone-300">{lot.quantityQuintals} q</span>
-                <span className="font-bold text-emerald-400">₹{lot.expectedPricePerQ}/q</span>
+                <span className="text-stone-300">{lot.quantityQuintals} {localizeUnit('q', language)}</span>
+                <span className="font-bold text-emerald-400">₹{lot.expectedPricePerQ}/{localizeUnit('q', language)}</span>
               </div>
 
               <div className="flex items-center gap-1.5 text-[11px] text-stone-400">
                 <MapPin className="w-3 h-3 text-emerald-400 shrink-0" />
-                <span className="truncate">{lot.district}, {lot.state}</span>
+                <span className="truncate">{lot.district}, {localizeState(lot.state, language)}</span>
               </div>
             </div>
           ))}
         </div>
 
         <div className="text-[11px] text-stone-400 text-center z-10">
-          Showing interactive lot geolocation clusters across Indian mandis and farmgates.
+          {t('buyer.showingGeolocations') || 'Showing interactive lot geolocation clusters across Indian mandis and farmgates.'}
         </div>
       </div>
     );
@@ -186,7 +194,7 @@ export const BuyerLotsGoogleMapView: React.FC<BuyerLotsGoogleMapViewProps> = ({
                   onSelectLot(lot);
                   setActiveInfoWindowLot(lot);
                 }}
-                title={`${lot.crop} - ${lot.lotNumber}`}
+                title={`${localizeCropName(lot.crop, language)} - ${lot.lotNumber}`}
               >
                 <div
                   className={`px-2.5 py-1.5 rounded-2xl shadow-xl border-2 flex items-center gap-1.5 transition-all transform cursor-pointer ${
@@ -198,10 +206,10 @@ export const BuyerLotsGoogleMapView: React.FC<BuyerLotsGoogleMapViewProps> = ({
                   <span className="text-base">{getCropEmoji(lot.crop)}</span>
                   <div className="text-left leading-tight">
                     <span className="text-[11px] font-extrabold block truncate max-w-[90px]">
-                      {lot.crop}
+                      {localizeCropName(lot.crop, language)}
                     </span>
                     <span className="text-[10px] opacity-90 block">
-                      ₹{lot.expectedPricePerQ}/q
+                      ₹{lot.expectedPricePerQ}/{localizeUnit('q', language)}
                     </span>
                   </div>
                   <span
@@ -211,7 +219,7 @@ export const BuyerLotsGoogleMapView: React.FC<BuyerLotsGoogleMapViewProps> = ({
                         : 'bg-amber-500 text-stone-950'
                     }`}
                   >
-                    {lot.qualityGrade.replace('Grade ', '')}
+                    {localizeGrade(lot.qualityGrade, language).replace('Grade ', '')}
                   </span>
                 </div>
               </AdvancedMarker>
@@ -233,32 +241,32 @@ export const BuyerLotsGoogleMapView: React.FC<BuyerLotsGoogleMapViewProps> = ({
                       {activeInfoWindowLot.lotNumber}
                     </span>
                     <h4 className="font-black text-sm text-stone-900">
-                      {activeInfoWindowLot.crop}
+                      {localizeCropName(activeInfoWindowLot.crop, language)}
                     </h4>
                   </div>
                   <span className="text-xs font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
-                    {activeInfoWindowLot.qualityGrade}
+                    {localizeGrade(activeInfoWindowLot.qualityGrade, language)}
                   </span>
                 </div>
 
                 <div className="text-xs space-y-1 text-stone-700">
                   <div className="flex justify-between">
-                    <span className="text-stone-500">Volume:</span>
-                    <span className="font-bold">{activeInfoWindowLot.quantityQuintals} quintals</span>
+                    <span className="text-stone-500">{t('buyer.volume') || 'Volume'}:</span>
+                    <span className="font-bold">{activeInfoWindowLot.quantityQuintals} {localizeUnit('quintals', language)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-stone-500">Asking Price:</span>
+                    <span className="text-stone-500">{t('buyer.askingPrice') || 'Asking Price'}:</span>
                     <span className="font-bold text-emerald-800">
-                      ₹{activeInfoWindowLot.expectedPricePerQ}/q
+                      ₹{activeInfoWindowLot.expectedPricePerQ}/{localizeUnit('q', language)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-stone-500">Farmer:</span>
+                    <span className="text-stone-500">{t('buyer.farmer') || 'Farmer'}:</span>
                     <span className="font-medium">{activeInfoWindowLot.farmerName}</span>
                   </div>
                   <div className="flex items-center gap-1 text-[11px] text-stone-500 truncate pt-0.5">
                     <MapPin className="w-3 h-3 text-emerald-700 shrink-0" />
-                    <span>{activeInfoWindowLot.district}, {activeInfoWindowLot.state}</span>
+                    <span>{activeInfoWindowLot.district}, {localizeState(activeInfoWindowLot.state, language)}</span>
                   </div>
                 </div>
 
@@ -269,10 +277,10 @@ export const BuyerLotsGoogleMapView: React.FC<BuyerLotsGoogleMapViewProps> = ({
                       onOpenDetails(activeInfoWindowLot);
                       setActiveInfoWindowLot(null);
                     }}
-                    className="w-full py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1"
+                    className="w-full py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                    <span>Inspect AI Report & Offer</span>
+                    <span>{t('buyer.inspectAIReport') || 'Inspect AI Report & Offer'}</span>
                   </button>
                 </div>
               </div>

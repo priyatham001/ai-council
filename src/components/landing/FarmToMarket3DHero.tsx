@@ -13,7 +13,9 @@ import {
   CheckCircle2,
   Zap,
   Layers,
-  Compass
+  Compass,
+  Play,
+  Pause,
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -128,6 +130,7 @@ const STAGES: PipelineStage[] = [
 export const FarmToMarket3DHero: React.FC = () => {
   const { t, language } = useLanguage();
   const [activeStage, setActiveStage] = useState<number>(2); // Default to AI Vision
+  const [isFloating, setIsFloating] = useState<boolean>(true); // 3D Floating Motion control
 
   const current = STAGES[activeStage] || STAGES[0];
   const CurrentIcon = current.icon;
@@ -266,13 +269,36 @@ export const FarmToMarket3DHero: React.FC = () => {
             </div>
 
             {/* Right 3D Visual Hologram Element */}
-            <div className="lg:col-span-5 flex justify-center items-center">
-              <div className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-3xl bg-gradient-to-br from-emerald-950 via-stone-900 to-black p-6 border-2 border-emerald-500/40 shadow-2xl flex flex-col items-center justify-center text-center preserve-3d animate-float3d overflow-hidden hologram-passport">
+            <div className="lg:col-span-5 flex flex-col justify-center items-center gap-3">
+              <div
+                onClick={() => setIsFloating(!isFloating)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setIsFloating(!isFloating);
+                  }
+                }}
+                title={isFloating ? 'Click box to pause floating motion' : 'Click box to resume floating motion'}
+                className={`relative w-64 h-64 sm:w-72 sm:h-72 rounded-3xl bg-gradient-to-br from-emerald-950 via-stone-900 to-black p-6 border-2 border-emerald-500/50 shadow-2xl flex flex-col items-center justify-center text-center preserve-3d overflow-hidden hologram-passport cursor-pointer select-none transition-all duration-300 hover:border-emerald-400 ${
+                  isFloating ? 'animate-float3d' : 'transform-none shadow-emerald-900/30'
+                }`}
+              >
                 {/* 3D Scanning Laser Beam */}
-                <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_#34d399] animate-laserSweep pointer-events-none" />
+                <div
+                  className={`absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_#34d399] pointer-events-none ${
+                    isFloating ? 'animate-laserSweep' : 'opacity-30'
+                  }`}
+                  style={{ top: isFloating ? undefined : '50%' }}
+                />
 
                 {/* Rotating Orbital Rings */}
-                <div className="absolute inset-4 rounded-full border border-dashed border-emerald-400/30 animate-orbital pointer-events-none" />
+                <div
+                  className={`absolute inset-4 rounded-full border border-dashed border-emerald-400/30 pointer-events-none ${
+                    isFloating ? 'animate-orbital' : 'opacity-40'
+                  }`}
+                />
                 <div className="absolute inset-10 rounded-full border border-emerald-500/20 pointer-events-none" />
 
                 {/* Main Icon */}
@@ -292,6 +318,26 @@ export const FarmToMarket3DHero: React.FC = () => {
                   SIH 2026 Verified
                 </div>
               </div>
+
+              {/* Floating Motion Control Toggle */}
+              <button
+                type="button"
+                onClick={() => setIsFloating(!isFloating)}
+                className="px-3 py-1 rounded-full bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-[11px] font-semibold text-emerald-300 hover:text-white flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                title={isFloating ? 'Pause 3D floating movement' : 'Start 3D floating movement'}
+              >
+                {isFloating ? (
+                  <>
+                    <Pause className="w-3 h-3 text-emerald-400" />
+                    <span>3D Motion: Floating (Click to Pause)</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3 h-3 text-amber-400" />
+                    <span>3D Motion: Paused (Click to Float)</span>
+                  </>
+                )}
+              </button>
             </div>
           </motion.div>
         </AnimatePresence>

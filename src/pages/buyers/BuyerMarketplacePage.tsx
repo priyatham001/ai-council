@@ -42,6 +42,14 @@ import { useTheme } from '../../context/ThemeContext';
 import { useFarmerGuide } from '../../context/FarmerGuideContext';
 import { LanguageSelector } from '../../components/common/LanguageSelector';
 import { FarmerBuyerLinkageAnimation } from '../../components/common/FarmerBuyerLinkageAnimation';
+import {
+  localizeCropName,
+  localizeGrade,
+  localizeState,
+  localizeStatus,
+  localizeBuyerType,
+  localizeUnit,
+} from '../../utils/cropLocalization';
 
 // Buyer Procurement Request Interface
 interface BuyerRequest {
@@ -349,10 +357,10 @@ export const BuyerMarketplacePage: React.FC = () => {
                 type="button"
                 onClick={() => setShowLinkageAnimation(true)}
                 className="px-3 py-1.5 rounded-xl bg-emerald-900/90 hover:bg-emerald-800 text-emerald-200 hover:text-white border border-emerald-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                title="Watch Farmer to Buyer Connection Animation"
+                title={t('buyer.howItConnects') || 'Watch Farmer to Buyer Connection Animation'}
               >
                 <Tv className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden md:inline">How It Connects</span>
+                <span className="hidden md:inline">{t('buyer.howItConnects') || 'How It Connects'}</span>
               </button>
 
               <LanguageSelector variant="dark" />
@@ -447,13 +455,13 @@ export const BuyerMarketplacePage: React.FC = () => {
           <div className="relative z-10 max-w-2xl space-y-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-800 text-emerald-200 border border-emerald-700/60">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              Institutional & Commercial Procurement Exchange
+              {t('buyer.exchangeTag') || 'Institutional & Commercial Procurement Exchange'}
             </span>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Sourcing Directly from Verified Indian Farmers
+              {t('buyer.heroTitle') || 'Sourcing Directly from Verified Indian Farmers'}
             </h1>
             <p className="text-xs sm:text-sm text-stone-300">
-              Review AI-graded produce lots with verified digital passports, place competitive bids, or publish procurement requirements for automatic farmer matching.
+              {t('buyer.heroSubtitle') || 'Review AI-graded produce lots with verified digital passports, place competitive bids, or publish procurement requirements for automatic farmer matching.'}
             </p>
           </div>
         </div>
@@ -483,9 +491,9 @@ export const BuyerMarketplacePage: React.FC = () => {
                   className="py-2 px-3 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-semibold text-stone-800 dark:text-stone-200 focus:bg-white dark:focus:bg-stone-800 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden cursor-pointer"
                 >
                   <option value="All">{t('buyer.allGrades') || 'All Quality Grades'}</option>
-                  <option value="Grade A">🟢 Grade A (Premium)</option>
-                  <option value="Grade B">🔵 Grade B (Standard)</option>
-                  <option value="Grade C">🟠 Grade C (Lower)</option>
+                  <option value="Grade A">🟢 {t('buyer.gradeA') || 'Grade A (Premium)'}</option>
+                  <option value="Grade B">🔵 {t('buyer.gradeB') || 'Grade B (Standard)'}</option>
+                  <option value="Grade C">🟠 {t('buyer.gradeC') || 'Grade C (Lower)'}</option>
                 </select>
 
                 {/* State Filter */}
@@ -495,13 +503,13 @@ export const BuyerMarketplacePage: React.FC = () => {
                   className="py-2 px-3 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-semibold text-stone-800 dark:text-stone-200 focus:bg-white dark:focus:bg-stone-800 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden cursor-pointer"
                 >
                   <option value="All">{t('buyer.allStates') || 'All States (Pan-India)'}</option>
-                  <option value="Andhra Pradesh">Andhra Pradesh</option>
-                  <option value="Maharashtra">Maharashtra</option>
-                  <option value="Punjab">Punjab</option>
-                  <option value="Karnataka">Karnataka</option>
-                  <option value="Telangana">Telangana</option>
-                  <option value="Madhya Pradesh">Madhya Pradesh</option>
-                  <option value="Gujarat">Gujarat</option>
+                  <option value="Andhra Pradesh">{localizeState('Andhra Pradesh', language)}</option>
+                  <option value="Maharashtra">{localizeState('Maharashtra', language)}</option>
+                  <option value="Punjab">{localizeState('Punjab', language)}</option>
+                  <option value="Karnataka">{localizeState('Karnataka', language)}</option>
+                  <option value="Telangana">{localizeState('Telangana', language)}</option>
+                  <option value="Madhya Pradesh">{localizeState('Madhya Pradesh', language)}</option>
+                  <option value="Gujarat">{localizeState('Gujarat', language)}</option>
                 </select>
               </div>
 
@@ -565,7 +573,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                             {lot.lotNumber}
                           </span>
                           <h3 className="text-lg font-black text-stone-900 dark:text-stone-100 mt-1">
-                            {lot.crop}
+                            {localizeCropName(lot.crop, language)}
                           </h3>
                           <p className="text-xs text-stone-500 dark:text-stone-400">
                             {lot.variety || 'Standard Hybrid'}
@@ -579,7 +587,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                               : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                           }`}
                         >
-                          {lot.qualityGrade}
+                          {localizeGrade(lot.qualityGrade, language)}
                         </span>
                       </div>
 
@@ -587,12 +595,14 @@ export const BuyerMarketplacePage: React.FC = () => {
                       <div className="bg-stone-50 dark:bg-stone-800/80 p-3 rounded-xl border border-stone-100 dark:border-stone-700/60 space-y-1.5 text-xs">
                         <div className="flex items-center gap-1.5 text-stone-700 dark:text-stone-300">
                           <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          <span className="font-semibold">{lot.location || `${lot.district}, ${lot.state}`}</span>
+                          <span className="font-semibold">
+                            {lot.district ? `${lot.district}, ${localizeState(lot.state, language)}` : (lot.location || '')}
+                          </span>
                         </div>
                         <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 text-[11px] pt-1 border-t border-stone-200/60 dark:border-stone-700/60">
-                          <span>Farmer: <strong className="text-stone-800 dark:text-stone-200">{lot.farmerName}</strong></span>
+                          <span>{t('buyer.farmer') || 'Farmer'}: <strong className="text-stone-800 dark:text-stone-200">{lot.farmerName}</strong></span>
                           <span className="text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1">
-                            <ShieldCheck className="w-3 h-3" /> KYC Verified
+                            <ShieldCheck className="w-3 h-3" /> {t('buyer.kycVerified') || 'KYC Verified'}
                           </span>
                         </div>
                       </div>
@@ -601,23 +611,23 @@ export const BuyerMarketplacePage: React.FC = () => {
                       <div className="grid grid-cols-2 gap-2 pt-1">
                         <div className="bg-emerald-50/60 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/60">
                           <div className="text-[10px] uppercase font-bold text-stone-500 dark:text-stone-400">
-                            Available Lot Size
+                            {t('buyer.availableLotSize') || 'Available Lot Size'}
                           </div>
                           <div className="text-base font-black text-stone-900 dark:text-stone-100 mt-0.5">
-                            {lot.quantityQuintals} q
+                            {lot.quantityQuintals} {localizeUnit('q', language)}
                             <span className="text-[11px] font-normal text-stone-500 dark:text-stone-400">
-                              {' '}({(lot.quantityQuintals / 10).toFixed(1)} MT)
+                              {' '}({(lot.quantityQuintals / 10).toFixed(1)} {localizeUnit('MT', language)})
                             </span>
                           </div>
                         </div>
 
                         <div className="bg-emerald-50/60 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/60">
                           <div className="text-[10px] uppercase font-bold text-stone-500 dark:text-stone-400">
-                            Farmer Asking Price
+                            {t('buyer.farmerAskingPrice') || 'Farmer Asking Price'}
                           </div>
                           <div className="text-base font-black text-emerald-800 dark:text-emerald-300 mt-0.5">
                             ₹{lot.expectedPricePerQ.toLocaleString('en-IN')}
-                            <span className="text-[10px] font-normal text-stone-500 dark:text-stone-400">/q</span>
+                            <span className="text-[10px] font-normal text-stone-500 dark:text-stone-400">/{localizeUnit('q', language)}</span>
                           </div>
                         </div>
                       </div>
@@ -626,11 +636,11 @@ export const BuyerMarketplacePage: React.FC = () => {
                       <div className="flex items-center justify-between text-[11px] text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1.5 rounded-lg font-semibold border border-emerald-200 dark:border-emerald-800">
                         <div className="flex items-center gap-1.5">
                           <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                          <span>AI Assayed: {lot.qualityGrade}</span>
+                          <span>{t('buyer.aiAssayed') || 'AI Assayed'}: {localizeGrade(lot.qualityGrade, language)}</span>
                         </div>
                         {lot.interestedBuyers && lot.interestedBuyers.length > 0 && (
                           <span className="text-[10px] font-mono text-amber-800 dark:text-amber-300 font-bold bg-amber-200/80 dark:bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-300/40 dark:border-amber-700/40">
-                            {lot.interestedBuyers.length} buyers interested
+                            {lot.interestedBuyers.length} {t('buyer.buyersInterested') || 'buyers interested'}
                           </span>
                         )}
                       </div>
@@ -651,7 +661,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                         type="button"
                         onClick={() => handleOpenOfferModal(lot)}
                         className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
-                        title="Submit Quick Commercial Offer"
+                        title={t('buyer.bid') || 'Submit Quick Commercial Offer'}
                       >
                         <DollarSign className="w-4 h-4" />
                         <span>{t('buyer.bid') || 'Bid'}</span>
@@ -670,10 +680,10 @@ export const BuyerMarketplacePage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-stone-900 p-5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs transition-colors">
               <div>
                 <h2 className="text-lg font-black text-stone-900 dark:text-stone-100">
-                  Active Buyer Procurement Requests
+                  {t('buyer.activeRequestsTitle') || 'Active Buyer Procurement Requests'}
                 </h2>
                 <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                  Institutional buyers and retail aggregators seeking farmgate supply across India
+                  {t('buyer.activeRequestsSubtitle') || 'Institutional buyers and retail aggregators seeking farmgate supply across India'}
                 </p>
               </div>
 
@@ -683,7 +693,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                 className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto"
               >
                 <Plus className="w-4 h-4" />
-                <span>Publish Procurement Demand</span>
+                <span>{t('buyer.publishDemand') || 'Publish Procurement Demand'}</span>
               </button>
             </div>
 
@@ -697,47 +707,47 @@ export const BuyerMarketplacePage: React.FC = () => {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                          {req.buyerType}
+                          {localizeBuyerType(req.buyerType, language)}
                         </span>
                         <h3 className="text-base font-black text-stone-900 dark:text-stone-100 mt-1">
-                          {req.cropName}
+                          {localizeCropName(req.cropName, language)}
                         </h3>
                         <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">
-                          Buyer: <strong className="text-stone-800 dark:text-stone-200">{req.buyerName}</strong>
+                          {t('buyer.buyer') || 'Buyer'}: <strong className="text-stone-800 dark:text-stone-200">{req.buyerName}</strong>
                         </p>
                       </div>
 
                       <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                        ● {req.status}
+                        ● {localizeStatus(req.status, language)}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="bg-stone-50 dark:bg-stone-800 p-2.5 rounded-xl border border-stone-200/80 dark:border-stone-700">
                         <div className="text-[10px] uppercase font-bold text-stone-500 dark:text-stone-400">
-                          Required Volume
+                          {t('buyer.requiredVolume') || 'Required Volume'}
                         </div>
                         <div className="text-base font-black text-stone-900 dark:text-stone-100 mt-0.5">
-                          {req.quantityQuintals} quintals
+                          {req.quantityQuintals} {localizeUnit('quintals', language)}
                         </div>
                       </div>
 
                       <div className="bg-stone-50 dark:bg-stone-800 p-2.5 rounded-xl border border-stone-200/80 dark:border-stone-700">
                         <div className="text-[10px] uppercase font-bold text-stone-500 dark:text-stone-400">
-                          Target Budget
+                          {t('buyer.targetBudget') || 'Target Budget'}
                         </div>
                         <div className="text-base font-black text-emerald-700 dark:text-emerald-400 mt-0.5">
-                          ₹{req.targetPricePerQ.toLocaleString('en-IN')}/q
+                          ₹{req.targetPricePerQ.toLocaleString('en-IN')}/{localizeUnit('q', language)}
                         </div>
                       </div>
                     </div>
 
                     <div className="space-y-1 text-xs text-stone-600 dark:text-stone-300 bg-stone-50 dark:bg-stone-800/80 p-3 rounded-xl border border-stone-100 dark:border-stone-700/60">
                       <div>
-                        <strong className="text-stone-800 dark:text-stone-200">Target Location:</strong> {req.deliveryLocation}
+                        <strong className="text-stone-800 dark:text-stone-200">{t('buyer.targetLocation') || 'Target Location'}:</strong> {req.deliveryLocation}
                       </div>
                       <div>
-                        <strong className="text-stone-800 dark:text-stone-200">Quality Spec:</strong> {req.qualityRequirement}
+                        <strong className="text-stone-800 dark:text-stone-200">{t('buyer.qualitySpec') || 'Quality Spec'}:</strong> {req.qualityRequirement}
                       </div>
                       {req.notes && (
                         <div className="text-stone-500 dark:text-stone-400 italic text-[11px] pt-1">
@@ -749,7 +759,7 @@ export const BuyerMarketplacePage: React.FC = () => {
 
                   <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between text-xs">
                     <span className="text-stone-400 text-[11px] flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" /> Posted {req.createdAt}
+                      <Clock className="w-3.5 h-3.5" /> {t('buyer.posted') || 'Posted'} {req.createdAt}
                     </span>
                     <button
                       type="button"
@@ -760,7 +770,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                       }
                       className="px-3 py-1.5 bg-emerald-100 dark:bg-emerald-950 hover:bg-emerald-200 dark:hover:bg-emerald-900 text-emerald-900 dark:text-emerald-200 rounded-lg font-bold text-xs transition-colors cursor-pointer"
                     >
-                      Match Produce Lot →
+                      {t('buyer.matchProduceLot') || 'Match Produce Lot →'}
                     </button>
                   </div>
                 </div>
@@ -774,10 +784,10 @@ export const BuyerMarketplacePage: React.FC = () => {
           <div className="space-y-6">
             <div className="bg-white dark:bg-stone-900 p-5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs transition-colors">
               <h2 className="text-lg font-black text-stone-900 dark:text-stone-100">
-                Pan-India Verified Farmer & FPO Network
+                {t('buyer.farmerNetworkTitle') || 'Pan-India Verified Farmer & FPO Network'}
               </h2>
               <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                Farmers with authenticated PM-KISAN, KYC, and land records ready for direct institutional trade
+                {t('buyer.farmerNetworkSubtitle') || 'Farmers with authenticated PM-KISAN, KYC, and land records ready for direct institutional trade'}
               </p>
             </div>
 
@@ -856,25 +866,27 @@ export const BuyerMarketplacePage: React.FC = () => {
                         </h3>
                         <div className="flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400 mt-0.5">
                           <MapPin className="w-3.5 h-3.5 text-stone-400" />
-                          <span>{farmer.village}, {farmer.district}, {farmer.state}</span>
+                          <span>{farmer.village}, {farmer.district}, {localizeState(farmer.state, language)}</span>
                         </div>
                       </div>
                       <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Verified
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> {t('buyer.verifiedBadge') || 'Verified'}
                       </span>
                     </div>
 
                     <div className="bg-stone-50 dark:bg-stone-800 p-3 rounded-xl border border-stone-100 dark:border-stone-700 text-xs space-y-1.5">
                       <div>
-                        <span className="text-stone-500 dark:text-stone-400">Primary Crops:</span>{' '}
-                        <strong className="text-stone-900 dark:text-stone-100">{farmer.crops.join(', ')}</strong>
+                        <span className="text-stone-500 dark:text-stone-400">{t('buyer.primaryCrops') || 'Primary Crops'}:</span>{' '}
+                        <strong className="text-stone-900 dark:text-stone-100">
+                          {farmer.crops.map((c) => localizeCropName(c, language)).join(', ')}
+                        </strong>
                       </div>
                       <div>
-                        <span className="text-stone-500 dark:text-stone-400">Land Holding:</span>{' '}
-                        <strong className="text-stone-900 dark:text-stone-100">{farmer.acres} Acres</strong>
+                        <span className="text-stone-500 dark:text-stone-400">{t('buyer.landHolding') || 'Land Holding'}:</span>{' '}
+                        <strong className="text-stone-900 dark:text-stone-100">{farmer.acres} {t('buyer.acres') || 'Acres'}</strong>
                       </div>
                       <div>
-                        <span className="text-stone-500 dark:text-stone-400">Affiliated FPO:</span>{' '}
+                        <span className="text-stone-500 dark:text-stone-400">{t('buyer.affiliatedFPO') || 'Affiliated FPO'}:</span>{' '}
                         <strong className="text-emerald-700 dark:text-emerald-400">{farmer.fpo}</strong>
                       </div>
                     </div>
@@ -888,7 +900,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                     }}
                     className="w-full py-2 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 rounded-xl text-xs font-bold transition-colors border border-stone-200 dark:border-stone-700 flex items-center justify-center gap-1 cursor-pointer"
                   >
-                    <span>Request Farm Produce</span>
+                    <span>{t('buyer.requestFarmProduce') || 'Request Farm Produce'}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -902,10 +914,10 @@ export const BuyerMarketplacePage: React.FC = () => {
           <div className="space-y-6">
             <div className="bg-white dark:bg-stone-900 p-5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs transition-colors">
               <h2 className="text-lg font-black text-stone-900 dark:text-stone-100">
-                Pan-India APMC Mandi Benchmark Prices
+                {t('buyer.mandiBenchmarkTitle') || 'Pan-India APMC Mandi Benchmark Prices'}
               </h2>
               <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                Official modal pricing and arrival volumes synchronized across e-NAM and APMC networks
+                {t('buyer.mandiBenchmarkSubtitle') || 'Official modal pricing and arrival volumes synchronized across e-NAM and APMC networks'}
               </p>
             </div>
 
@@ -918,24 +930,24 @@ export const BuyerMarketplacePage: React.FC = () => {
                   <div className="flex items-start justify-between">
                     <div>
                       <h4 className="font-black text-stone-900 dark:text-stone-100 text-sm">{mkt.name}</h4>
-                      <p className="text-xs text-stone-500 dark:text-stone-400">{mkt.district}, {mkt.state}</p>
+                      <p className="text-xs text-stone-500 dark:text-stone-400">{mkt.district}, {localizeState(mkt.state, language)}</p>
                     </div>
                     <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
-                      {mkt.cropName}
+                      {localizeCropName(mkt.cropName, language)}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-xs bg-stone-50 dark:bg-stone-800 p-2.5 rounded-xl border border-stone-100 dark:border-stone-700">
                     <div>
-                      <span className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-bold">Modal Price</span>
+                      <span className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-bold">{t('buyer.modalPrice') || 'Modal Price'}</span>
                       <div className="text-base font-black text-emerald-700 dark:text-emerald-400">
-                        ₹{mkt.modalPrice}/q
+                        ₹{mkt.modalPrice}/{localizeUnit('q', language)}
                       </div>
                     </div>
                     <div>
-                      <span className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-bold">Arrivals</span>
+                      <span className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-bold">{t('buyer.arrivals') || 'Arrivals'}</span>
                       <div className="text-base font-black text-stone-800 dark:text-stone-200">
-                        {mkt.arrivalsQuintals} q
+                        {mkt.arrivalsQuintals} {localizeUnit('q', language)}
                       </div>
                     </div>
                   </div>
@@ -976,20 +988,20 @@ export const BuyerMarketplacePage: React.FC = () => {
             {/* Produce snapshot */}
             <div className="bg-stone-50 dark:bg-stone-800 p-3.5 rounded-2xl border border-stone-200 dark:border-stone-700 text-xs space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-stone-500 dark:text-stone-400">Farmer:</span>
+                <span className="text-stone-500 dark:text-stone-400">{t('buyer.farmer') || 'Farmer'}:</span>
                 <strong className="text-stone-900 dark:text-stone-100">{selectedLotForOffer.farmerName}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500 dark:text-stone-400">Location:</span>
+                <span className="text-stone-500 dark:text-stone-400">{t('buyer.location') || 'Location'}:</span>
                 <strong className="text-stone-900 dark:text-stone-100">{selectedLotForOffer.location}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500 dark:text-stone-400">AI Quality Grade:</span>
-                <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{selectedLotForOffer.qualityGrade}</strong>
+                <span className="text-stone-500 dark:text-stone-400">{t('buyer.aiGrade') || 'AI Quality Grade'}:</span>
+                <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{localizeGrade(selectedLotForOffer.qualityGrade, language)}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500 dark:text-stone-400">Farmer Asking Price:</span>
-                <strong className="text-stone-900 dark:text-stone-100">₹{selectedLotForOffer.expectedPricePerQ}/quintal</strong>
+                <span className="text-stone-500 dark:text-stone-400">{t('buyer.farmerAskingPrice') || 'Farmer Asking Price'}:</span>
+                <strong className="text-stone-900 dark:text-stone-100">₹{selectedLotForOffer.expectedPricePerQ}/{localizeUnit('quintal', language)}</strong>
               </div>
             </div>
 
@@ -997,7 +1009,7 @@ export const BuyerMarketplacePage: React.FC = () => {
             <form onSubmit={handleSendOffer} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  Your Offered Price (₹ per Quintal) *
+                  {t('buyer.yourOfferedPrice') || 'Your Offered Price (₹ per Quintal)'} *
                 </label>
                 <input
                   type="number"
@@ -1012,7 +1024,7 @@ export const BuyerMarketplacePage: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  Quantity Wanted (Quintals) *
+                  {t('buyer.quantityWanted') || 'Quantity Wanted (Quintals)'} *
                 </label>
                 <input
                   type="number"
@@ -1024,17 +1036,17 @@ export const BuyerMarketplacePage: React.FC = () => {
                   className="w-full py-2.5 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-sm font-black text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                 />
                 <span className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5 block">
-                  Max available in this lot: {selectedLotForOffer.quantityQuintals} quintals
+                  {t('buyer.maxAvailable') || 'Max available in this lot'}: {selectedLotForOffer.quantityQuintals} {localizeUnit('quintals', language)}
                 </span>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  Buyer Notes / Transport Terms (Optional)
+                  {t('buyer.buyerNotes') || 'Buyer Notes / Transport Terms (Optional)'}
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="e.g., We arrange pickup truck from farmgate within 24 hours. Immediate weighbridge RTGS payment."
+                  placeholder={t('buyer.buyerNotesPlaceholder') || 'e.g., We arrange pickup truck from farmgate within 24 hours. Immediate weighbridge RTGS payment.'}
                   value={offerNotes}
                   onChange={(e) => setOfferNotes(e.target.value)}
                   className="w-full py-2 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-medium text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
@@ -1043,7 +1055,7 @@ export const BuyerMarketplacePage: React.FC = () => {
 
               {/* Total Calculation Preview */}
               <div className="bg-emerald-50/70 dark:bg-emerald-950/40 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-800 text-xs flex items-center justify-between">
-                <span className="font-bold text-stone-700 dark:text-stone-300">Gross Procurement Value:</span>
+                <span className="font-bold text-stone-700 dark:text-stone-300">{t('buyer.grossValue') || 'Gross Procurement Value'}:</span>
                 <span className="text-base font-black text-emerald-800 dark:text-emerald-300">
                   ₹{(offerPrice * offerQuantity).toLocaleString('en-IN')}
                 </span>
@@ -1055,7 +1067,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                   onClick={() => setSelectedLotForOffer(null)}
                   className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
-                  Cancel
+                  {t('common.cancel') || 'Cancel'}
                 </button>
                 <button
                   type="submit"
@@ -1063,7 +1075,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                   className="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>Send Offer to Farmer</span>
+                  <span>{t('buyer.sendOffer') || 'Send Offer to Farmer'}</span>
                 </button>
               </div>
             </form>
@@ -1082,10 +1094,10 @@ export const BuyerMarketplacePage: React.FC = () => {
                 </span>
                 <div>
                   <h3 className="text-lg font-black text-stone-900 dark:text-stone-100">
-                    Publish Procurement Demand
+                    {t('buyer.publishDemand') || 'Publish Procurement Demand'}
                   </h3>
                   <p className="text-xs text-stone-500 dark:text-stone-400">
-                    Broadcast your produce requirements to verified farmers
+                    {t('buyer.broadcastSubtitle') || 'Broadcast your produce requirements to verified farmers'}
                   </p>
                 </div>
               </div>
@@ -1101,28 +1113,28 @@ export const BuyerMarketplacePage: React.FC = () => {
             <form onSubmit={handleCreateRequest} className="space-y-3.5 text-xs">
               <div>
                 <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  Crop Commodity *
+                  {t('buyer.cropCommodity') || 'Crop Commodity'} *
                 </label>
                 <select
                   value={newRequestCrop}
                   onChange={(e) => setNewRequestCrop(e.target.value)}
                   className="w-full py-2 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl font-bold text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                 >
-                  <option value="Paddy (Dhan / Rice)">Paddy (Dhan / Rice)</option>
-                  <option value="Wheat (Gehun)">Wheat (Gehun)</option>
-                  <option value="Onion (Nasik Red)">Onion (Nasik Red)</option>
-                  <option value="Tomato">Tomato</option>
-                  <option value="Maize (Corn)">Maize (Corn)</option>
-                  <option value="Chilli (Teja)">Chilli (Teja)</option>
-                  <option value="Soybean (Yellow)">Soybean (Yellow)</option>
-                  <option value="Cotton (Kapas)">Cotton (Kapas)</option>
+                  <option value="Paddy (Dhan / Rice)">{localizeCropName('Paddy (Dhan / Rice)', language)}</option>
+                  <option value="Wheat (Gehun)">{localizeCropName('Wheat (Gehun)', language)}</option>
+                  <option value="Onion (Nasik Red)">{localizeCropName('Onion (Nasik Red)', language)}</option>
+                  <option value="Tomato">{localizeCropName('Tomato', language)}</option>
+                  <option value="Maize (Corn)">{localizeCropName('Maize (Corn)', language)}</option>
+                  <option value="Chilli (Teja)">{localizeCropName('Chilli (Teja)', language)}</option>
+                  <option value="Soybean (Yellow)">{localizeCropName('Soybean (Yellow)', language)}</option>
+                  <option value="Cotton (Kapas)">{localizeCropName('Cotton (Kapas)', language)}</option>
                 </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
-                    Required Quantity (q) *
+                    {t('buyer.requiredQuantity') || 'Required Quantity (q)'} *
                   </label>
                   <input
                     type="number"
@@ -1136,7 +1148,7 @@ export const BuyerMarketplacePage: React.FC = () => {
 
                 <div>
                   <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
-                    Target Budget (₹/q) *
+                    {t('buyer.targetBudget') || 'Target Budget'} (₹/{localizeUnit('q', language)}) *
                   </label>
                   <input
                     type="number"
@@ -1151,12 +1163,12 @@ export const BuyerMarketplacePage: React.FC = () => {
 
               <div>
                 <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  Target Delivery Location / APMC *
+                  {t('buyer.targetDeliveryLocation') || 'Target Delivery Location / APMC'} *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g., Nizamabad APMC, Hyderabad, or Farmgate pickup"
+                  placeholder={t('buyer.targetLocationPlaceholder') || 'e.g., Nizamabad APMC, Hyderabad, or Farmgate pickup'}
                   value={newRequestLocation}
                   onChange={(e) => setNewRequestLocation(e.target.value)}
                   className="w-full py-2 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl font-medium text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
@@ -1165,11 +1177,11 @@ export const BuyerMarketplacePage: React.FC = () => {
 
               <div>
                 <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  Quality Requirements
+                  {t('buyer.qualityRequirements') || 'Quality Requirements'}
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g., Grade A preferred, clean luster, low moisture"
+                  placeholder={t('buyer.qualitySpecPlaceholder') || 'e.g., Grade A preferred, clean luster, low moisture'}
                   value={newRequestQuality}
                   onChange={(e) => setNewRequestQuality(e.target.value)}
                   className="w-full py-2 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl font-medium text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
@@ -1178,11 +1190,11 @@ export const BuyerMarketplacePage: React.FC = () => {
 
               <div>
                 <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  Procurement Notes
+                  {t('buyer.procurementNotes') || 'Procurement Notes'}
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="e.g., Immediate weighbridge RTGS payment. We can send our own 10-tonne truck."
+                  placeholder={t('buyer.procurementNotesPlaceholder') || 'e.g., Immediate weighbridge RTGS payment. We can send our own 10-tonne truck.'}
                   value={newRequestNotes}
                   onChange={(e) => setNewRequestNotes(e.target.value)}
                   className="w-full py-2 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl font-medium text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
@@ -1195,14 +1207,14 @@ export const BuyerMarketplacePage: React.FC = () => {
                   onClick={() => setIsRequestModalOpen(false)}
                   className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-xl font-bold transition-colors cursor-pointer"
                 >
-                  Cancel
+                  {t('common.cancel') || 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>Publish Requirement</span>
+                  <span>{t('buyer.publishRequirement') || 'Publish Requirement'}</span>
                 </button>
               </div>
             </form>
@@ -1235,17 +1247,17 @@ export const BuyerMarketplacePage: React.FC = () => {
               AgriConnect
             </span>
             <span className="text-[10px] font-mono uppercase bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded border border-amber-400/30">
-              Direct Farmer Linkage
+              {t('buyer.directFarmerLinkage') || 'Direct Farmer Linkage'}
             </span>
           </div>
           <p className="text-amber-400 font-medium text-xs">
-            Direct Farm-to-Buyer Marketplace Linkage Platform
+            {t('buyer.footerHeadline') || 'Direct Farm-to-Buyer Marketplace Linkage Platform'}
           </p>
           <p className="text-[11px] text-stone-500 max-w-xl mx-auto">
-            AgriConnect connects farmers directly with audited institutional buyers and regional APMC mandis with guaranteed digital settlement.
+            {t('buyer.footerDesc') || 'AgriConnect connects farmers directly with audited institutional buyers and regional APMC mandis with guaranteed digital settlement.'}
           </p>
           <p className="text-[10px] text-stone-600 pt-2 border-t border-stone-800">
-            © {new Date().getFullYear()} AgriConnect • Direct Farmgate Linkage Platform
+            © {new Date().getFullYear()} AgriConnect • {t('buyer.directFarmerLinkage') || 'Direct Farmgate Linkage Platform'}
           </p>
         </div>
       </footer>

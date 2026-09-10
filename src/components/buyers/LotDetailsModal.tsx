@@ -18,6 +18,13 @@ import {
   Eye,
 } from 'lucide-react';
 import { DigitalLot } from '../../agrilink/types';
+import { useLanguage } from '../../context/LanguageContext';
+import {
+  localizeCropName,
+  localizeGrade,
+  localizeState,
+  localizeUnit,
+} from '../../utils/cropLocalization';
 
 interface LotDetailsModalProps {
   lot: DigitalLot | null;
@@ -40,6 +47,7 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
   onClose,
   onInterestSubmitted,
 }) => {
+  const { language, t } = useLanguage();
   const [buyerName, setBuyerName] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
   const [requestedQty, setRequestedQty] = useState<number>(lot?.quantityQuintals || 10);
@@ -110,15 +118,15 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
               {lot.lotNumber}
             </span>
             <span className="text-xs font-semibold text-emerald-200 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
-              Verified Produce Passport
+              {t('buyer.verifiedPassport') || 'Verified Produce Passport'}
             </span>
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-black text-white mt-2 font-outfit">
-            {lot.crop} ({lot.variety || 'Hybrid'})
+            {localizeCropName(lot.crop, language)} ({lot.variety || 'Hybrid'})
           </h2>
           <p className="text-xs sm:text-sm text-emerald-100 mt-1">
-            Listed by Farmer {lot.farmerName} • {lot.location || `${lot.district}, ${lot.state}`}
+            {t('buyer.listedByFarmer') || 'Listed by Farmer'} {lot.farmerName} • {lot.district ? `${lot.district}, ${localizeState(lot.state, language)}` : (lot.location || '')}
           </p>
         </div>
 
@@ -127,35 +135,51 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
           {/* Produce Photos / Key Metrics Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-stone-50 dark:bg-stone-800 p-3 rounded-2xl border border-stone-200 dark:border-stone-700">
-              <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase block">Total Lot Volume</span>
+              <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase block">
+                {t('buyer.totalLotVolume') || 'Total Lot Volume'}
+              </span>
               <span className="text-lg font-black text-stone-900 dark:text-stone-100 mt-0.5 block">
-                {lot.quantityQuintals} q
+                {lot.quantityQuintals} {localizeUnit('q', language)}
               </span>
-              <span className="text-[10px] text-stone-500 dark:text-stone-400">{(lot.quantityQuintals / 10).toFixed(1)} Metric Tons</span>
+              <span className="text-[10px] text-stone-500 dark:text-stone-400">
+                {(lot.quantityQuintals / 10).toFixed(1)} {localizeUnit('MT', language)}
+              </span>
             </div>
 
             <div className="bg-stone-50 dark:bg-stone-800 p-3 rounded-2xl border border-stone-200 dark:border-stone-700">
-              <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase block">Expected Price</span>
+              <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase block">
+                {t('buyer.expectedPrice') || 'Expected Price'}
+              </span>
               <span className="text-lg font-black text-emerald-700 dark:text-emerald-400 mt-0.5 block">
-                ₹{lot.expectedPricePerQ.toLocaleString('en-IN')}/q
+                ₹{lot.expectedPricePerQ.toLocaleString('en-IN')}/{localizeUnit('q', language)}
               </span>
-              <span className="text-[10px] text-stone-500 dark:text-stone-400">Ex-Farmgate / Mandi</span>
+              <span className="text-[10px] text-stone-500 dark:text-stone-400">
+                {t('buyer.exFarmgate') || 'Ex-Farmgate / Mandi'}
+              </span>
             </div>
 
             <div className="bg-stone-50 dark:bg-stone-800 p-3 rounded-2xl border border-stone-200 dark:border-stone-700">
-              <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase block">Est. Total Value</span>
+              <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase block">
+                {t('buyer.estTotalValue') || 'Est. Total Value'}
+              </span>
               <span className="text-lg font-black text-stone-900 dark:text-stone-100 mt-0.5 block">
                 ₹{(lot.quantityQuintals * lot.expectedPricePerQ).toLocaleString('en-IN')}
               </span>
-              <span className="text-[10px] text-stone-500 dark:text-stone-400">Direct trade estimate</span>
+              <span className="text-[10px] text-stone-500 dark:text-stone-400">
+                {t('buyer.directTradeEst') || 'Direct trade estimate'}
+              </span>
             </div>
 
             <div className="bg-stone-50 dark:bg-stone-800 p-3 rounded-2xl border border-stone-200 dark:border-stone-700">
-              <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase block">Harvest Date</span>
-              <span className="text-sm font-bold text-stone-800 dark:text-stone-200 mt-0.5 block">
-                {lot.harvestDate || 'Freshly Harvested'}
+              <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase block">
+                {t('buyer.harvestDate') || 'Harvest Date'}
               </span>
-              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Ready for dispatch</span>
+              <span className="text-sm font-bold text-stone-800 dark:text-stone-200 mt-0.5 block">
+                {lot.harvestDate || (t('buyer.freshlyHarvested') || 'Freshly Harvested')}
+              </span>
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">
+                {t('buyer.readyForDispatch') || 'Ready for dispatch'}
+              </span>
             </div>
           </div>
 
@@ -165,41 +189,41 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-amber-300" />
                 <h3 className="font-black text-base text-white font-outfit">
-                  AI Quality Assessment Report
+                  {t('buyer.aiQualityReport') || 'AI Quality Assessment Report'}
                 </h3>
               </div>
               <span className="text-[11px] font-mono font-bold bg-amber-400 text-stone-950 px-2.5 py-0.5 rounded-full">
-                Score: {lot.qualityMetrics?.overallScore || 88}/100
+                {t('buyer.score') || 'Score'}: {lot.qualityMetrics?.overallScore || 88}/100
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-emerald-900/60 p-3.5 rounded-xl border border-emerald-700/60 space-y-1">
                 <span className="text-[10px] uppercase font-bold text-emerald-300">
-                  Assigned Quality Grade
+                  {t('buyer.assignedQualityGrade') || 'Assigned Quality Grade'}
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xl font-black text-amber-300">{farmerConfirmed}</span>
+                  <span className="text-xl font-black text-amber-300">{localizeGrade(farmerConfirmed, language)}</span>
                   {lot.qualityGrade.includes('A') && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-stone-950">
-                      Top Premium
+                      {t('buyer.topPremium') || 'Top Premium'}
                     </span>
                   )}
                 </div>
                 {isAdjusted ? (
                   <p className="text-[11px] text-amber-200 mt-1">
-                    ⚠️ AI model estimated <strong>{aiEstimated}</strong>, confirmed by farmer as <strong>{farmerConfirmed}</strong>.
+                    ⚠️ {t('buyer.aiModelEstimated') || 'AI model estimated'} <strong>{localizeGrade(aiEstimated, language)}</strong>, {t('buyer.confirmedByFarmerAs') || 'confirmed by farmer as'} <strong>{localizeGrade(farmerConfirmed, language)}</strong>.
                   </p>
                 ) : (
                   <p className="text-[11px] text-emerald-200 mt-1">
-                    ✓ AI estimated grade verified and matches farmer confirmation ({lot.aiConfidencePct || 91}% confidence).
+                    ✓ {t('buyer.aiGradeVerified') || 'AI estimated grade verified and matches farmer confirmation'} ({lot.aiConfidencePct || 91}% {t('buyer.confidence') || 'confidence'}).
                   </p>
                 )}
               </div>
 
               <div className="bg-emerald-900/60 p-3.5 rounded-xl border border-emerald-700/60 space-y-1">
                 <span className="text-[10px] uppercase font-bold text-emerald-300">
-                  Agmark Visual Standard
+                  {t('buyer.agmarkVisualStandard') || 'Agmark Visual Standard'}
                 </span>
                 <p className="text-xs text-stone-200">
                   {lot.qualityMetrics?.damage
@@ -213,7 +237,7 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
             {lot.aiObservations && lot.aiObservations.length > 0 && (
               <div className="space-y-1 text-xs">
                 <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">
-                  Assayer Observations
+                  {t('buyer.assayerObservations') || 'Assayer Observations'}
                 </span>
                 <ul className="list-disc list-inside text-stone-300 space-y-0.5 text-[11px]">
                   {lot.aiObservations.map((obs, i) => (
@@ -225,14 +249,14 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
 
             {/* Disclaimer */}
             <p className="text-[10px] text-emerald-300/80 italic border-t border-emerald-800/80 pt-2">
-              Disclaimer: AI-assisted visual quality assessment is an estimate based on visible surface factors and does not replace official physical weighbridge sampling.
+              {t('buyer.aiDisclaimer') || 'Disclaimer: AI-assisted visual quality assessment is an estimate based on visible surface factors and does not replace official physical weighbridge sampling.'}
             </p>
           </div>
 
           {/* Contact Farmer Directly */}
           <div className="bg-stone-50 dark:bg-stone-800 p-4 rounded-2xl border border-stone-200 dark:border-stone-700 space-y-3">
             <h4 className="font-bold text-xs uppercase tracking-wider text-stone-500 dark:text-stone-400">
-              Direct Farmer Contact Options
+              {t('buyer.directFarmerContact') || 'Direct Farmer Contact Options'}
             </h4>
             <div className="flex flex-wrap items-center gap-3">
               <a
@@ -240,7 +264,7 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
                 className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors"
               >
                 <Phone className="w-4 h-4" />
-                <span>Call Farmer ({lot.farmerPhone || '+91 98480 22334'})</span>
+                <span>{t('buyer.callFarmer') || 'Call Farmer'} ({lot.farmerPhone || '+91 98480 22334'})</span>
               </a>
 
               <a
@@ -252,7 +276,7 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
                 className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-100 dark:bg-emerald-950 hover:bg-emerald-200 dark:hover:bg-emerald-900 text-emerald-950 dark:text-emerald-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors border border-emerald-300 dark:border-emerald-800"
               >
                 <MessageCircle className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-                <span>Message on WhatsApp</span>
+                <span>{t('buyer.messageWhatsApp') || 'Message on WhatsApp'}</span>
               </a>
             </div>
           </div>
@@ -265,10 +289,10 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
               </div>
               <div>
                 <h3 className="text-base font-black text-stone-900 dark:text-stone-100">
-                  Express Formal Purchase Interest
+                  {t('buyer.expressInterestTitle') || 'Express Formal Purchase Interest'}
                 </h3>
                 <p className="text-xs text-stone-500 dark:text-stone-400">
-                  Notify the farmer instantly so they can reserve stock and confirm dispatch
+                  {t('buyer.expressInterestSubtitle') || 'Notify the farmer instantly so they can reserve stock and confirm dispatch'}
                 </p>
               </div>
             </div>
@@ -276,16 +300,16 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
             {submittedSuccess ? (
               <div className="p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 space-y-2 text-center animate-in fade-in duration-200">
                 <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mx-auto" />
-                <h4 className="font-black text-base">Interest Successfully Sent to {lot.farmerName}!</h4>
+                <h4 className="font-black text-base">{t('buyer.interestSentSuccess') || 'Interest Successfully Sent to'} {lot.farmerName}!</h4>
                 <p className="text-xs text-emerald-800 dark:text-emerald-300">
-                  Your procurement inquiry of <strong>{requestedQty} quintals</strong> has been logged and the farmer's dashboard has been updated in real time.
+                  {t('buyer.interestLoggedDesc') || 'Your procurement inquiry has been logged and the farmer dashboard has been updated in real time.'}
                 </p>
                 <button
                   type="button"
                   onClick={onClose}
                   className="mt-3 px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
-                  Done
+                  {t('common.done') || 'Done'}
                 </button>
               </div>
             ) : (
@@ -293,12 +317,12 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block mb-1">
-                      Your Full Name / Trading Firm *
+                      {t('buyer.buyerNameLabel') || 'Your Full Name / Trading Firm'} *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Apex Agri Procurement Ltd"
+                      placeholder={t('buyer.buyerNamePlaceholder') || 'e.g. Apex Agri Procurement Ltd'}
                       value={buyerName}
                       onChange={(e) => setBuyerName(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-medium text-stone-900 dark:text-stone-100 focus:bg-white dark:focus:bg-stone-800 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
@@ -307,7 +331,7 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
 
                   <div>
                     <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block mb-1">
-                      Your Contact Phone Number *
+                      {t('buyer.buyerPhoneLabel') || 'Your Contact Phone Number'} *
                     </label>
                     <input
                       type="tel"
@@ -323,7 +347,7 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block mb-1">
-                      Quantity Requested (Quintals) *
+                      {t('buyer.quantityWanted') || 'Quantity Requested (Quintals)'} *
                     </label>
                     <input
                       type="number"
@@ -334,16 +358,18 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
                       onChange={(e) => setRequestedQty(Number(e.target.value))}
                       className="w-full px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-medium text-stone-900 dark:text-stone-100 focus:bg-white dark:focus:bg-stone-800 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                     />
-                    <span className="text-[10px] text-stone-500 dark:text-stone-400">Max available: {lot.quantityQuintals} q</span>
+                    <span className="text-[10px] text-stone-500 dark:text-stone-400">
+                      {t('buyer.maxAvailable') || 'Max available'}: {lot.quantityQuintals} {localizeUnit('q', language)}
+                    </span>
                   </div>
 
                   <div>
                     <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block mb-1">
-                      Counter Offer or Delivery Notes
+                      {t('buyer.counterOfferNotes') || 'Counter Offer or Delivery Notes'}
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Will arrange pickup tomorrow at ₹2,400/q"
+                      placeholder={t('buyer.counterOfferPlaceholder') || 'e.g. Will arrange pickup tomorrow at ₹2,400/q'}
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-medium text-stone-900 dark:text-stone-100 focus:bg-white dark:focus:bg-stone-800 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
@@ -357,7 +383,7 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
                   className="w-full py-3 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <Send className="w-4 h-4" />
-                  <span>{isSubmitting ? 'Sending Request...' : "Submit Purchase Interest (I'm Interested)"}</span>
+                  <span>{isSubmitting ? (t('buyer.sendingRequest') || 'Sending Request...') : (t('buyer.submitPurchaseInterest') || "Submit Purchase Interest (I'm Interested)")}</span>
                 </button>
               </form>
             )}
