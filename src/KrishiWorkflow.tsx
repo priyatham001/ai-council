@@ -31,19 +31,14 @@ import { LogisticsPage } from './agrilink/pages/farmer/LogisticsPage';
 import { NationalMarketMap } from './agrilink/components/common/NationalMarketMap';
 import { FarmerGuidedFlow } from './components/farmer/FarmerGuidedFlow';
 
+import { useTheme } from './context/ThemeContext';
+import { useLanguage } from './context/LanguageContext';
+
 export const KrishiWorkflow: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-
-  // Global Language state (English, Hindi, Marathi, Telugu)
-  const [language, setLanguage] = useState<Language>(() => {
-    return (localStorage.getItem('krishi_language') as Language) || 'en';
-  });
-
-  // Dark / Earth Mode state
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    return localStorage.getItem('krishi_theme') === 'dark';
-  });
+  const { isDark, toggleTheme } = useTheme();
+  const { language, setLanguage } = useLanguage();
 
   // View state: 'landing' (Platform Overview) vs 'workflow' (Farm Steps 1-4)
   const [activeView, setActiveView] = useState<'landing' | 'workflow'>('workflow');
@@ -53,20 +48,6 @@ export const KrishiWorkflow: React.FC = () => {
   const [farmerTab, setFarmerTab] = useState<'journey' | 'lots' | 'offers' | 'map' | 'logistics'>(
     ['journey', 'lots', 'offers', 'map', 'logistics'].includes(initialTab) ? initialTab : 'journey'
   );
-
-  const handleToggleDarkMode = () => {
-    setDarkMode((prev) => {
-      const next = !prev;
-      if (next) {
-        document.documentElement.classList.add('dark');
-        localStorage.setItem('krishi_theme', 'dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-        localStorage.setItem('krishi_theme', 'light');
-      }
-      return next;
-    });
-  };
 
   // Step Navigation: 1 (Location) -> 2 (Crop Details) -> 3 (Market Comparison) -> 4 (Deal Summary)
   // If location was already confirmed in onboarding, default to step 2 (Crop Details)
@@ -182,7 +163,7 @@ export const KrishiWorkflow: React.FC = () => {
     <GoogleMapsProvider>
       <div
         className={`min-h-screen ${
-          darkMode ? 'dark bg-stone-950 text-stone-100' : 'bg-stone-50 text-stone-900'
+          isDark ? 'dark bg-stone-950 text-stone-100' : 'bg-stone-50 text-stone-900'
         } flex flex-col selection:bg-emerald-200 selection:text-emerald-950 font-sans transition-colors duration-200`}
       >
         {/* 1. Persistent Header with Brand, Language & Location controls */}
@@ -198,8 +179,8 @@ export const KrishiWorkflow: React.FC = () => {
             setCurrentStep(1);
           }}
           canNavigateToStep3={canNavigateToStep3}
-          darkMode={darkMode}
-          onToggleDarkMode={handleToggleDarkMode}
+          darkMode={isDark}
+          onToggleDarkMode={toggleTheme}
           activeView={activeView}
           onSelectView={setActiveView}
         />

@@ -1,4 +1,4 @@
-export type Language = 'en' | 'hi' | 'mr' | 'te' | 'ta' | 'kn' | 'ml';
+export type Language = 'te' | 'en' | 'mr';
 
 export type CropCategory = 'all' | 'cereals' | 'pulses' | 'vegetables' | 'fruits' | 'commercial';
 

@@ -84,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </Link>
 
-            {/* Quick Navigation Tabs: Home, Farmer, Buyers, Markets */}
+            {/* Quick Navigation Tabs: Home, Farmer, Buyers, Markets, Admin */}
             <div className="hidden lg:flex items-center gap-1 bg-emerald-900/80 p-1 rounded-xl border border-emerald-800 ml-2">
               <Link
                 to="/"
@@ -98,6 +98,27 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <span>👨‍🌾</span>
                 <span>Farmer</span>
+              </Link>
+              <Link
+                to="/buyers"
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-200 hover:text-white transition-colors"
+              >
+                Buyers
+              </Link>
+              <Link
+                to="/markets"
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-200 hover:text-white transition-colors"
+              >
+                Markets
+              </Link>
+              <Link
+                to="/admin"
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-purple-300 hover:text-white hover:bg-purple-900/50 transition-colors flex items-center gap-1"
+              >
+                <span>🛡️</span>
+                <span>Admin</span>
+              </Link>
+            </div>
               </Link>
               <Link
                 to="/buyers"
@@ -146,10 +167,9 @@ export const Header: React.FC<HeaderProps> = ({
                 aria-label="Select Language"
                 className="bg-transparent text-xs font-bold text-white px-2 py-1 rounded focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer"
               >
+                <option value="te" className="bg-emerald-950 text-white">తెలుగు</option>
                 <option value="en" className="bg-emerald-950 text-white">English</option>
-                <option value="hi" className="bg-emerald-950 text-white">हिंदी (Hindi)</option>
-                <option value="mr" className="bg-emerald-950 text-white">मराठी (Marathi)</option>
-                <option value="te" className="bg-emerald-950 text-white">తెలుగు (Telugu)</option>
+                <option value="mr" className="bg-emerald-950 text-white">मराठी</option>
               </select>
             </div>
 

@@ -1098,6 +1098,27 @@ app.get('/api/markets/nearby', (req, res) => {
   });
 });
 
+// Admin authentication endpoint
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body || {};
+  if (username === 'admin' && password === 'admin@123key') {
+    return res.json({
+      success: true,
+      token: 'krishisetu_admin_token_secure_valid',
+      user: {
+        username: 'admin',
+        role: 'admin',
+        name: 'APMC & Platform Administrator',
+        department: 'Agricultural Produce Market Oversight',
+      },
+    });
+  }
+  return res.status(401).json({
+    success: false,
+    error: 'Invalid administrator credentials. Please check your username and password.',
+  });
+});
+
 // 8. GET /api/admin/coverage - India-Wide coverage statistics
 app.get('/api/admin/coverage', (req, res) => {
   const locs = getAllLocations();

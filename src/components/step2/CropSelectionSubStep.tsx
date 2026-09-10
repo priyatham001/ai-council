@@ -122,10 +122,12 @@ export const CropSelectionSubStep: React.FC<CropSelectionSubStepProps> = ({
                 Selected Crop
               </div>
               <div className="text-lg sm:text-xl font-black text-stone-900 flex items-center gap-2">
-                {cropState.selectedCrop.name}
-                {cropState.selectedCrop.localNames?.[language] && (
+                {language === 'en'
+                  ? cropState.selectedCrop.localNames?.en || cropState.selectedCrop.name
+                  : cropState.selectedCrop.localNames?.[language] || cropState.selectedCrop.localNames?.en || cropState.selectedCrop.name}
+                {language !== 'en' && cropState.selectedCrop.localNames?.[language] && (
                   <span className="text-emerald-700 font-semibold text-base">
-                    ({cropState.selectedCrop.localNames[language]})
+                    ({cropState.selectedCrop.localNames?.en || cropState.selectedCrop.name})
                   </span>
                 )}
               </div>
@@ -203,15 +205,17 @@ export const CropSelectionSubStep: React.FC<CropSelectionSubStepProps> = ({
                 <div>
                   <div className="flex items-start justify-between gap-1">
                     <span className="text-sm sm:text-base font-bold text-stone-900 leading-tight">
-                      {crop.name}
+                      {language === 'en'
+                        ? crop.localNames?.en || crop.name
+                        : crop.localNames?.[language] || crop.localNames?.en || crop.name}
                     </span>
                     {isSelected && (
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     )}
                   </div>
-                  {crop.localNames?.[language] && (
+                  {language !== 'en' && crop.localNames?.[language] && (
                     <div className="text-xs text-stone-500 font-medium mt-0.5">
-                      {crop.localNames[language]}
+                      {crop.localNames.en || crop.name}
                     </div>
                   )}
                 </div>

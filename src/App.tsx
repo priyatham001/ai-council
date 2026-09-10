@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { LandingOnboardingFlow } from './components/onboarding/LandingOnboardingFlow';
 import { HomePage } from './pages/Home/HomePage';
 import { KrishiWorkflow } from './KrishiWorkflow';
@@ -19,53 +21,64 @@ import { GrievancePage } from './agrilink/pages/farmer/GrievancePage';
 import { MarketExplorerPage } from './agrilink/pages/farmer/MarketExplorerPage';
 import { AISellAdvisorPage } from './agrilink/pages/farmer/AISellAdvisorPage';
 import { VerifiedBuyersPage } from './agrilink/pages/farmer/VerifiedBuyersPage';
+import { AdminRoute } from './agrilink/pages/admin/AdminRoute';
+import { AdminLoginPage } from './agrilink/pages/admin/AdminLoginPage';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Main Master Landing & Onboarding Flow */}
-        <Route path="/" element={<LandingOnboardingFlow />} />
-        <Route path="/onboarding" element={<LandingOnboardingFlow />} />
-        <Route path="/welcome" element={<LandingOnboardingFlow />} />
-        <Route path="/portal" element={<HomePage />} />
-        <Route path="/overview" element={<HomePage />} />
+    <ThemeProvider>
+      <LanguageProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Main Master Landing & Onboarding Flow */}
+            <Route path="/" element={<LandingOnboardingFlow />} />
+            <Route path="/onboarding" element={<LandingOnboardingFlow />} />
+            <Route path="/welcome" element={<LandingOnboardingFlow />} />
+            <Route path="/portal" element={<HomePage />} />
+            <Route path="/overview" element={<HomePage />} />
 
-        {/* Unified Farmer Experience: Merged Crop Analysis & Marketplace */}
-        <Route path="/farmer" element={<KrishiWorkflow />} />
-        <Route path="/crop-analysis" element={<KrishiWorkflow />} />
-        <Route path="/crop-analysis/*" element={<KrishiWorkflow />} />
-        <Route path="/marketplace" element={<KrishiWorkflow />} />
-        <Route path="/dashboard" element={<KrishiWorkflow />} />
+            {/* Unified Farmer Experience: Merged Crop Analysis & Marketplace */}
+            <Route path="/farmer" element={<KrishiWorkflow />} />
+            <Route path="/crop-analysis" element={<KrishiWorkflow />} />
+            <Route path="/crop-analysis/*" element={<KrishiWorkflow />} />
+            <Route path="/marketplace" element={<KrishiWorkflow />} />
+            <Route path="/dashboard" element={<KrishiWorkflow />} />
 
-        {/* Dedicated Buyer Marketplace & Procurement Portal */}
-        <Route path="/buyers" element={<BuyerMarketplacePage />} />
+            {/* Dedicated Admin Portal */}
+            <Route path="/admin" element={<AdminRoute />} />
+            <Route path="/admin/login" element={<AdminLoginPage />} />
 
-        {/* Public Informational Pages */}
-        <Route element={<PublicLayout />}>
-          <Route path="/markets" element={<PublicMarketsPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/how-it-works" element={<HowItWorksPage />} />
-          <Route path="/login" element={<LoginPage />} />
-        </Route>
+            {/* Dedicated Buyer Marketplace & Procurement Portal */}
+            <Route path="/buyers" element={<BuyerMarketplacePage />} />
+            <Route path="/buyer" element={<BuyerMarketplacePage />} />
 
-        {/* Detailed Farmer Marketplace Sub-routes (Wrapped in AppLayout) */}
-        <Route element={<AppLayout />}>
-          <Route path="/farmer/lots" element={<LotsPage />} />
-          <Route path="/farmer/offers" element={<OffersPage />} />
-          <Route path="/farmer/logistics" element={<LogisticsPage />} />
-          <Route path="/farmer/storage" element={<StoragePage />} />
-          <Route path="/farmer/transactions" element={<TransactionsPage />} />
-          <Route path="/farmer/grievances" element={<GrievancePage />} />
-          <Route path="/farmer/markets" element={<MarketExplorerPage />} />
-          <Route path="/farmer/buyers" element={<VerifiedBuyersPage />} />
-          <Route path="/farmer/ai-advisor" element={<AISellAdvisorPage />} />
-          <Route path="/transport" element={<LogisticsPage />} />
-        </Route>
+            {/* Public Informational Pages */}
+            <Route element={<PublicLayout />}>
+              <Route path="/markets" element={<PublicMarketsPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/how-it-works" element={<HowItWorksPage />} />
+              <Route path="/login" element={<LoginPage />} />
+            </Route>
 
-        {/* Catch-all fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+            {/* Detailed Farmer Marketplace Sub-routes (Wrapped in AppLayout) */}
+            <Route element={<AppLayout />}>
+              <Route path="/farmer/lots" element={<LotsPage />} />
+              <Route path="/farmer/offers" element={<OffersPage />} />
+              <Route path="/farmer/logistics" element={<LogisticsPage />} />
+              <Route path="/farmer/storage" element={<StoragePage />} />
+              <Route path="/farmer/transactions" element={<TransactionsPage />} />
+              <Route path="/farmer/grievances" element={<GrievancePage />} />
+              <Route path="/farmer/markets" element={<MarketExplorerPage />} />
+              <Route path="/farmer/buyers" element={<VerifiedBuyersPage />} />
+              <Route path="/farmer/ai-advisor" element={<AISellAdvisorPage />} />
+              <Route path="/transport" element={<LogisticsPage />} />
+            </Route>
+
+            {/* Catch-all fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }

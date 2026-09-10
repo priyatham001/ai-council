@@ -13,12 +13,8 @@ import {
 export type { Translations };
 
 export const TRANSLATIONS: Record<Language, Translations> = {
-  en: EN_TRANSLATIONS,
   te: TE_TRANSLATIONS,
-  hi: HI_TRANSLATIONS,
-  ta: TA_TRANSLATIONS,
-  kn: KN_TRANSLATIONS,
-  ml: ML_TRANSLATIONS,
+  en: EN_TRANSLATIONS,
   mr: MR_TRANSLATIONS,
 };
 
@@ -29,12 +25,9 @@ export const SUPPORTED_LANGUAGES: {
   flag: string;
   greeting: string;
 }[] = [
-  { code: 'en', label: 'English', native: 'English', flag: '🇮🇳', greeting: 'Welcome to Kisan Setu' },
-  { code: 'te', label: 'Telugu', native: 'తెలుగు', flag: '🌾', greeting: 'కిసాన్ సేతుకి స్వాగతం' },
-  { code: 'hi', label: 'Hindi', native: 'हिन्दी', flag: '🇮🇳', greeting: 'किसान सेतु में आपका स्वागत है' },
-  { code: 'ta', label: 'Tamil', native: 'தமிழ்', flag: '🌱', greeting: 'கிசான் சேதுவிற்கு நல்வரவு' },
-  { code: 'kn', label: 'Kannada', native: 'ಕನ್ನಡ', flag: '🌿', greeting: 'ಕಿಸಾನ್ ಸೇತುಗೆ ಸುಸ್ವಾಗತ' },
-  { code: 'ml', label: 'Malayalam', native: 'മലയാളം', flag: '🌴', greeting: 'കിസാൻ സേതുവിലേക്ക് സ്വാഗതം' },
+  { code: 'te', label: 'Telugu', native: 'తెలుగు', flag: '🇮🇳', greeting: 'కిసాన్ సేతుకి స్వాగతం' },
+  { code: 'en', label: 'English', native: 'English', flag: '🇬🇧', greeting: 'Welcome to KrishiSetu' },
+  { code: 'mr', label: 'Marathi', native: 'मराठी', flag: '🇮🇳', greeting: 'कृषीसेतू मध्ये आपले स्वागत आहे' },
 ];
 
 export function getTranslation(lang: Language): Translations {

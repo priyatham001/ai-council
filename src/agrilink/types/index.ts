@@ -1,5 +1,5 @@
 export type UserRole = 'farmer' | 'fpo' | 'buyer' | 'admin';
-export type Language = 'en' | 'hi' | 'mr' | 'te' | 'ta' | 'kn' | 'ml' | 'bn' | 'gu' | 'pa' | 'or';
+export type Language = 'te' | 'en' | 'mr';
 
 export interface FarmerPersona {
   id: string;

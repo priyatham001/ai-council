@@ -502,7 +502,14 @@ export const FarmerGuidedFlow: React.FC<FarmerGuidedFlowProps> = ({
             {filteredCrops.map((crop) => {
               const isSelected = selectedCrop?.id === crop.id;
               const photoUrl = crop.imageUrl || getCropImageUrl(crop.id);
-              const localName = crop.localNames[language] || crop.localNames.en || crop.name;
+              const isEnglish = language === 'en';
+              const primaryTitle = isEnglish
+                ? crop.localNames.en || crop.name
+                : crop.localNames[language] || crop.localNames.en || crop.name;
+              const subtitleText =
+                !isEnglish && crop.localNames[language]
+                  ? crop.localNames.en || crop.name
+                  : null;
 
               return (
                 <div
@@ -532,11 +539,13 @@ export const FarmerGuidedFlow: React.FC<FarmerGuidedFlowProps> = ({
                     )}
                     <div className="absolute bottom-2 left-2 right-2 text-white">
                       <p className="text-xs sm:text-sm font-black truncate drop-shadow">
-                        {localName}
+                        {primaryTitle}
                       </p>
-                      <p className="text-[10px] text-stone-200 truncate">
-                        {crop.localNames.hi || crop.name}
-                      </p>
+                      {subtitleText && (
+                        <p className="text-[10px] text-stone-200 truncate">
+                          {subtitleText}
+                        </p>
+                      )}
                     </div>
                   </div>
 
