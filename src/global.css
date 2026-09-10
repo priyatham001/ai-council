@@ -1,0 +1,280 @@
+/* ============================================================
+   KrishiSetu — Global Styles
+   Tailwind v4 base, themes, and design tokens
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=Noto+Sans:wght@400;500;600;700;900&family=Noto+Sans+Devanagari:wght@400;500;600;700;900&family=Noto+Sans+Telugu:wght@400;500;600;700;900&family=Noto+Sans+Tamil:wght@400;500;600;700;900&family=Noto+Sans+Kannada:wght@400;500;600;700;900&family=Noto+Sans+Malayalam:wght@400;500;600;700;900&display=swap');
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-brand-50: #f0fdf4;
+  --color-brand-100: #dcfce7;
+  --color-brand-200: #bbf7d0;
+  --color-brand-300: #86efac;
+  --color-brand-400: #4ade80;
+  --color-brand-500: #22c55e;
+  --color-brand-600: #16a34a;
+  --color-brand-700: #15803d;
+  --color-brand-800: #166534;
+  --color-brand-900: #14532d;
+  --color-brand-950: #052e16;
+
+  --color-earth-50: #faf8f5;
+  --color-earth-100: #f5f0e8;
+  --color-earth-200: #e8dcce;
+  --color-earth-300: #dac3ad;
+  --color-earth-400: #c59d79;
+  --color-earth-500: #b17b4c;
+  --color-earth-600: #9b643c;
+  --color-earth-700: #7c4d32;
+  --color-earth-800: #643f2d;
+  --color-earth-900: #533628;
+
+  --color-dark-bg: #0c1510;
+  --color-dark-surface: #14231b;
+  --color-dark-card: #1b2f24;
+  --color-dark-border: #274435;
+  --color-dark-muted: #88a694;
+
+  --font-sans: 'Plus Jakarta Sans', 'Outfit', 'Noto Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-outfit: 'Outfit', sans-serif;
+}
+
+/* ============================================================
+   Root variables
+   ============================================================ */
+:root {
+  --motion-duration-fast: 150ms;
+  --motion-duration-normal: 300ms;
+  --motion-duration-slow: 500ms;
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base Body Styles */
+body {
+  font-family: 'Plus Jakarta Sans', 'Outfit', 'Noto Sans', system-ui, -apple-system, sans-serif;
+  background-color: #fafaf9;
+  color: #1c1917;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.dark body {
+  background-color: #0c0a09;
+  color: #fafaf9;
+}
+
+/* ============================================================
+   Global prefers-reduced-motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .motion-safe\:translate-x-0,
+  .motion-safe\:translate-y-0,
+  .motion-safe\:scale-100 {
+    transform: none !important;
+  }
+}
+
+/* ============================================================
+   Indian script rendering — ensure proper text rendering
+   ============================================================ */
+[lang="te"], .lang-te,
+[lang="hi"], .lang-hi,
+[lang="mr"], .lang-mr,
+[lang="ta"], .lang-ta,
+[lang="kn"], .lang-kn,
+[lang="ml"], .lang-ml {
+  font-family: 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Telugu',
+               'Noto Sans Tamil', 'Noto Sans Kannada', 'Noto Sans Malayalam',
+               system-ui, sans-serif;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* ============================================================
+   Scrollbar styling
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+/* ============================================================
+   Utility & Animation keyframes
+   ============================================================ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+}
+
+@keyframes scanLine {
+  0%   { top: 0%; opacity: 0.8; }
+  50%  { opacity: 1; }
+  100% { top: 100%; opacity: 0.8; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float3d {
+  0%, 100% { transform: translateY(0px) rotateX(0deg) rotateY(0deg); }
+  50% { transform: translateY(-8px) rotateX(2deg) rotateY(-2deg); }
+}
+
+@keyframes orbitalRotate {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.05); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes laserSweep {
+  0% { top: 5%; opacity: 0.2; }
+  50% { opacity: 1; }
+  100% { top: 95%; opacity: 0.2; }
+}
+
+@keyframes badgeReveal {
+  0% { transform: scale(0.6) rotate(-10deg); opacity: 0; }
+  70% { transform: scale(1.1) rotate(3deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* 3D Utility Classes */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.perspective-2000 {
+  perspective: 2000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.card-3d {
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.card-3d:hover {
+  transform: translateY(-6px) rotateX(2deg) scale(1.01);
+  box-shadow: 0 20px 35px -10px rgba(16, 185, 129, 0.15), 0 10px 20px -5px rgba(0, 0, 0, 0.08);
+}
+
+.dark .card-3d:hover {
+  box-shadow: 0 20px 35px -10px rgba(16, 185, 129, 0.25), 0 10px 20px -5px rgba(0, 0, 0, 0.5);
+}
+
+.hologram-passport {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 50%, rgba(16, 185, 129, 0.1) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.hologram-passport::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  transform: rotate(30deg);
+  pointer-events: none;
+  animation: shimmer 4s infinite linear;
+}
+
+.animate-fadeIn     { animation: fadeIn 0.3s var(--motion-ease) both; }
+.animate-slideIn    { animation: slideInRight 0.3s var(--motion-ease) both; }
+.animate-pulseGlow  { animation: pulseGlow 2s ease-in-out infinite; }
+.animate-scanLine   { animation: scanLine 2s linear infinite; }
+.animate-float3d    { animation: float3d 6s ease-in-out infinite; }
+.animate-orbital    { animation: orbitalRotate 12s linear infinite; }
+.animate-laserSweep { animation: laserSweep 2s ease-in-out infinite alternate; }
+.animate-badgeReveal { animation: badgeReveal 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
+
+.shimmer-bg {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+.dark .shimmer-bg {
+  background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+  background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeIn,
+  .animate-slideIn,
+  .animate-pulseGlow,
+  .animate-scanLine,
+  .animate-float3d,
+  .animate-orbital,
+  .animate-laserSweep,
+  .animate-badgeReveal,
+  .shimmer-bg,
+  .hologram-passport::after {
+    animation: none !important;
+  }
+  .card-3d:hover {
+    transform: none !important;
+  }
+}
+
+/* ============================================================
+   Focus visible - accessibility
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid #16a34a;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
