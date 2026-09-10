@@ -1,6 +1,6 @@
 {
-  "name": "Kisan Setu – Smart Farmer & Buyer Marketplace",
-  "description": "Premium agricultural marketplace connecting farmers directly with buyers and discovering optimal nearby APMC mandis.",
+  "name": "KrishiSetu - Farmer Intelligence & Agricultural Marketplace Platform",
+  "description": "From crop intelligence to the best market, KrishiSetu helps farmers make smarter agricultural decisions.",
   "requestFramePermissions": [
     "camera",
     "microphone",
