@@ -330,26 +330,26 @@ export const KrishiWorkflow: React.FC = () => {
           )}
         </main>
 
-        {/* 4. Farmer-First Footer: KrishiSetu & Kisan AI */}
+        {/* 4. Farmer-First Footer: AgriConnect Marketplace */}
         <footer className="bg-stone-900 text-stone-400 text-xs py-8 border-t border-stone-800">
           <div className="max-w-7xl mx-auto px-4 text-center space-y-3">
             <div className="flex items-center justify-center gap-2">
               <span className="text-xl">🌾</span>
               <span className="font-extrabold text-stone-200 text-sm font-outfit">
-                KrishiSetu
+                AgriConnect
               </span>
               <span className="text-[10px] font-mono uppercase bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/30 font-bold">
-                Kisan AI
+                Marketplace Linkage
               </span>
             </div>
             <p className="text-emerald-400 font-medium text-xs">
-              From Your Farm to the Right Market.
+              Direct Farm-to-Buyer Marketplace Linkage Platform
             </p>
             <p className="text-[11px] text-stone-500 max-w-2xl mx-auto leading-relaxed">
-              Transparent mandi price discovery, AGMARK quality grading, net realization calculation, and digital marketplace listings across Indian agricultural markets.
+              Transparent mandi price discovery, AGMARK quality grading, net realization calculation, and digital marketplace listings connecting Indian farmers directly with buyers.
             </p>
             <p className="text-[10px] text-stone-600">
-              © {new Date().getFullYear()} KrishiSetu • Powered by Kisan AI • Built with ❤️ by IDEA FORGE
+              © {new Date().getFullYear()} AgriConnect • Direct Farmgate Linkage Platform
             </p>
           </div>
         </footer>

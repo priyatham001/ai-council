@@ -245,7 +245,7 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
 
               <a
                 href={`https://wa.me/${(lot.farmerPhone || '919848022334').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                  `Namaste ${lot.farmerName}, I am an interested buyer viewing your ${lot.crop} lot (${lot.lotNumber}) on KrishiSetu. I would like to purchase ${lot.quantityQuintals} quintals.`
+                  `Namaste ${lot.farmerName}, I am an interested buyer viewing your ${lot.crop} lot (${lot.lotNumber}) on AgriConnect. I would like to purchase ${lot.quantityQuintals} quintals.`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"

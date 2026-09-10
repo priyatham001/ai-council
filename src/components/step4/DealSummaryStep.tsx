@@ -1287,7 +1287,7 @@ export const DealSummaryStep: React.FC<DealSummaryStepProps> = ({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase font-black bg-amber-400 text-stone-950">
-                KrishiSetu Marketplace
+                AgriConnect Marketplace
               </span>
               <span className="text-xs text-amber-300 font-bold flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5" /> 24+ Verified Buyers Active
@@ -1299,7 +1299,7 @@ export const DealSummaryStep: React.FC<DealSummaryStepProps> = ({
             </h3>
 
             <p className="text-xs sm:text-sm text-stone-300 max-w-2xl leading-relaxed">
-              Publish your verified produce lot on KrishiSetu Marketplace. Verified institutional buyers, food processors, and terminal aggregators will be notified to place direct bids at or above your asking price.
+              Publish your verified produce lot on AgriConnect Marketplace. Verified institutional buyers, food processors, and terminal aggregators will be notified to place direct bids at or above your asking price.
             </p>
           </div>
 

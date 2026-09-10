@@ -69,16 +69,16 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 
       <div className="flex flex-col">
         <div className="flex items-center gap-1.5">
-          <div className={`font-bold tracking-tight text-gray-900 leading-tight ${textSizes[size]}`}>
-            Krishi<span className="text-brand-700">Setu</span>
+          <div className={`font-black tracking-tight text-gray-900 leading-tight ${textSizes[size]}`}>
+            Agri<span className="text-emerald-700">Connect</span>
           </div>
           <span className="text-[9px] font-mono uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-            Kisan AI
+            Marketplace
           </span>
         </div>
         {showTagline && (
           <span className="text-[11px] font-medium text-gray-700 hidden sm:block tracking-wide">
-            From Your Farm to the Right Market
+            Direct Farm-to-Buyer Linkage Platform
           </span>
         )}
       </div>

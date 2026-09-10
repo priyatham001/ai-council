@@ -19,7 +19,7 @@ export const IntelligenceOrb: React.FC<IntelligenceOrbProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onOrbClick}
-      title="KrishiSetu Intelligence Core - Tap to interact"
+      title="AgriConnect Intelligence Core - Tap to interact"
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {

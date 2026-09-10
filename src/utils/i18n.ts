@@ -22,7 +22,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
   mr: MR_TRANSLATIONS,
 };
 
-/** All 7 languages supported by KrishiSetu */
+/** All 7 languages supported by AgriConnect — English, Marathi, Telugu front and center */
 export const SUPPORTED_LANGUAGES: {
   code: Language;
   label: string;
@@ -30,13 +30,13 @@ export const SUPPORTED_LANGUAGES: {
   flag: string;
   greeting: string;
 }[] = [
-  { code: 'en', label: 'English',   native: 'English',   flag: '🇮🇳', greeting: 'Welcome to KrishiSetu' },
-  { code: 'te', label: 'Telugu',    native: 'తెలుగు',    flag: '🌾',  greeting: 'కృషిసేతుకి స్వాగతం' },
-  { code: 'hi', label: 'Hindi',     native: 'हिन्दी',    flag: '🇮🇳', greeting: 'कृषिसेतु में आपका स्वागत है' },
-  { code: 'ta', label: 'Tamil',     native: 'தமிழ்',     flag: '🌱',  greeting: 'கிருஷிசேதுவிற்கு நல்வரவு' },
-  { code: 'kn', label: 'Kannada',   native: 'ಕನ್ನಡ',     flag: '🌿',  greeting: 'ಕೃಷಿಸೇತುಗೆ ಸ್ವಾಗತ' },
-  { code: 'ml', label: 'Malayalam', native: 'മലയാളം',    flag: '🌴',  greeting: 'കൃഷിസേതുവിലേക്ക് സ്വാഗതം' },
-  { code: 'mr', label: 'Marathi',   native: 'मराठी',     flag: '🌻',  greeting: 'कृषिसेतुमध्ये आपले स्वागत आहे' },
+  { code: 'en', label: 'English',   native: 'English',   flag: '🇮🇳', greeting: 'Welcome to AgriConnect' },
+  { code: 'mr', label: 'Marathi',   native: 'मराठी',     flag: '🌻',  greeting: 'AgriConnect मध्ये आपले स्वागत आहे' },
+  { code: 'te', label: 'Telugu',    native: 'తెలుగు',    flag: '🌾',  greeting: 'AgriConnect కు స్వాగతం' },
+  { code: 'hi', label: 'Hindi',     native: 'हिन्दी',    flag: '🇮🇳', greeting: 'AgriConnect में आपका स्वागत है' },
+  { code: 'kn', label: 'Kannada',   native: 'ಕನ್ನಡ',     flag: '🌿',  greeting: 'AgriConnect ಗೆ ಸ್ವಾಗತ' },
+  { code: 'ta', label: 'Tamil',     native: 'தமிழ்',     flag: '🌱',  greeting: 'AgriConnect-க்கு நல்வரவு' },
+  { code: 'ml', label: 'Malayalam', native: 'മലയാളം',    flag: '🌴',  greeting: 'AgriConnect-ലേക്ക് സ്വാగతం' },
 ];
 
 export function getTranslation(lang: Language): Translations {

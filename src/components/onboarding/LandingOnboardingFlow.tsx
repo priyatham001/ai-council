@@ -22,6 +22,7 @@ import { Language, LocationData } from '../../types/krishi';
 import { SUPPORTED_LANGUAGES } from '../../utils/i18n';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useFarmerGuide } from '../../context/FarmerGuideContext';
 import { reverseGeocodeLocation } from '../../services/googleMapsService';
 import { IndiaMapZoomExperience } from './IndiaMapZoomExperience';
 import { queryLocations } from '../../data/indiaWideLocations';
@@ -53,7 +54,22 @@ export const LandingOnboardingFlow: React.FC = () => {
 
 
   // Theme state — synced with global ThemeContext (single source of truth)
-  const { isDark: isDarkMode, setTheme } = useTheme();
+  const { isDark: isDarkMode, setTheme, toggleTheme } = useTheme();
+  const { setGuideStepId, setTargetSelector } = useFarmerGuide();
+
+  // Sync guide step with current onboarding step
+  useEffect(() => {
+    if (step === 1) {
+      setGuideStepId('start-language');
+      setTargetSelector('#guide-language-step');
+    } else if (step === 2) {
+      setGuideStepId('start-location');
+      setTargetSelector('#guide-location-step');
+    } else if (step === 3) {
+      setGuideStepId('start-role');
+      setTargetSelector('#guide-role-step');
+    }
+  }, [step, setGuideStepId, setTargetSelector]);
 
   // Location State Machine for Step 2
   // 'explain' -> 'requesting' -> ('map_preview' | 'error' | 'manual_search')
@@ -92,6 +108,10 @@ export const LandingOnboardingFlow: React.FC = () => {
   // Save language — writes to global context (which persists to localStorage)
   const handleSelectLanguage = (lang: Language) => {
     setGlobalLanguage(lang);
+    // Ask for location permission early during language selection so that the next page will be ready
+    if (navigator.geolocation && locationStepMode === 'explain') {
+      requestBrowserGeolocation();
+    }
   };
 
   // Step 1 -> Step 2 transition: Show explanation card first, DO NOT auto-trigger GPS without consent
@@ -286,16 +306,27 @@ export const LandingOnboardingFlow: React.FC = () => {
             </div>
             <div>
               <span className="text-xl sm:text-2xl font-black font-outfit tracking-tight text-emerald-900 dark:text-white">
-                Krishi<span className="text-emerald-600 dark:text-emerald-400">Setu</span>
+                Agri<span className="text-emerald-600 dark:text-emerald-400">Connect</span>
               </span>
               <span className="hidden sm:inline-block text-[11px] font-bold text-amber-800 dark:text-amber-300 ml-2 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 border border-amber-300 dark:border-amber-800">
-                Farmer & Buyer Linkage
+                Direct Farmer & Buyer Linkage
               </span>
             </div>
           </div>
 
-          {/* Step Breadcrumbs */}
-          <div className="flex items-center gap-2 text-xs font-bold">
+          <div className="flex items-center gap-3">
+            {/* Quick Header Theme Toggle */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-2 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-amber-300 transition-colors border border-stone-200 dark:border-stone-700 cursor-pointer"
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
+            </button>
+
+            {/* Step Breadcrumbs */}
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-bold">
             <span
               className={`px-3 py-1 rounded-full transition-colors ${
                 step === 1
@@ -327,7 +358,8 @@ export const LandingOnboardingFlow: React.FC = () => {
             </span>
           </div>
         </div>
-      </header>
+      </div>
+    </header>
 
       {/* Main Content Body */}
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12 flex flex-col justify-center">
@@ -338,6 +370,7 @@ export const LandingOnboardingFlow: React.FC = () => {
           {step === 1 && (
             <motion.div
               key="step1"
+              id="guide-language-step"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
@@ -469,6 +502,7 @@ export const LandingOnboardingFlow: React.FC = () => {
           {step === 2 && (
             <motion.div
               key="step2"
+              id="guide-location-step"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
@@ -870,6 +904,7 @@ export const LandingOnboardingFlow: React.FC = () => {
           {step === 3 && (
             <motion.div
               key="step3"
+              id="guide-role-step"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
@@ -881,7 +916,7 @@ export const LandingOnboardingFlow: React.FC = () => {
                   <ShieldCheck className="w-3.5 h-3.5 text-amber-500" /> {t('onboarding.step3') || 'Step 3: Select Your Role'}
                 </span>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black font-outfit text-stone-900 dark:text-white">
-                  {t('onboarding.roleTitle') || 'How Will You Use KrishiSetu?'}
+                  {t('onboarding.roleTitle') || 'How Will You Use AgriConnect?'}
                 </h2>
                 <p className="text-sm text-stone-600 dark:text-stone-400">
                   {t('onboarding.roleSubtitle') || 'Select your role to access dedicated dashboards, tailored pricing, and direct market linkage.'}
@@ -905,7 +940,7 @@ export const LandingOnboardingFlow: React.FC = () => {
                     </div>
 
                     <h3 className="text-2xl sm:text-3xl font-black font-outfit text-stone-900 dark:text-white">
-                      {t('onboarding.farmerTitle') || 'I AM A FARMER'}
+                      {t('onboarding.farmerTitle') || 'Farmer'}
                     </h3>
 
                     <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed font-medium">
@@ -953,7 +988,7 @@ export const LandingOnboardingFlow: React.FC = () => {
                     </div>
 
                     <h3 className="text-2xl sm:text-3xl font-black font-outfit text-stone-900 dark:text-white">
-                      {t('onboarding.buyerTitle') || 'I AM A BUYER'}
+                      {t('onboarding.buyerTitle') || 'Buyer'}
                     </h3>
 
                     <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed font-medium">
@@ -1003,7 +1038,7 @@ export const LandingOnboardingFlow: React.FC = () => {
 
       {/* Footer */}
       <footer className="border-t border-stone-200 dark:border-stone-800 py-4 px-6 text-center text-xs text-stone-500 dark:text-stone-400">
-        KrishiSetu Platform • Built with Google Maps Platform and Gemini Vision Assayer • Direct Farm-to-Buyer Linkage
+        AgriConnect Platform • Built with Google Maps Platform and Direct Farm-to-Buyer Linkage
       </footer>
     </div>
   );

@@ -94,16 +94,16 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-lg sm:text-xl font-black tracking-tight text-white">
-                    KRISHI<span className="text-emerald-400">SETU</span>
+                  <span className="text-lg sm:text-xl font-black tracking-tight text-white font-outfit">
+                    AGRI<span className="text-emerald-400">CONNECT</span>
                   </span>
                   <span className="text-[10px] font-mono tracking-wider font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 flex items-center gap-1">
-                    <span>🤖</span>
-                    <span>Kisan AI</span>
+                    <span>🌾</span>
+                    <span>Direct Linkage</span>
                   </span>
                 </div>
                 <p className="text-[11px] text-emerald-300 font-medium hidden sm:block">
-                  From Your Farm to the Right Market • By Idea Forge
+                  Direct Farm-to-Buyer Marketplace Linkage
                 </p>
               </div>
             </Link>

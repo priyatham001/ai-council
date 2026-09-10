@@ -864,7 +864,7 @@ export const HomePage: React.FC = () => {
               <ul className="space-y-1.5 text-stone-300">
                 <li>
                   <Link to="/about" className="hover:text-white transition-colors">
-                    About KrishiSetu
+                    About AgriConnect
                   </Link>
                 </li>
                 <li>
@@ -879,12 +879,12 @@ export const HomePage: React.FC = () => {
                 </li>
                 <li>
                   <a
-                    href="/KrishiSetu-Final.zip"
-                    download="KrishiSetu-Final.zip"
+                    href="/agriconnect-source.zip"
+                    download="agriconnect-source.zip"
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-300 hover:text-white border border-emerald-700/50 text-xs font-bold transition-colors"
                   >
                     <span>📦</span>
-                    <span>Download KrishiSetu-Final.zip</span>
+                    <span>Download Project Source</span>
                   </a>
                 </li>
                 <li className="pt-1">
@@ -897,7 +897,7 @@ export const HomePage: React.FC = () => {
 
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-stone-400 text-[11px]">
             <div>
-              &copy; {new Date().getFullYear()} KrishiSetu Platform. All rights reserved. Built for Indian Farmers.
+              &copy; {new Date().getFullYear()} AgriConnect Platform. All rights reserved. Built for Indian Farmers & Buyers.
             </div>
             <div className="flex items-center gap-4">
               <span>Security: End-to-End Assayer Encrypted</span>

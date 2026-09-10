@@ -24,7 +24,10 @@ import {
   Compass,
   FileText,
   Map as MapIcon,
-  LayoutGrid
+  LayoutGrid,
+  Sun,
+  Moon,
+  Tv
 } from 'lucide-react';
 import { lotService } from '../../agrilink/services/lotService';
 import { offerService } from '../../agrilink/services/offerService';
@@ -35,7 +38,10 @@ import { PAN_INDIA_MARKETS } from '../../agrilink/data/panIndiaData';
 import { BuyerLotsGoogleMapView } from '../../components/buyers/BuyerLotsGoogleMapView';
 import { LotDetailsModal } from '../../components/buyers/LotDetailsModal';
 import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useFarmerGuide } from '../../context/FarmerGuideContext';
 import { LanguageSelector } from '../../components/common/LanguageSelector';
+import { FarmerBuyerLinkageAnimation } from '../../components/common/FarmerBuyerLinkageAnimation';
 
 // Buyer Procurement Request Interface
 interface BuyerRequest {
@@ -115,9 +121,19 @@ const DEFAULT_BUYER_REQUESTS: BuyerRequest[] = [
 export const BuyerMarketplacePage: React.FC = () => {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
+  const { isDark, toggleTheme } = useTheme();
+  const { setGuideStepId, setTargetSelector } = useFarmerGuide();
+
+  // Linkage animation modal toggle
+  const [showLinkageAnimation, setShowLinkageAnimation] = useState(false);
 
   // Active Tab: 'lots' | 'requests' | 'farmers' | 'markets'
   const [activeTab, setActiveTab] = useState<'lots' | 'requests' | 'farmers' | 'markets'>('lots');
+
+  useEffect(() => {
+    setGuideStepId('buyer-browse');
+    setTargetSelector('#buyer-lots-section');
+  }, [setGuideStepId, setTargetSelector]);
 
   // Filter states
   const [searchCrop, setSearchCrop] = useState('');
@@ -212,7 +228,7 @@ export const BuyerMarketplacePage: React.FC = () => {
       paymentTerms: 'Within 24 hours via Escrow',
       status: 'Pending',
       createdAt: new Date().toISOString(),
-      notes: offerNotes || 'Official commercial bid submitted directly through KrishiSetu Marketplace.'
+      notes: offerNotes || 'Official commercial bid submitted directly through AgriConnect Marketplace.'
     };
 
     // Store in storage
@@ -303,7 +319,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-lg sm:text-xl font-black tracking-tight font-outfit text-white">
-                      KRISHI<span className="text-emerald-400">SETU</span>
+                      AGRI<span className="text-emerald-400">CONNECT</span>
                     </span>
                     <span className="text-[10px] font-mono tracking-wider font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
                       {t('buyer.marketplace') || 'BUYER MARKETPLACE'}
@@ -316,8 +332,29 @@ export const BuyerMarketplacePage: React.FC = () => {
               </Link>
             </div>
 
-            {/* Nav Links + Language Selector */}
-            <div className="flex items-center gap-2">
+            {/* Nav Links + Language Selector + Theme Toggle */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Theme Toggle */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="p-2 rounded-xl bg-emerald-900/80 hover:bg-emerald-800 text-amber-300 border border-emerald-800 transition-colors cursor-pointer"
+                title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-200" />}
+              </button>
+
+              {/* View Animated Linkage Modal */}
+              <button
+                type="button"
+                onClick={() => setShowLinkageAnimation(true)}
+                className="px-3 py-1.5 rounded-xl bg-emerald-900/90 hover:bg-emerald-800 text-emerald-200 hover:text-white border border-emerald-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Watch Farmer to Buyer Connection Animation"
+              >
+                <Tv className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden md:inline">How It Connects</span>
+              </button>
+
               <LanguageSelector variant="dark" />
               <Link
                 to="/"
@@ -1180,26 +1217,34 @@ export const BuyerMarketplacePage: React.FC = () => {
         onInterestSubmitted={handleInterestSubmitted}
       />
 
+      {/* Linkage Animation Modal */}
+      {showLinkageAnimation && (
+        <FarmerBuyerLinkageAnimation
+          isOpen={showLinkageAnimation}
+          onClose={() => setShowLinkageAnimation(false)}
+        />
+      )}
+
       {/* 3. Footer */}
       <footer className="bg-stone-900 text-stone-400 text-xs py-8 border-t border-stone-800 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center space-y-2">
           <div className="flex items-center justify-center gap-2">
             <span className="text-xl">🌾</span>
             <span className="font-extrabold text-stone-200 text-sm font-outfit">
-              KrishiSetu
+              AgriConnect
             </span>
             <span className="text-[10px] font-mono uppercase bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded border border-amber-400/30">
-              Kisan AI Marketplace
+              Direct Farmer Linkage
             </span>
           </div>
           <p className="text-amber-400 font-medium text-xs">
-            From Your Farm to the Right Market
+            Direct Farm-to-Buyer Marketplace Linkage Platform
           </p>
           <p className="text-[11px] text-stone-500 max-w-xl mx-auto">
-            KrishiSetu connects farmers directly with audited institutional buyers and regional APMC mandis with guaranteed digital settlement.
+            AgriConnect connects farmers directly with audited institutional buyers and regional APMC mandis with guaranteed digital settlement.
           </p>
           <p className="text-[10px] text-stone-600 pt-2 border-t border-stone-800">
-            © 2026 KrishiSetu • Powered by Kisan AI • Built with ❤️ by IDEA FORGE
+            © {new Date().getFullYear()} AgriConnect • Direct Farmgate Linkage Platform
           </p>
         </div>
       </footer>

@@ -38,6 +38,7 @@ import { CROP_DATABASE, filterCrops, getCropImageUrl } from '../../data/cropsDat
 import { findGeographicMarkets } from '../../data/indiaWideMarkets';
 import { TRANSLATIONS, getTranslation } from '../../utils/i18n';
 import { lotService } from '../../agrilink/services/lotService';
+import { useFarmerGuide } from '../../context/FarmerGuideContext';
 
 interface FarmerGuidedFlowProps {
   location: LocationData;
@@ -54,9 +55,47 @@ export const FarmerGuidedFlow: React.FC<FarmerGuidedFlowProps> = ({
 }) => {
   const navigate = useNavigate();
   const t = getTranslation(language);
+  const { setGuideStepId, setTargetSelector } = useFarmerGuide();
 
   // 7 Guided Steps: 1=Crop, 2=Details, 3=Photos, 4=Quality, 5=Markets, 6=Contact, 7=Publish
   const [currentStep, setCurrentStep] = useState<number>(1);
+
+  // Sync farmer guide with current flow step
+  useEffect(() => {
+    switch (currentStep) {
+      case 1:
+        setGuideStepId('farmer-crop');
+        setTargetSelector('#farmer-crop-section');
+        break;
+      case 2:
+        setGuideStepId('farmer-details');
+        setTargetSelector('#farmer-details-section');
+        break;
+      case 3:
+        setGuideStepId('farmer-photos');
+        setTargetSelector('#farmer-photos-section');
+        break;
+      case 4:
+        setGuideStepId('farmer-quality');
+        setTargetSelector('#farmer-quality-section');
+        break;
+      case 5:
+        setGuideStepId('farmer-markets');
+        setTargetSelector('#farmer-markets-section');
+        break;
+      case 6:
+        setGuideStepId('farmer-contact');
+        setTargetSelector('#farmer-contact-section');
+        break;
+      case 7:
+        setGuideStepId('farmer-publish');
+        setTargetSelector('#farmer-publish-section');
+        break;
+      default:
+        setGuideStepId('idle');
+        break;
+    }
+  }, [currentStep, setGuideStepId, setTargetSelector]);
 
   // Step 1: Crop Selection
   const [selectedCrop, setSelectedCrop] = useState<CropItem | null>(() => CROP_DATABASE[0]);

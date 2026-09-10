@@ -88,12 +88,12 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a
-                  href="/KrishiSetu-Final.zip"
-                  download="KrishiSetu-Final.zip"
+                  href="/agriconnect-source.zip"
+                  download="agriconnect-source.zip"
                   className="hover:text-emerald-300 transition-colors flex items-center gap-1"
                 >
                   <Download className="w-3 h-3 text-emerald-400" />
-                  <span>Download Project ZIP</span>
+                  <span>Download Project Source</span>
                 </a>
               </li>
             </ul>
@@ -119,7 +119,7 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Bar */}
         <div className="mt-12 pt-6 border-t border-emerald-950 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-stone-400">
-          <p>© {new Date().getFullYear()} KrishiSetu. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} AgriConnect. All rights reserved.</p>
           <div className="flex items-center gap-1 text-stone-400">
             <span>Built with dedication for Indian Agriculture</span>
             <Heart className="w-3 h-3 text-red-500 fill-red-500 mx-0.5" />

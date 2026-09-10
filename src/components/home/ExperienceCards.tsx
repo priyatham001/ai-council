@@ -17,7 +17,7 @@ export const ExperienceCards: React.FC = () => {
             Choose Your Agricultural Path
           </h2>
           <p className="text-sm sm:text-base text-stone-400 mt-2">
-            Whether you want to inspect crop quality with computer vision or trade with verified buyers, KrishiSetu provides dedicated, seamless tools.
+            Whether you want to inspect crop quality or trade with verified buyers, AgriConnect provides dedicated, seamless tools.
           </p>
         </div>
 
