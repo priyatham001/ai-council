@@ -290,7 +290,7 @@ export const BuyerMarketplacePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 flex flex-col font-sans transition-colors duration-200">
       {/* Top Notification Toast */}
       {offerSuccessToast && (
         <div className="fixed top-4 right-4 z-50 bg-emerald-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-emerald-500/50 flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-200 text-xs sm:text-sm">
@@ -460,9 +460,9 @@ export const BuyerMarketplacePage: React.FC = () => {
 
         {/* TAB 1: BROWSE AVAILABLE CROP LOTS */}
         {activeTab === 'lots' && (
-          <div className="space-y-6">
+          <div id="buyer-lots-section" className="space-y-6">
             {/* Filters Bar */}
-            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
+            <div className="bg-white dark:bg-stone-900 p-4 sm:p-5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs flex flex-wrap items-center justify-between gap-4 transition-colors">
               <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
                 {/* Search Input */}
                 <div className="relative flex-1 min-w-[200px]">
@@ -472,7 +472,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                     placeholder={t('buyer.searchCropPlaceholder') || 'Search crop (Paddy, Onion, Tomato, Wheat...)'}
                     value={searchCrop}
                     onChange={(e) => setSearchCrop(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium text-stone-900 focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                    className="w-full pl-9 pr-4 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-medium text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:bg-white dark:focus:bg-stone-800 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                   />
                 </div>
 
@@ -480,7 +480,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                 <select
                   value={selectedGrade}
                   onChange={(e) => setSelectedGrade(e.target.value)}
-                  className="py-2 px-3 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold text-stone-800 focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                  className="py-2 px-3 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-semibold text-stone-800 dark:text-stone-200 focus:bg-white dark:focus:bg-stone-800 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden cursor-pointer"
                 >
                   <option value="All">{t('buyer.allGrades') || 'All Quality Grades'}</option>
                   <option value="Grade A">🟢 Grade A (Premium)</option>
@@ -492,7 +492,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                 <select
                   value={selectedState}
                   onChange={(e) => setSelectedState(e.target.value)}
-                  className="py-2 px-3 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold text-stone-800 focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                  className="py-2 px-3 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-semibold text-stone-800 dark:text-stone-200 focus:bg-white dark:focus:bg-stone-800 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden cursor-pointer"
                 >
                   <option value="All">{t('buyer.allStates') || 'All States (Pan-India)'}</option>
                   <option value="Andhra Pradesh">Andhra Pradesh</option>
@@ -507,14 +507,14 @@ export const BuyerMarketplacePage: React.FC = () => {
 
               {/* View Switcher: List vs Google Map */}
               <div className="flex items-center gap-3">
-                <div className="flex items-center bg-stone-100 p-1 rounded-xl border border-stone-300">
+                <div className="flex items-center bg-stone-100 dark:bg-stone-800 p-1 rounded-xl border border-stone-300 dark:border-stone-700">
                   <button
                     type="button"
                     onClick={() => setLotViewMode('list')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       lotViewMode === 'list'
-                        ? 'bg-white text-stone-900 shadow-xs'
-                        : 'text-stone-600 hover:text-stone-900'
+                        ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs'
+                        : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
                     }`}
                   >
                     <LayoutGrid className="w-3.5 h-3.5" />
@@ -527,7 +527,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       lotViewMode === 'map'
                         ? 'bg-emerald-700 text-white shadow-xs'
-                        : 'text-stone-600 hover:text-stone-900'
+                        : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
                     }`}
                   >
                     <MapIcon className="w-3.5 h-3.5" />
@@ -535,8 +535,8 @@ export const BuyerMarketplacePage: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="text-xs text-stone-500 font-medium hidden sm:block">
-                  <strong className="text-stone-900">{filteredLots.length}</strong> {t('buyer.availableLotsCount') || 'available lots'}
+                <div className="text-xs text-stone-500 dark:text-stone-400 font-medium hidden sm:block">
+                  <strong className="text-stone-900 dark:text-stone-100">{filteredLots.length}</strong> {t('buyer.availableLotsCount') || 'available lots'}
                 </div>
               </div>
             </div>
@@ -561,13 +561,13 @@ export const BuyerMarketplacePage: React.FC = () => {
                       {/* Header: Lot ID + Grade */}
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <span className="text-[10px] font-mono uppercase bg-stone-100 text-stone-600 px-2 py-0.5 rounded border border-stone-200 font-bold">
+                          <span className="text-[10px] font-mono uppercase bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 px-2 py-0.5 rounded border border-stone-200 dark:border-stone-700 font-bold">
                             {lot.lotNumber}
                           </span>
-                          <h3 className="text-lg font-black text-stone-900 mt-1">
+                          <h3 className="text-lg font-black text-stone-900 dark:text-stone-100 mt-1">
                             {lot.crop}
                           </h3>
-                          <p className="text-xs text-stone-500">
+                          <p className="text-xs text-stone-500 dark:text-stone-400">
                             {lot.variety || 'Standard Hybrid'}
                           </p>
                         </div>
@@ -575,8 +575,8 @@ export const BuyerMarketplacePage: React.FC = () => {
                         <span
                           className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
                             lot.qualityGrade.includes('A')
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : 'bg-amber-50 text-amber-800 border-amber-200'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                              : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                           }`}
                         >
                           {lot.qualityGrade}
@@ -584,14 +584,14 @@ export const BuyerMarketplacePage: React.FC = () => {
                       </div>
 
                       {/* Location & Farmer */}
-                      <div className="bg-stone-50 p-3 rounded-xl border border-stone-100 space-y-1.5 text-xs">
-                        <div className="flex items-center gap-1.5 text-stone-700">
-                          <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                      <div className="bg-stone-50 dark:bg-stone-800/80 p-3 rounded-xl border border-stone-100 dark:border-stone-700/60 space-y-1.5 text-xs">
+                        <div className="flex items-center gap-1.5 text-stone-700 dark:text-stone-300">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                           <span className="font-semibold">{lot.location || `${lot.district}, ${lot.state}`}</span>
                         </div>
-                        <div className="flex items-center justify-between text-stone-500 text-[11px] pt-1 border-t border-stone-200/60">
-                          <span>Farmer: <strong className="text-stone-800">{lot.farmerName}</strong></span>
-                          <span className="text-emerald-700 font-bold flex items-center gap-1">
+                        <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 text-[11px] pt-1 border-t border-stone-200/60 dark:border-stone-700/60">
+                          <span>Farmer: <strong className="text-stone-800 dark:text-stone-200">{lot.farmerName}</strong></span>
+                          <span className="text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1">
                             <ShieldCheck className="w-3 h-3" /> KYC Verified
                           </span>
                         </div>
@@ -599,37 +599,37 @@ export const BuyerMarketplacePage: React.FC = () => {
 
                       {/* Metrics: Quantity & Asking Price */}
                       <div className="grid grid-cols-2 gap-2 pt-1">
-                        <div className="bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
-                          <div className="text-[10px] uppercase font-bold text-stone-500">
+                        <div className="bg-emerald-50/60 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/60">
+                          <div className="text-[10px] uppercase font-bold text-stone-500 dark:text-stone-400">
                             Available Lot Size
                           </div>
-                          <div className="text-base font-black text-stone-900 mt-0.5">
+                          <div className="text-base font-black text-stone-900 dark:text-stone-100 mt-0.5">
                             {lot.quantityQuintals} q
-                            <span className="text-[11px] font-normal text-stone-500">
+                            <span className="text-[11px] font-normal text-stone-500 dark:text-stone-400">
                               {' '}({(lot.quantityQuintals / 10).toFixed(1)} MT)
                             </span>
                           </div>
                         </div>
 
-                        <div className="bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
-                          <div className="text-[10px] uppercase font-bold text-stone-500">
+                        <div className="bg-emerald-50/60 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/60">
+                          <div className="text-[10px] uppercase font-bold text-stone-500 dark:text-stone-400">
                             Farmer Asking Price
                           </div>
-                          <div className="text-base font-black text-emerald-800 mt-0.5">
+                          <div className="text-base font-black text-emerald-800 dark:text-emerald-300 mt-0.5">
                             ₹{lot.expectedPricePerQ.toLocaleString('en-IN')}
-                            <span className="text-[10px] font-normal text-stone-500">/q</span>
+                            <span className="text-[10px] font-normal text-stone-500 dark:text-stone-400">/q</span>
                           </div>
                         </div>
                       </div>
 
                       {/* AI Verification Badge */}
-                      <div className="flex items-center justify-between text-[11px] text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-lg font-semibold border border-emerald-200">
+                      <div className="flex items-center justify-between text-[11px] text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1.5 rounded-lg font-semibold border border-emerald-200 dark:border-emerald-800">
                         <div className="flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                           <span>AI Assayed: {lot.qualityGrade}</span>
                         </div>
                         {lot.interestedBuyers && lot.interestedBuyers.length > 0 && (
-                          <span className="text-[10px] font-mono text-amber-800 font-bold bg-amber-200/80 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] font-mono text-amber-800 dark:text-amber-300 font-bold bg-amber-200/80 dark:bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-300/40 dark:border-amber-700/40">
                             {lot.interestedBuyers.length} buyers interested
                           </span>
                         )}
@@ -637,11 +637,11 @@ export const BuyerMarketplacePage: React.FC = () => {
                     </div>
 
                     {/* Actions: View Details / Inspect + Direct Bid */}
-                    <div className="pt-2 border-t border-stone-100 flex items-center gap-2">
+                    <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setSelectedLotForDetails(lot)}
-                        className="flex-1 py-2.5 px-3 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="flex-1 py-2.5 px-3 bg-stone-900 hover:bg-stone-800 dark:bg-stone-800 dark:hover:bg-stone-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                         <span>{t('buyer.inspectContact') || 'Inspect & Contact'}</span>
@@ -667,12 +667,12 @@ export const BuyerMarketplacePage: React.FC = () => {
         {/* TAB 2: BUYER PROCUREMENT REQUESTS */}
         {activeTab === 'requests' && (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-stone-200 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-stone-900 p-5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs transition-colors">
               <div>
-                <h2 className="text-lg font-black text-stone-900">
+                <h2 className="text-lg font-black text-stone-900 dark:text-stone-100">
                   Active Buyer Procurement Requests
                 </h2>
-                <p className="text-xs text-stone-500 mt-0.5">
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
                   Institutional buyers and retail aggregators seeking farmgate supply across India
                 </p>
               </div>
@@ -691,63 +691,63 @@ export const BuyerMarketplacePage: React.FC = () => {
               {buyerRequests.map((req) => (
                 <div
                   key={req.id}
-                  className="bg-white rounded-2xl border border-stone-200 p-5 shadow-xs space-y-4 flex flex-col justify-between"
+                  className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 p-5 shadow-xs space-y-4 flex flex-col justify-between transition-colors"
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                           {req.buyerType}
                         </span>
-                        <h3 className="text-base font-black text-stone-900 mt-1">
+                        <h3 className="text-base font-black text-stone-900 dark:text-stone-100 mt-1">
                           {req.cropName}
                         </h3>
-                        <p className="text-xs text-stone-500 font-medium">
-                          Buyer: <strong className="text-stone-800">{req.buyerName}</strong>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">
+                          Buyer: <strong className="text-stone-800 dark:text-stone-200">{req.buyerName}</strong>
                         </p>
                       </div>
 
-                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                         ● {req.status}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-200/80">
-                        <div className="text-[10px] uppercase font-bold text-stone-500">
+                      <div className="bg-stone-50 dark:bg-stone-800 p-2.5 rounded-xl border border-stone-200/80 dark:border-stone-700">
+                        <div className="text-[10px] uppercase font-bold text-stone-500 dark:text-stone-400">
                           Required Volume
                         </div>
-                        <div className="text-base font-black text-stone-900 mt-0.5">
+                        <div className="text-base font-black text-stone-900 dark:text-stone-100 mt-0.5">
                           {req.quantityQuintals} quintals
                         </div>
                       </div>
 
-                      <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-200/80">
-                        <div className="text-[10px] uppercase font-bold text-stone-500">
+                      <div className="bg-stone-50 dark:bg-stone-800 p-2.5 rounded-xl border border-stone-200/80 dark:border-stone-700">
+                        <div className="text-[10px] uppercase font-bold text-stone-500 dark:text-stone-400">
                           Target Budget
                         </div>
-                        <div className="text-base font-black text-emerald-800 mt-0.5">
+                        <div className="text-base font-black text-emerald-700 dark:text-emerald-400 mt-0.5">
                           ₹{req.targetPricePerQ.toLocaleString('en-IN')}/q
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-1 text-xs text-stone-600 bg-stone-50 p-3 rounded-xl border border-stone-100">
+                    <div className="space-y-1 text-xs text-stone-600 dark:text-stone-300 bg-stone-50 dark:bg-stone-800/80 p-3 rounded-xl border border-stone-100 dark:border-stone-700/60">
                       <div>
-                        <strong>Target Location:</strong> {req.deliveryLocation}
+                        <strong className="text-stone-800 dark:text-stone-200">Target Location:</strong> {req.deliveryLocation}
                       </div>
                       <div>
-                        <strong>Quality Spec:</strong> {req.qualityRequirement}
+                        <strong className="text-stone-800 dark:text-stone-200">Quality Spec:</strong> {req.qualityRequirement}
                       </div>
                       {req.notes && (
-                        <div className="text-stone-500 italic text-[11px] pt-1">
+                        <div className="text-stone-500 dark:text-stone-400 italic text-[11px] pt-1">
                           "{req.notes}"
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-xs">
+                  <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between text-xs">
                     <span className="text-stone-400 text-[11px] flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5" /> Posted {req.createdAt}
                     </span>
@@ -758,7 +758,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                           `/farmer?crop=${encodeURIComponent(req.cropName)}&request=${encodeURIComponent(req.id)}`
                         )
                       }
-                      className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg font-bold text-xs transition-colors cursor-pointer"
+                      className="px-3 py-1.5 bg-emerald-100 dark:bg-emerald-950 hover:bg-emerald-200 dark:hover:bg-emerald-900 text-emerald-900 dark:text-emerald-200 rounded-lg font-bold text-xs transition-colors cursor-pointer"
                     >
                       Match Produce Lot →
                     </button>
@@ -772,11 +772,11 @@ export const BuyerMarketplacePage: React.FC = () => {
         {/* TAB 3: VERIFIED FARMER NETWORK */}
         {activeTab === 'farmers' && (
           <div className="space-y-6">
-            <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs">
-              <h2 className="text-lg font-black text-stone-900">
+            <div className="bg-white dark:bg-stone-900 p-5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs transition-colors">
+              <h2 className="text-lg font-black text-stone-900 dark:text-stone-100">
                 Pan-India Verified Farmer & FPO Network
               </h2>
-              <p className="text-xs text-stone-500 mt-0.5">
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
                 Farmers with authenticated PM-KISAN, KYC, and land records ready for direct institutional trade
               </p>
             </div>
@@ -846,36 +846,36 @@ export const BuyerMarketplacePage: React.FC = () => {
               ].map((farmer, idx) => (
                 <div
                   key={idx}
-                  className="bg-white rounded-2xl border border-stone-200 p-5 shadow-xs space-y-3 flex flex-col justify-between"
+                  className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 p-5 shadow-xs space-y-3 flex flex-col justify-between transition-colors"
                 >
                   <div className="space-y-2.5">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="font-black text-stone-900 text-base">
+                        <h3 className="font-black text-stone-900 dark:text-stone-100 text-base">
                           {farmer.name}
                         </h3>
-                        <div className="flex items-center gap-1 text-xs text-stone-500 mt-0.5">
+                        <div className="flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400 mt-0.5">
                           <MapPin className="w-3.5 h-3.5 text-stone-400" />
                           <span>{farmer.village}, {farmer.district}, {farmer.state}</span>
                         </div>
                       </div>
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" /> Verified
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Verified
                       </span>
                     </div>
 
-                    <div className="bg-stone-50 p-3 rounded-xl border border-stone-100 text-xs space-y-1.5">
+                    <div className="bg-stone-50 dark:bg-stone-800 p-3 rounded-xl border border-stone-100 dark:border-stone-700 text-xs space-y-1.5">
                       <div>
-                        <span className="text-stone-500">Primary Crops:</span>{' '}
-                        <strong className="text-stone-900">{farmer.crops.join(', ')}</strong>
+                        <span className="text-stone-500 dark:text-stone-400">Primary Crops:</span>{' '}
+                        <strong className="text-stone-900 dark:text-stone-100">{farmer.crops.join(', ')}</strong>
                       </div>
                       <div>
-                        <span className="text-stone-500">Land Holding:</span>{' '}
-                        <strong className="text-stone-900">{farmer.acres} Acres</strong>
+                        <span className="text-stone-500 dark:text-stone-400">Land Holding:</span>{' '}
+                        <strong className="text-stone-900 dark:text-stone-100">{farmer.acres} Acres</strong>
                       </div>
                       <div>
-                        <span className="text-stone-500">Affiliated FPO:</span>{' '}
-                        <strong className="text-emerald-800">{farmer.fpo}</strong>
+                        <span className="text-stone-500 dark:text-stone-400">Affiliated FPO:</span>{' '}
+                        <strong className="text-emerald-700 dark:text-emerald-400">{farmer.fpo}</strong>
                       </div>
                     </div>
                   </div>
@@ -886,7 +886,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                       setIsRequestModalOpen(true);
                       setNewRequestCrop(farmer.crops[0]);
                     }}
-                    className="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-bold transition-colors border border-stone-200 flex items-center justify-center gap-1 cursor-pointer"
+                    className="w-full py-2 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 rounded-xl text-xs font-bold transition-colors border border-stone-200 dark:border-stone-700 flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <span>Request Farm Produce</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -900,11 +900,11 @@ export const BuyerMarketplacePage: React.FC = () => {
         {/* TAB 4: MANDI BENCHMARK RATES */}
         {activeTab === 'markets' && (
           <div className="space-y-6">
-            <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs">
-              <h2 className="text-lg font-black text-stone-900">
+            <div className="bg-white dark:bg-stone-900 p-5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs transition-colors">
+              <h2 className="text-lg font-black text-stone-900 dark:text-stone-100">
                 Pan-India APMC Mandi Benchmark Prices
               </h2>
-              <p className="text-xs text-stone-500 mt-0.5">
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
                 Official modal pricing and arrival volumes synchronized across e-NAM and APMC networks
               </p>
             </div>
@@ -913,28 +913,28 @@ export const BuyerMarketplacePage: React.FC = () => {
               {PAN_INDIA_MARKETS.slice(0, 9).map((mkt) => (
                 <div
                   key={mkt.id}
-                  className="bg-white rounded-2xl border border-stone-200 p-4 shadow-xs space-y-3"
+                  className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 p-4 shadow-xs space-y-3 transition-colors"
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <h4 className="font-black text-stone-900 text-sm">{mkt.name}</h4>
-                      <p className="text-xs text-stone-500">{mkt.district}, {mkt.state}</p>
+                      <h4 className="font-black text-stone-900 dark:text-stone-100 text-sm">{mkt.name}</h4>
+                      <p className="text-xs text-stone-500 dark:text-stone-400">{mkt.district}, {mkt.state}</p>
                     </div>
-                    <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
                       {mkt.cropName}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs bg-stone-50 p-2.5 rounded-xl border border-stone-100">
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-stone-50 dark:bg-stone-800 p-2.5 rounded-xl border border-stone-100 dark:border-stone-700">
                     <div>
-                      <span className="text-[10px] text-stone-500 uppercase font-bold">Modal Price</span>
-                      <div className="text-base font-black text-emerald-800">
+                      <span className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-bold">Modal Price</span>
+                      <div className="text-base font-black text-emerald-700 dark:text-emerald-400">
                         ₹{mkt.modalPrice}/q
                       </div>
                     </div>
                     <div>
-                      <span className="text-[10px] text-stone-500 uppercase font-bold">Arrivals</span>
-                      <div className="text-base font-black text-stone-800">
+                      <span className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-bold">Arrivals</span>
+                      <div className="text-base font-black text-stone-800 dark:text-stone-200">
                         {mkt.arrivalsQuintals} q
                       </div>
                     </div>
@@ -946,20 +946,20 @@ export const BuyerMarketplacePage: React.FC = () => {
         )}
       </main>
 
-      {/* MODAL 1: MAKE AN OFFER / BID ON LOT */}
+      {/* MODAL 1: MAKE AN OFFER / BID ON LOT (DARK MODE ENABLED) */}
       {selectedLotForOffer && (
         <div className="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-lg w-full p-6 space-y-5 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+          <div className="bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 shadow-2xl max-w-lg w-full p-6 space-y-5 animate-in zoom-in-95 duration-150 transition-colors">
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
               <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-emerald-100 text-emerald-800 text-lg">
+                <span className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-lg">
                   💰
                 </span>
                 <div>
-                  <h3 className="text-lg font-black text-stone-900">
+                  <h3 className="text-lg font-black text-stone-900 dark:text-stone-100">
                     Submit Commercial Bid / Offer
                   </h3>
-                  <p className="text-xs text-stone-500">
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
                     Lot: {selectedLotForOffer.lotNumber} ({selectedLotForOffer.crop})
                   </p>
                 </div>
@@ -967,36 +967,36 @@ export const BuyerMarketplacePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedLotForOffer(null)}
-                className="p-1 rounded-lg text-stone-400 hover:text-stone-700"
+                className="p-1 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Produce snapshot */}
-            <div className="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-xs space-y-1.5">
+            <div className="bg-stone-50 dark:bg-stone-800 p-3.5 rounded-2xl border border-stone-200 dark:border-stone-700 text-xs space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-stone-500">Farmer:</span>
-                <strong className="text-stone-900">{selectedLotForOffer.farmerName}</strong>
+                <span className="text-stone-500 dark:text-stone-400">Farmer:</span>
+                <strong className="text-stone-900 dark:text-stone-100">{selectedLotForOffer.farmerName}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500">Location:</span>
-                <strong className="text-stone-900">{selectedLotForOffer.location}</strong>
+                <span className="text-stone-500 dark:text-stone-400">Location:</span>
+                <strong className="text-stone-900 dark:text-stone-100">{selectedLotForOffer.location}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500">AI Quality Grade:</span>
-                <strong className="text-emerald-700 font-bold">{selectedLotForOffer.qualityGrade}</strong>
+                <span className="text-stone-500 dark:text-stone-400">AI Quality Grade:</span>
+                <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{selectedLotForOffer.qualityGrade}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500">Farmer Asking Price:</span>
-                <strong className="text-stone-900">₹{selectedLotForOffer.expectedPricePerQ}/quintal</strong>
+                <span className="text-stone-500 dark:text-stone-400">Farmer Asking Price:</span>
+                <strong className="text-stone-900 dark:text-stone-100">₹{selectedLotForOffer.expectedPricePerQ}/quintal</strong>
               </div>
             </div>
 
             {/* Offer Form */}
             <form onSubmit={handleSendOffer} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
                   Your Offered Price (₹ per Quintal) *
                 </label>
                 <input
@@ -1006,12 +1006,12 @@ export const BuyerMarketplacePage: React.FC = () => {
                   required
                   value={offerPrice}
                   onChange={(e) => setOfferPrice(Number(e.target.value))}
-                  className="w-full py-2.5 px-3 bg-white border border-stone-300 rounded-xl text-sm font-black text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                  className="w-full py-2.5 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-sm font-black text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
                   Quantity Wanted (Quintals) *
                 </label>
                 <input
@@ -1021,15 +1021,15 @@ export const BuyerMarketplacePage: React.FC = () => {
                   required
                   value={offerQuantity}
                   onChange={(e) => setOfferQuantity(Number(e.target.value))}
-                  className="w-full py-2.5 px-3 bg-white border border-stone-300 rounded-xl text-sm font-black text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                  className="w-full py-2.5 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-sm font-black text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                 />
-                <span className="text-[11px] text-stone-500 mt-0.5 block">
+                <span className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5 block">
                   Max available in this lot: {selectedLotForOffer.quantityQuintals} quintals
                 </span>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
                   Buyer Notes / Transport Terms (Optional)
                 </label>
                 <textarea
@@ -1037,14 +1037,14 @@ export const BuyerMarketplacePage: React.FC = () => {
                   placeholder="e.g., We arrange pickup truck from farmgate within 24 hours. Immediate weighbridge RTGS payment."
                   value={offerNotes}
                   onChange={(e) => setOfferNotes(e.target.value)}
-                  className="w-full py-2 px-3 bg-white border border-stone-300 rounded-xl text-xs font-medium text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                  className="w-full py-2 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-medium text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                 />
               </div>
 
               {/* Total Calculation Preview */}
-              <div className="bg-emerald-50/70 p-3 rounded-2xl border border-emerald-200 text-xs flex items-center justify-between">
-                <span className="font-bold text-stone-700">Gross Procurement Value:</span>
-                <span className="text-base font-black text-emerald-900">
+              <div className="bg-emerald-50/70 dark:bg-emerald-950/40 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-800 text-xs flex items-center justify-between">
+                <span className="font-bold text-stone-700 dark:text-stone-300">Gross Procurement Value:</span>
+                <span className="text-base font-black text-emerald-800 dark:text-emerald-300">
                   ₹{(offerPrice * offerQuantity).toLocaleString('en-IN')}
                 </span>
               </div>
@@ -1053,12 +1053,13 @@ export const BuyerMarketplacePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedLotForOffer(null)}
-                  className="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
+                  id="buyer-offer-submit-btn"
                   className="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
@@ -1070,20 +1071,20 @@ export const BuyerMarketplacePage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL 2: CREATE PROCUREMENT DEMAND */}
+      {/* MODAL 2: CREATE PROCUREMENT DEMAND (DARK MODE ENABLED) */}
       {isRequestModalOpen && (
         <div className="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-2xl max-w-lg w-full p-6 space-y-5 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+          <div className="bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 shadow-2xl max-w-lg w-full p-6 space-y-5 animate-in zoom-in-95 duration-150 transition-colors">
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
               <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-amber-100 text-amber-900 text-lg">
+                <span className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 text-lg">
                   📢
                 </span>
                 <div>
-                  <h3 className="text-lg font-black text-stone-900">
+                  <h3 className="text-lg font-black text-stone-900 dark:text-stone-100">
                     Publish Procurement Demand
                   </h3>
-                  <p className="text-xs text-stone-500">
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
                     Broadcast your produce requirements to verified farmers
                   </p>
                 </div>
@@ -1091,7 +1092,7 @@ export const BuyerMarketplacePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsRequestModalOpen(false)}
-                className="p-1 rounded-lg text-stone-400 hover:text-stone-700"
+                className="p-1 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1099,13 +1100,13 @@ export const BuyerMarketplacePage: React.FC = () => {
 
             <form onSubmit={handleCreateRequest} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-bold text-stone-700 mb-1">
+                <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
                   Crop Commodity *
                 </label>
                 <select
                   value={newRequestCrop}
                   onChange={(e) => setNewRequestCrop(e.target.value)}
-                  className="w-full py-2 px-3 bg-white border border-stone-300 rounded-xl font-bold text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                  className="w-full py-2 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl font-bold text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                 >
                   <option value="Paddy (Dhan / Rice)">Paddy (Dhan / Rice)</option>
                   <option value="Wheat (Gehun)">Wheat (Gehun)</option>
@@ -1120,7 +1121,7 @@ export const BuyerMarketplacePage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-stone-700 mb-1">
+                  <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
                     Required Quantity (q) *
                   </label>
                   <input
@@ -1129,12 +1130,12 @@ export const BuyerMarketplacePage: React.FC = () => {
                     required
                     value={newRequestQty}
                     onChange={(e) => setNewRequestQty(Number(e.target.value))}
-                    className="w-full py-2 px-3 bg-white border border-stone-300 rounded-xl font-bold text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                    className="w-full py-2 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl font-bold text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-stone-700 mb-1">
+                  <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
                     Target Budget (₹/q) *
                   </label>
                   <input
@@ -1143,13 +1144,13 @@ export const BuyerMarketplacePage: React.FC = () => {
                     required
                     value={newRequestPrice}
                     onChange={(e) => setNewRequestPrice(Number(e.target.value))}
-                    className="w-full py-2 px-3 bg-white border border-stone-300 rounded-xl font-bold text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                    className="w-full py-2 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl font-bold text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-stone-700 mb-1">
+                <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
                   Target Delivery Location / APMC *
                 </label>
                 <input
@@ -1158,12 +1159,12 @@ export const BuyerMarketplacePage: React.FC = () => {
                   placeholder="e.g., Nizamabad APMC, Hyderabad, or Farmgate pickup"
                   value={newRequestLocation}
                   onChange={(e) => setNewRequestLocation(e.target.value)}
-                  className="w-full py-2 px-3 bg-white border border-stone-300 rounded-xl font-medium text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                  className="w-full py-2 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl font-medium text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-stone-700 mb-1">
+                <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
                   Quality Requirements
                 </label>
                 <input
@@ -1171,12 +1172,12 @@ export const BuyerMarketplacePage: React.FC = () => {
                   placeholder="e.g., Grade A preferred, clean luster, low moisture"
                   value={newRequestQuality}
                   onChange={(e) => setNewRequestQuality(e.target.value)}
-                  className="w-full py-2 px-3 bg-white border border-stone-300 rounded-xl font-medium text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                  className="w-full py-2 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl font-medium text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-stone-700 mb-1">
+                <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
                   Procurement Notes
                 </label>
                 <textarea
@@ -1184,7 +1185,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                   placeholder="e.g., Immediate weighbridge RTGS payment. We can send our own 10-tonne truck."
                   value={newRequestNotes}
                   onChange={(e) => setNewRequestNotes(e.target.value)}
-                  className="w-full py-2 px-3 bg-white border border-stone-300 rounded-xl font-medium text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                  className="w-full py-2 px-3 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl font-medium text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                 />
               </div>
 
@@ -1192,7 +1193,7 @@ export const BuyerMarketplacePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsRequestModalOpen(false)}
-                  className="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl font-bold transition-colors cursor-pointer"
+                  className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-xl font-bold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>

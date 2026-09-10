@@ -93,7 +93,7 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[92vh] overflow-y-auto shadow-2xl border border-stone-200 flex flex-col animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-2xl w-full max-h-[92vh] overflow-y-auto shadow-2xl border border-stone-200 dark:border-stone-800 flex flex-col animate-in fade-in zoom-in-95 duration-200 transition-colors">
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-900 to-stone-900 text-white p-5 sm:p-6 rounded-t-3xl relative">
           <button
@@ -123,39 +123,39 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-5 sm:p-6 space-y-6 flex-1 text-stone-900 text-sm">
+        <div className="p-5 sm:p-6 space-y-6 flex-1 text-stone-900 dark:text-stone-100 text-sm">
           {/* Produce Photos / Key Metrics Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200">
-              <span className="text-[10px] font-bold text-stone-500 uppercase block">Total Lot Volume</span>
-              <span className="text-lg font-black text-stone-900 mt-0.5 block">
+            <div className="bg-stone-50 dark:bg-stone-800 p-3 rounded-2xl border border-stone-200 dark:border-stone-700">
+              <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase block">Total Lot Volume</span>
+              <span className="text-lg font-black text-stone-900 dark:text-stone-100 mt-0.5 block">
                 {lot.quantityQuintals} q
               </span>
-              <span className="text-[10px] text-stone-500">{(lot.quantityQuintals / 10).toFixed(1)} Metric Tons</span>
+              <span className="text-[10px] text-stone-500 dark:text-stone-400">{(lot.quantityQuintals / 10).toFixed(1)} Metric Tons</span>
             </div>
 
-            <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200">
-              <span className="text-[10px] font-bold text-stone-500 uppercase block">Expected Price</span>
-              <span className="text-lg font-black text-emerald-700 mt-0.5 block">
+            <div className="bg-stone-50 dark:bg-stone-800 p-3 rounded-2xl border border-stone-200 dark:border-stone-700">
+              <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase block">Expected Price</span>
+              <span className="text-lg font-black text-emerald-700 dark:text-emerald-400 mt-0.5 block">
                 ₹{lot.expectedPricePerQ.toLocaleString('en-IN')}/q
               </span>
-              <span className="text-[10px] text-stone-500">Ex-Farmgate / Mandi</span>
+              <span className="text-[10px] text-stone-500 dark:text-stone-400">Ex-Farmgate / Mandi</span>
             </div>
 
-            <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200">
-              <span className="text-[10px] font-bold text-stone-500 uppercase block">Est. Total Value</span>
-              <span className="text-lg font-black text-stone-900 mt-0.5 block">
+            <div className="bg-stone-50 dark:bg-stone-800 p-3 rounded-2xl border border-stone-200 dark:border-stone-700">
+              <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase block">Est. Total Value</span>
+              <span className="text-lg font-black text-stone-900 dark:text-stone-100 mt-0.5 block">
                 ₹{(lot.quantityQuintals * lot.expectedPricePerQ).toLocaleString('en-IN')}
               </span>
-              <span className="text-[10px] text-stone-500">Direct trade estimate</span>
+              <span className="text-[10px] text-stone-500 dark:text-stone-400">Direct trade estimate</span>
             </div>
 
-            <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200">
-              <span className="text-[10px] font-bold text-stone-500 uppercase block">Harvest Date</span>
-              <span className="text-sm font-bold text-stone-800 mt-0.5 block">
+            <div className="bg-stone-50 dark:bg-stone-800 p-3 rounded-2xl border border-stone-200 dark:border-stone-700">
+              <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase block">Harvest Date</span>
+              <span className="text-sm font-bold text-stone-800 dark:text-stone-200 mt-0.5 block">
                 {lot.harvestDate || 'Freshly Harvested'}
               </span>
-              <span className="text-[10px] text-emerald-700 font-semibold">Ready for dispatch</span>
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Ready for dispatch</span>
             </div>
           </div>
 
@@ -230,8 +230,8 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
           </div>
 
           {/* Contact Farmer Directly */}
-          <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 space-y-3">
-            <h4 className="font-bold text-xs uppercase tracking-wider text-stone-500">
+          <div className="bg-stone-50 dark:bg-stone-800 p-4 rounded-2xl border border-stone-200 dark:border-stone-700 space-y-3">
+            <h4 className="font-bold text-xs uppercase tracking-wider text-stone-500 dark:text-stone-400">
               Direct Farmer Contact Options
             </h4>
             <div className="flex flex-wrap items-center gap-3">
@@ -249,35 +249,35 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-bold text-xs flex items-center justify-center gap-2 transition-colors border border-emerald-300"
+                className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-100 dark:bg-emerald-950 hover:bg-emerald-200 dark:hover:bg-emerald-900 text-emerald-950 dark:text-emerald-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors border border-emerald-300 dark:border-emerald-800"
               >
-                <MessageCircle className="w-4 h-4 text-emerald-700" />
+                <MessageCircle className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
                 <span>Message on WhatsApp</span>
               </a>
             </div>
           </div>
 
           {/* 🤝 EXPRESS INTEREST FORM */}
-          <div className="border-t border-stone-200 pt-5 space-y-4">
+          <div className="border-t border-stone-200 dark:border-stone-800 pt-5 space-y-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-amber-400 text-stone-950 font-bold flex items-center justify-center">
                 🤝
               </div>
               <div>
-                <h3 className="text-base font-black text-stone-900">
+                <h3 className="text-base font-black text-stone-900 dark:text-stone-100">
                   Express Formal Purchase Interest
                 </h3>
-                <p className="text-xs text-stone-500">
+                <p className="text-xs text-stone-500 dark:text-stone-400">
                   Notify the farmer instantly so they can reserve stock and confirm dispatch
                 </p>
               </div>
             </div>
 
             {submittedSuccess ? (
-              <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 space-y-2 text-center animate-in fade-in duration-200">
-                <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
+              <div className="p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 space-y-2 text-center animate-in fade-in duration-200">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mx-auto" />
                 <h4 className="font-black text-base">Interest Successfully Sent to {lot.farmerName}!</h4>
-                <p className="text-xs text-emerald-800">
+                <p className="text-xs text-emerald-800 dark:text-emerald-300">
                   Your procurement inquiry of <strong>{requestedQty} quintals</strong> has been logged and the farmer's dashboard has been updated in real time.
                 </p>
                 <button
@@ -292,7 +292,7 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
               <form onSubmit={handleSubmitInterest} className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-stone-700 block mb-1">
+                    <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block mb-1">
                       Your Full Name / Trading Firm *
                     </label>
                     <input
@@ -301,12 +301,12 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
                       placeholder="e.g. Apex Agri Procurement Ltd"
                       value={buyerName}
                       onChange={(e) => setBuyerName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                      className="w-full px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-medium text-stone-900 dark:text-stone-100 focus:bg-white dark:focus:bg-stone-800 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-stone-700 block mb-1">
+                    <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block mb-1">
                       Your Contact Phone Number *
                     </label>
                     <input
@@ -315,14 +315,14 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
                       placeholder="e.g. +91 98765 43210"
                       value={buyerPhone}
                       onChange={(e) => setBuyerPhone(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                      className="w-full px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-medium text-stone-900 dark:text-stone-100 focus:bg-white dark:focus:bg-stone-800 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-stone-700 block mb-1">
+                    <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block mb-1">
                       Quantity Requested (Quintals) *
                     </label>
                     <input
@@ -332,13 +332,13 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
                       max={lot.quantityQuintals}
                       value={requestedQty}
                       onChange={(e) => setRequestedQty(Number(e.target.value))}
-                      className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                      className="w-full px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-medium text-stone-900 dark:text-stone-100 focus:bg-white dark:focus:bg-stone-800 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                     />
-                    <span className="text-[10px] text-stone-500">Max available: {lot.quantityQuintals} q</span>
+                    <span className="text-[10px] text-stone-500 dark:text-stone-400">Max available: {lot.quantityQuintals} q</span>
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-stone-700 block mb-1">
+                    <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block mb-1">
                       Counter Offer or Delivery Notes
                     </label>
                     <input
@@ -346,7 +346,7 @@ export const LotDetailsModal: React.FC<LotDetailsModalProps> = ({
                       placeholder="e.g. Will arrange pickup tomorrow at ₹2,400/q"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                      className="w-full px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 rounded-xl text-xs font-medium text-stone-900 dark:text-stone-100 focus:bg-white dark:focus:bg-stone-800 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                     />
                   </div>
                 </div>

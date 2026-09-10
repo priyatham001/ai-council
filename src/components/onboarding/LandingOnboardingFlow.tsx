@@ -23,6 +23,7 @@ import { SUPPORTED_LANGUAGES } from '../../utils/i18n';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useFarmerGuide } from '../../context/FarmerGuideContext';
+import { LanguageSelector } from '../common/LanguageSelector';
 import { reverseGeocodeLocation } from '../../services/googleMapsService';
 import { IndiaMapZoomExperience } from './IndiaMapZoomExperience';
 import { queryLocations } from '../../data/indiaWideLocations';
@@ -108,10 +109,6 @@ export const LandingOnboardingFlow: React.FC = () => {
   // Save language — writes to global context (which persists to localStorage)
   const handleSelectLanguage = (lang: Language) => {
     setGlobalLanguage(lang);
-    // Ask for location permission early during language selection so that the next page will be ready
-    if (navigator.geolocation && locationStepMode === 'explain') {
-      requestBrowserGeolocation();
-    }
   };
 
   // Step 1 -> Step 2 transition: Show explanation card first, DO NOT auto-trigger GPS without consent
@@ -314,7 +311,10 @@ export const LandingOnboardingFlow: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* Quick Header Language Selector */}
+            <LanguageSelector variant={isDarkMode ? 'dark' : 'light'} />
+
             {/* Quick Header Theme Toggle */}
             <button
               type="button"
@@ -326,7 +326,7 @@ export const LandingOnboardingFlow: React.FC = () => {
             </button>
 
             {/* Step Breadcrumbs */}
-            <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-bold">
+            <div className="hidden md:flex items-center gap-1.5 sm:gap-2 text-xs font-bold">
             <span
               className={`px-3 py-1 rounded-full transition-colors ${
                 step === 1
@@ -334,7 +334,7 @@ export const LandingOnboardingFlow: React.FC = () => {
                   : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
               }`}
             >
-              1. Language & Theme
+              {t('onboarding.step1') ? t('onboarding.step1').split(':')[0] : '1. Language'}
             </span>
             <span className="text-stone-400">→</span>
             <span
@@ -344,7 +344,7 @@ export const LandingOnboardingFlow: React.FC = () => {
                   : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
               }`}
             >
-              2. Location
+              {t('onboarding.step2') ? t('onboarding.step2').split(':')[0] : '2. Location'}
             </span>
             <span className="text-stone-400">→</span>
             <span
@@ -354,7 +354,7 @@ export const LandingOnboardingFlow: React.FC = () => {
                   : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
               }`}
             >
-              3. Role
+              {t('onboarding.step3') ? t('onboarding.step3').split(':')[0] : '3. Role'}
             </span>
           </div>
         </div>
@@ -905,41 +905,68 @@ export const LandingOnboardingFlow: React.FC = () => {
             <motion.div
               key="step3"
               id="guide-role-step"
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
               className="space-y-8"
             >
-              <div className="text-center space-y-3 max-w-xl mx-auto">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500" /> {t('onboarding.step3') || 'Step 3: Select Your Role'}
-                </span>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black font-outfit text-stone-900 dark:text-white">
+              <motion.div
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: 0.05 }}
+                className="text-center space-y-3 max-w-xl mx-auto"
+              >
+                <motion.span
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1, duration: 0.3 }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-800 shadow-xs"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500 animate-pulse" /> {t('onboarding.step3') || 'Step 3: Select Your Role'}
+                </motion.span>
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black font-outfit text-stone-900 dark:text-white tracking-tight">
                   {t('onboarding.roleTitle') || 'How Will You Use AgriConnect?'}
                 </h2>
-                <p className="text-sm text-stone-600 dark:text-stone-400">
+                <p className="text-sm sm:text-base text-stone-600 dark:text-stone-400 leading-relaxed">
                   {t('onboarding.roleSubtitle') || 'Select your role to access dedicated dashboards, tailored pricing, and direct market linkage.'}
                 </p>
-              </div>
+              </motion.div>
 
-              {/* Two Distinct Role Cards */}
+              {/* Two Distinct Role Cards with High-Craft 3D Interactive Animations */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto perspective-1000">
                 {/* 1. FARMER CARD */}
-                <div className="bg-white dark:bg-stone-900 rounded-3xl p-8 border-2 border-emerald-500/50 hover:border-emerald-500 shadow-xl transition-all hover:scale-[1.02] flex flex-col justify-between space-y-6 relative overflow-hidden group card-3d preserve-3d">
-                  <div className="absolute top-0 right-0 w-36 h-36 bg-emerald-500/10 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
+                <motion.div
+                  initial={{ opacity: 0, y: 28, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.45, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+                  whileHover={{ y: -8, scale: 1.02, transition: { duration: 0.22 } }}
+                  whileTap={{ scale: 0.985 }}
+                  onClick={() => handleRoleSelect('farmer')}
+                  className="bg-white dark:bg-stone-900 rounded-3xl p-8 border-2 border-emerald-500/50 hover:border-emerald-500 shadow-xl hover:shadow-2xl hover:shadow-emerald-900/20 transition-all flex flex-col justify-between space-y-6 relative overflow-hidden group cursor-pointer"
+                >
+                  {/* Fluid animated ambient glow */}
+                  <motion.div
+                    className="absolute -top-12 -right-12 w-44 h-44 bg-gradient-to-br from-emerald-400/25 to-teal-400/10 rounded-full blur-2xl pointer-events-none"
+                    animate={{ scale: [1, 1.18, 1], opacity: [0.4, 0.75, 0.4] }}
+                    transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
+                  />
 
-                  <div className="space-y-4">
+                  <div className="space-y-4 relative z-10">
                     <div className="flex items-center justify-between">
-                      <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-3xl shadow-md">
+                      <motion.div
+                        whileHover={{ rotate: [0, -10, 10, -5, 0], scale: 1.12 }}
+                        transition={{ duration: 0.35 }}
+                        className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-3xl shadow-md ring-2 ring-emerald-500/20"
+                      >
                         🌾
-                      </div>
-                      <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+                      </motion.div>
+                      <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 uppercase tracking-wider border border-emerald-300/50 dark:border-emerald-800">
                         {t('onboarding.forProducers') || 'For Crop Producers'}
                       </span>
                     </div>
 
-                    <h3 className="text-2xl sm:text-3xl font-black font-outfit text-stone-900 dark:text-white">
+                    <h3 className="text-2xl sm:text-3xl font-black font-outfit text-stone-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                       {t('onboarding.farmerTitle') || 'Farmer'}
                     </h3>
 
@@ -947,47 +974,75 @@ export const LandingOnboardingFlow: React.FC = () => {
                       {t('onboarding.farmerTagline') || 'Sell your crops, check quality with certified AI vision lens, discover highest-paying mandis, and connect directly with verified buyers.'}
                     </p>
 
-                    <ul className="space-y-2 text-xs text-stone-600 dark:text-stone-300 font-semibold pt-2">
-                      <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-600" />
-                        {t('onboarding.farmerFeature1') || 'AI Quality Grading (Grade A, B, C)'}
+                    <ul className="space-y-2.5 text-xs text-stone-600 dark:text-stone-300 font-semibold pt-2">
+                      <li className="flex items-center gap-2.5 group/feat hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
+                        <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center shrink-0 shadow-xs">
+                          <Check className="w-3.5 h-3.5" />
+                        </span>
+                        <span>{t('onboarding.farmerFeature1') || 'AI Quality Grading (Grade A, B, C)'}</span>
                       </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-600" />
-                        {t('onboarding.farmerFeature2') || 'Smart Mandi Profit Calculator with Diesel Freight'}
+                      <li className="flex items-center gap-2.5 group/feat hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
+                        <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center shrink-0 shadow-xs">
+                          <Check className="w-3.5 h-3.5" />
+                        </span>
+                        <span>{t('onboarding.farmerFeature2') || 'Smart Mandi Profit Calculator with Diesel Freight'}</span>
                       </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-600" />
-                        {t('onboarding.farmerFeature3') || 'Direct Buyer Inquiries & WhatsApp Bids'}
+                      <li className="flex items-center gap-2.5 group/feat hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
+                        <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center shrink-0 shadow-xs">
+                          <Check className="w-3.5 h-3.5" />
+                        </span>
+                        <span>{t('onboarding.farmerFeature3') || 'Direct Buyer Inquiries & WhatsApp Bids'}</span>
                       </li>
                     </ul>
                   </div>
 
-                  <button
+                  <motion.button
                     type="button"
-                    onClick={() => handleRoleSelect('farmer')}
-                    className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-lg shadow-emerald-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer group-hover:shadow-emerald-600/50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRoleSelect('farmer');
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-lg shadow-emerald-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer group-hover:shadow-emerald-600/50 relative overflow-hidden"
                   >
                     <span>{t('onboarding.enterFarmer') || 'Continue as Farmer'}</span>
-                    <ArrowRight className="w-5 h-5" />
-                  </button>
-                </div>
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
+                  </motion.button>
+                </motion.div>
 
                 {/* 2. BUYER CARD */}
-                <div className="bg-white dark:bg-stone-900 rounded-3xl p-8 border-2 border-amber-500/50 hover:border-amber-500 shadow-xl transition-all hover:scale-[1.02] flex flex-col justify-between space-y-6 relative overflow-hidden group card-3d preserve-3d">
-                  <div className="absolute top-0 right-0 w-36 h-36 bg-amber-500/10 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
+                <motion.div
+                  initial={{ opacity: 0, y: 28, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.45, delay: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                  whileHover={{ y: -8, scale: 1.02, transition: { duration: 0.22 } }}
+                  whileTap={{ scale: 0.985 }}
+                  onClick={() => handleRoleSelect('buyer')}
+                  className="bg-white dark:bg-stone-900 rounded-3xl p-8 border-2 border-amber-500/50 hover:border-amber-500 shadow-xl hover:shadow-2xl hover:shadow-amber-900/20 transition-all flex flex-col justify-between space-y-6 relative overflow-hidden group cursor-pointer"
+                >
+                  {/* Fluid animated ambient glow */}
+                  <motion.div
+                    className="absolute -top-12 -right-12 w-44 h-44 bg-gradient-to-br from-amber-400/25 to-orange-400/10 rounded-full blur-2xl pointer-events-none"
+                    animate={{ scale: [1, 1.18, 1], opacity: [0.4, 0.75, 0.4] }}
+                    transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+                  />
 
-                  <div className="space-y-4">
+                  <div className="space-y-4 relative z-10">
                     <div className="flex items-center justify-between">
-                      <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 flex items-center justify-center text-3xl shadow-md">
+                      <motion.div
+                        whileHover={{ rotate: [0, -10, 10, -5, 0], scale: 1.12 }}
+                        transition={{ duration: 0.35 }}
+                        className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 flex items-center justify-center text-3xl shadow-md ring-2 ring-amber-500/20"
+                      >
                         🏢
-                      </div>
-                      <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+                      </motion.div>
+                      <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 uppercase tracking-wider border border-amber-300/50 dark:border-amber-800">
                         {t('onboarding.forBuyers') || 'For Institutional Buyers'}
                       </span>
                     </div>
 
-                    <h3 className="text-2xl sm:text-3xl font-black font-outfit text-stone-900 dark:text-white">
+                    <h3 className="text-2xl sm:text-3xl font-black font-outfit text-stone-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                       {t('onboarding.buyerTitle') || 'Buyer'}
                     </h3>
 
@@ -995,41 +1050,53 @@ export const LandingOnboardingFlow: React.FC = () => {
                       {t('onboarding.buyerTagline') || 'Discover available crops from nearby farmers, compare AI-inspected quality and prices, and contact farmers directly for institutional procurement.'}
                     </p>
 
-                    <ul className="space-y-2 text-xs text-stone-600 dark:text-stone-300 font-semibold pt-2">
-                      <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-amber-600" />
-                        {t('onboarding.buyerFeature1') || 'Explore verified farmer crop lots on Map & List'}
+                    <ul className="space-y-2.5 text-xs text-stone-600 dark:text-stone-300 font-semibold pt-2">
+                      <li className="flex items-center gap-2.5 group/feat hover:text-amber-700 dark:hover:text-amber-300 transition-colors">
+                        <span className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center shrink-0 shadow-xs">
+                          <Check className="w-3.5 h-3.5" />
+                        </span>
+                        <span>{t('onboarding.buyerFeature1') || 'Explore verified farmer crop lots on Map & List'}</span>
                       </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-amber-600" />
-                        {t('onboarding.buyerFeature2') || 'Filter by Grade (A/B/C), Distance, and Volume'}
+                      <li className="flex items-center gap-2.5 group/feat hover:text-amber-700 dark:hover:text-amber-300 transition-colors">
+                        <span className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center shrink-0 shadow-xs">
+                          <Check className="w-3.5 h-3.5" />
+                        </span>
+                        <span>{t('onboarding.buyerFeature2') || 'Filter by Grade (A/B/C), Distance, and Volume'}</span>
                       </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-amber-600" />
-                        {t('onboarding.buyerFeature3') || 'One-click "I\'m Interested" alerts sent to farmers'}
+                      <li className="flex items-center gap-2.5 group/feat hover:text-amber-700 dark:hover:text-amber-300 transition-colors">
+                        <span className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center shrink-0 shadow-xs">
+                          <Check className="w-3.5 h-3.5" />
+                        </span>
+                        <span>{t('onboarding.buyerFeature3') || 'One-click "I\'m Interested" alerts sent to farmers'}</span>
                       </li>
                     </ul>
                   </div>
 
-                  <button
+                  <motion.button
                     type="button"
-                    onClick={() => handleRoleSelect('buyer')}
-                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-black text-base shadow-lg shadow-amber-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer group-hover:shadow-amber-500/50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRoleSelect('buyer');
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-black text-base shadow-lg shadow-amber-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer group-hover:shadow-amber-500/50 relative overflow-hidden"
                   >
                     <span>{t('onboarding.enterBuyer') || 'Continue as Buyer'}</span>
-                    <ArrowRight className="w-5 h-5" />
-                  </button>
-                </div>
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
+                  </motion.button>
+                </motion.div>
               </div>
 
               <div className="text-center pt-2">
-                <button
+                <motion.button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="text-xs font-bold text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 cursor-pointer"
+                  whileHover={{ x: -3 }}
+                  className="text-xs font-bold text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 cursor-pointer inline-flex items-center gap-1.5 transition-colors"
                 >
-                  {t('onboarding.backToLocation') || '← Back to Location Confirmation'}
-                </button>
+                  <span>{t('onboarding.backToLocation') || '← Back to Location Confirmation'}</span>
+                </motion.button>
               </div>
             </motion.div>
           )}
